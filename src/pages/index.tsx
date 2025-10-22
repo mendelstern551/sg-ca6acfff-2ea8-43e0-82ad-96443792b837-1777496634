@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Calendar, Users, DollarSign, FileText, Plus } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -11,6 +10,7 @@ import { ExpenseDialog } from "@/components/ExpenseDialog";
 import { ExpenseList } from "@/components/ExpenseList";
 import { BudgetDashboard } from "@/components/BudgetDashboard";
 import { Booking, Expense } from "@/types/booking";
+import { BookingCalendar } from "@/components/BookingCalendar";
 
 export default function HomePage() {
   const [activeTab, setActiveTab] = useState("bookings");
@@ -214,21 +214,7 @@ export default function HomePage() {
           </TabsContent>
 
           <TabsContent value="calendar" className="space-y-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>Calendar View</CardTitle>
-                <CardDescription>
-                  View all your bookings in a calendar format
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="text-center py-12 text-slate-500 dark:text-slate-400">
-                  <Calendar className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                  <p className="text-lg font-medium mb-2">Calendar view coming soon</p>
-                  <p className="text-sm">Schedule and manage your bookings visually</p>
-                </div>
-              </CardContent>
-            </Card>
+            <BookingCalendar bookings={bookings} onBookingClick={handleEditBooking} />
           </TabsContent>
 
           <TabsContent value="budget" className="space-y-4">
