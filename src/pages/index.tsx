@@ -4,7 +4,7 @@ import { Calendar, Users, DollarSign, FileText, Plus } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import ThemeSwitch from "@/components/ThemeSwitch";
+import { ThemeSwitch } from "@/components/ThemeSwitch";
 import { BookingDialog } from "@/components/BookingDialog";
 import { BookingList } from "@/components/BookingList";
 import { ExpenseDialog } from "@/components/ExpenseDialog";
