@@ -26,7 +26,13 @@ export default function HomePage() {
     const savedExpenses = localStorage.getItem("trout-lake-expenses");
     
     if (savedBookings) {
-      setBookings(JSON.parse(savedBookings));
+      const bookingsData: Booking[] = JSON.parse(savedBookings);
+      // Simple migration for old data that might not have the 'confirmed' field
+      const migratedBookings = bookingsData.map(b => ({
+        ...b,
+        confirmed: b.confirmed ?? false 
+      }));
+      setBookings(migratedBookings);
     }
     if (savedExpenses) {
       setExpenses(JSON.parse(savedExpenses));

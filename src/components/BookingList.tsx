@@ -131,11 +131,11 @@ export function BookingList({ bookings, onEdit, onDelete, onUpdateBooking }: Boo
   );
 
   const pendingBookings = sortedBookings.filter(
-    (b) => b.paymentStatus === "pending" || b.paymentStatus === "deposit_paid" || b.paymentStatus === "partial"
+    (b) => !b.confirmed
   );
 
   const confirmedBookings = sortedBookings.filter(
-    (b) => b.paymentStatus === "confirmed" || b.paymentStatus === "paid"
+    (b) => b.confirmed === true
   );
 
   const renderBookingCard = (booking: Booking) => (
