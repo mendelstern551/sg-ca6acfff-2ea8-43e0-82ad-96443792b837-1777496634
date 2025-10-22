@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Expense, Booking } from "@/types/booking";
 import { formatCurrency } from "@/lib/bookingCalculations";
@@ -27,6 +26,7 @@ export function ExpenseList({ expenses, bookings, onEdit, onDelete }: ExpenseLis
       utilities: "Utilities",
       staff: "Staff & Labor",
       equipment: "Equipment",
+      "Manager Salary": "Manager Salary",
       other: "Other",
     };
     return labels[category] || category;
@@ -40,6 +40,7 @@ export function ExpenseList({ expenses, bookings, onEdit, onDelete }: ExpenseLis
       utilities: "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300",
       staff: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300",
       equipment: "bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300",
+      "Manager Salary": "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300",
       other: "bg-slate-100 text-slate-700 dark:bg-slate-900/30 dark:text-slate-300",
     };
     return colors[category] || colors.other;
