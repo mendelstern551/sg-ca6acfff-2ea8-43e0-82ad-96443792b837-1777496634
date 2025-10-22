@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -188,7 +187,7 @@ export function BookingDialog({ open, onOpenChange, onSave, booking }: BookingDi
             <div className="space-y-4">
               <div className="space-y-2">
                 <Label>Start Date</Label>
-                <Popover>
+                <Popover modal={true}>
                   <PopoverTrigger asChild>
                     <Button
                       variant="outline"
@@ -198,7 +197,7 @@ export function BookingDialog({ open, onOpenChange, onSave, booking }: BookingDi
                       {formData.startDate ? format(formData.startDate, "PPP") : "Pick a date"}
                     </Button>
                   </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0">
+                  <PopoverContent className="w-auto p-0" align="start">
                     <Calendar
                       mode="single"
                       selected={formData.startDate}
@@ -211,7 +210,7 @@ export function BookingDialog({ open, onOpenChange, onSave, booking }: BookingDi
 
               <div className="space-y-2">
                 <Label>End Date</Label>
-                <Popover>
+                <Popover modal={true}>
                   <PopoverTrigger asChild>
                     <Button
                       variant="outline"
@@ -221,7 +220,7 @@ export function BookingDialog({ open, onOpenChange, onSave, booking }: BookingDi
                       {formData.endDate ? format(formData.endDate, "PPP") : "Pick a date"}
                     </Button>
                   </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0">
+                  <PopoverContent className="w-auto p-0" align="start">
                     <Calendar
                       mode="single"
                       selected={formData.endDate}
