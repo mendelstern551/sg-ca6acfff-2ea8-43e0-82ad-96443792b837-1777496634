@@ -1,13 +1,61 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Calendar, Users, DollarSign, FileText, Plus } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import ThemeSwitch from "@/components/ThemeSwitch";
+import { BookingDialog } from "@/components/BookingDialog";
+import { BookingList } from "@/components/BookingList";
+import { Booking, Expense } from "@/types/booking";
 
 export default function HomePage() {
   const [activeTab, setActiveTab] = useState("bookings");
+  const [bookings, setBookings] = useState<Booking[]>([]);
+  const [expenses, setExpenses] = useState<Expense[]>([]);
+  const [bookingDialogOpen, setBookingDialogOpen] = useState(false);
+  const [editingBooking, setEditingBooking] = useState<Booking | undefined>();
+
+  useEffect(() => {
+    const savedBookings = localStorage.getItem("trout-lake-bookings");
+    const savedExpenses = localStorage.getItem("trout-lake-expenses");
+    
+    if (savedBookings) {
+      setBookings(JSON.parse(savedBookings));
+    }
+    if (savedExpenses) {
+      setExpenses(JSON.parse(savedExpenses));
+    }
+  }, []);
+
+  const handleSaveBooking = (booking: Booking) => {
+    let updatedBookings: Booking[];
+    
+    if (editingBooking) {
+      updatedBookings = bookings.map((b) => (b.id === booking.id ? booking : b));
+    } else {
+      updatedBookings = [...bookings, booking];
+    }
+    
+    setBookings(updatedBookings);
+    localStorage.setItem("trout-lake-bookings", JSON.stringify(updatedBookings));
+    setEditingBooking(undefined);
+  };
+
+  const handleEditBooking = (booking: Booking) => {
+    setEditingBooking(booking);
+    setBookingDialogOpen(true);
+  };
+
+  const handleDeleteBooking = (bookingId: string) => {
+    const updatedBookings = bookings.filter((b) => b.id !== bookingId);
+    setBookings(updatedBookings);
+    localStorage.setItem("trout-lake-bookings", JSON.stringify(updatedBookings));
+  };
+
+  const totalGuests = bookings.reduce((sum, b) => sum + b.numberOfGuests, 0);
+  const totalRevenue = bookings.reduce((sum, b) => sum + b.totalCost, 0);
+  const totalExpenses = expenses.reduce((sum, e) => sum + e.amount, 0);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-slate-50 dark:from-slate-950 dark:via-blue-950 dark:to-slate-950">
@@ -35,7 +83,7 @@ export default function HomePage() {
               <Calendar className="h-4 w-4 text-blue-600" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">0</div>
+              <div className="text-2xl font-bold">{bookings.length}</div>
               <p className="text-xs text-slate-600 dark:text-slate-400">
                 Active reservations
               </p>
@@ -48,7 +96,7 @@ export default function HomePage() {
               <Users className="h-4 w-4 text-green-600" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">0</div>
+              <div className="text-2xl font-bold">{totalGuests}</div>
               <p className="text-xs text-slate-600 dark:text-slate-400">
                 Expected attendees
               </p>
@@ -61,7 +109,9 @@ export default function HomePage() {
               <DollarSign className="h-4 w-4 text-emerald-600" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">$0</div>
+              <div className="text-2xl font-bold">
+                ${totalRevenue.toLocaleString()}
+              </div>
               <p className="text-xs text-slate-600 dark:text-slate-400">
                 From all bookings
               </p>
@@ -74,7 +124,9 @@ export default function HomePage() {
               <FileText className="h-4 w-4 text-red-600" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">$0</div>
+              <div className="text-2xl font-bold">
+                ${totalExpenses.toLocaleString()}
+              </div>
               <p className="text-xs text-slate-600 dark:text-slate-400">
                 Tracked expenses
               </p>
@@ -100,18 +152,32 @@ export default function HomePage() {
                       Manage your Yom Tov, Shabaton, and Night Event bookings
                     </CardDescription>
                   </div>
-                  <Button className="bg-blue-600 hover:bg-blue-700">
+                  <Button
+                    className="bg-blue-600 hover:bg-blue-700"
+                    onClick={() => {
+                      setEditingBooking(undefined);
+                      setBookingDialogOpen(true);
+                    }}
+                  >
                     <Plus className="h-4 w-4 mr-2" />
                     New Booking
                   </Button>
                 </div>
               </CardHeader>
               <CardContent>
-                <div className="text-center py-12 text-slate-500 dark:text-slate-400">
-                  <Calendar className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                  <p className="text-lg font-medium mb-2">No bookings yet</p>
-                  <p className="text-sm">Create your first booking to get started</p>
-                </div>
+                {bookings.length === 0 ? (
+                  <div className="text-center py-12 text-slate-500 dark:text-slate-400">
+                    <Calendar className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                    <p className="text-lg font-medium mb-2">No bookings yet</p>
+                    <p className="text-sm">Create your first booking to get started</p>
+                  </div>
+                ) : (
+                  <BookingList
+                    bookings={bookings}
+                    onEdit={handleEditBooking}
+                    onDelete={handleDeleteBooking}
+                  />
+                )}
               </CardContent>
             </Card>
           </TabsContent>
@@ -145,8 +211,8 @@ export default function HomePage() {
               <CardContent>
                 <div className="text-center py-12 text-slate-500 dark:text-slate-400">
                   <DollarSign className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                  <p className="text-lg font-medium mb-2">No financial data yet</p>
-                  <p className="text-sm">Add bookings and expenses to track your budget</p>
+                  <p className="text-lg font-medium mb-2">Budget dashboard coming soon</p>
+                  <p className="text-sm">Track your financial performance</p>
                 </div>
               </CardContent>
             </Card>
@@ -179,6 +245,13 @@ export default function HomePage() {
           </TabsContent>
         </Tabs>
       </main>
+
+      <BookingDialog
+        open={bookingDialogOpen}
+        onOpenChange={setBookingDialogOpen}
+        onSave={handleSaveBooking}
+        booking={editingBooking}
+      />
     </div>
   );
 }
