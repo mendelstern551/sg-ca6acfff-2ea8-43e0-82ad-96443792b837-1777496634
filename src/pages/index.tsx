@@ -7,6 +7,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import ThemeSwitch from "@/components/ThemeSwitch";
 import { BookingDialog } from "@/components/BookingDialog";
 import { BookingList } from "@/components/BookingList";
+import { ExpenseDialog } from "@/components/ExpenseDialog";
+import { ExpenseList } from "@/components/ExpenseList";
+import { BudgetDashboard } from "@/components/BudgetDashboard";
 import { Booking, Expense } from "@/types/booking";
 
 export default function HomePage() {
@@ -14,7 +17,9 @@ export default function HomePage() {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [bookingDialogOpen, setBookingDialogOpen] = useState(false);
+  const [expenseDialogOpen, setExpenseDialogOpen] = useState(false);
   const [editingBooking, setEditingBooking] = useState<Booking | undefined>();
+  const [editingExpense, setEditingExpense] = useState<Expense | undefined>();
 
   useEffect(() => {
     const savedBookings = localStorage.getItem("trout-lake-bookings");
@@ -53,9 +58,35 @@ export default function HomePage() {
     localStorage.setItem("trout-lake-bookings", JSON.stringify(updatedBookings));
   };
 
+  const handleSaveExpense = (expense: Expense) => {
+    let updatedExpenses: Expense[];
+    
+    if (editingExpense) {
+      updatedExpenses = expenses.map((e) => (e.id === expense.id ? expense : e));
+    } else {
+      updatedExpenses = [...expenses, expense];
+    }
+    
+    setExpenses(updatedExpenses);
+    localStorage.setItem("trout-lake-expenses", JSON.stringify(updatedExpenses));
+    setEditingExpense(undefined);
+  };
+
+  const handleEditExpense = (expense: Expense) => {
+    setEditingExpense(expense);
+    setExpenseDialogOpen(true);
+  };
+
+  const handleDeleteExpense = (expenseId: string) => {
+    const updatedExpenses = expenses.filter((e) => e.id !== expenseId);
+    setExpenses(updatedExpenses);
+    localStorage.setItem("trout-lake-expenses", JSON.stringify(updatedExpenses));
+  };
+
   const totalGuests = bookings.reduce((sum, b) => sum + b.numberOfGuests, 0);
   const totalRevenue = bookings.reduce((sum, b) => sum + b.totalCost, 0);
   const totalExpenses = expenses.reduce((sum, e) => sum + e.amount, 0);
+  const netProfit = totalRevenue - totalExpenses;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-slate-50 dark:from-slate-950 dark:via-blue-950 dark:to-slate-950">
@@ -109,7 +140,7 @@ export default function HomePage() {
               <DollarSign className="h-4 w-4 text-emerald-600" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">
+              <div className="text-2xl font-bold text-emerald-600">
                 ${totalRevenue.toLocaleString()}
               </div>
               <p className="text-xs text-slate-600 dark:text-slate-400">
@@ -120,15 +151,15 @@ export default function HomePage() {
 
           <Card className="hover:shadow-lg transition-shadow">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Expenses</CardTitle>
-              <FileText className="h-4 w-4 text-red-600" />
+              <CardTitle className="text-sm font-medium">Net Profit</CardTitle>
+              <FileText className="h-4 w-4 text-blue-600" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">
-                ${totalExpenses.toLocaleString()}
+              <div className={`text-2xl font-bold ${netProfit >= 0 ? "text-green-600" : "text-red-600"}`}>
+                ${netProfit.toLocaleString()}
               </div>
               <p className="text-xs text-slate-600 dark:text-slate-400">
-                Tracked expenses
+                Revenue - Expenses
               </p>
             </CardContent>
           </Card>
@@ -201,21 +232,7 @@ export default function HomePage() {
           </TabsContent>
 
           <TabsContent value="budget" className="space-y-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>Financial Overview</CardTitle>
-                <CardDescription>
-                  Track revenue, expenses, and profitability
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="text-center py-12 text-slate-500 dark:text-slate-400">
-                  <DollarSign className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                  <p className="text-lg font-medium mb-2">Budget dashboard coming soon</p>
-                  <p className="text-sm">Track your financial performance</p>
-                </div>
-              </CardContent>
-            </Card>
+            <BudgetDashboard bookings={bookings} expenses={expenses} />
           </TabsContent>
 
           <TabsContent value="expenses" className="space-y-4">
@@ -228,18 +245,33 @@ export default function HomePage() {
                       Record expenses with receipts and payment proof
                     </CardDescription>
                   </div>
-                  <Button className="bg-blue-600 hover:bg-blue-700">
+                  <Button 
+                    className="bg-blue-600 hover:bg-blue-700"
+                    onClick={() => {
+                      setEditingExpense(undefined);
+                      setExpenseDialogOpen(true);
+                    }}
+                  >
                     <Plus className="h-4 w-4 mr-2" />
                     Add Expense
                   </Button>
                 </div>
               </CardHeader>
               <CardContent>
-                <div className="text-center py-12 text-slate-500 dark:text-slate-400">
-                  <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                  <p className="text-lg font-medium mb-2">No expenses recorded</p>
-                  <p className="text-sm">Start tracking your expenses with receipts</p>
-                </div>
+                {expenses.length === 0 ? (
+                  <div className="text-center py-12 text-slate-500 dark:text-slate-400">
+                    <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                    <p className="text-lg font-medium mb-2">No expenses recorded</p>
+                    <p className="text-sm">Start tracking your expenses with receipts</p>
+                  </div>
+                ) : (
+                  <ExpenseList
+                    expenses={expenses}
+                    bookings={bookings}
+                    onEdit={handleEditExpense}
+                    onDelete={handleDeleteExpense}
+                  />
+                )}
               </CardContent>
             </Card>
           </TabsContent>
@@ -251,6 +283,14 @@ export default function HomePage() {
         onOpenChange={setBookingDialogOpen}
         onSave={handleSaveBooking}
         booking={editingBooking}
+      />
+
+      <ExpenseDialog
+        open={expenseDialogOpen}
+        onOpenChange={setExpenseDialogOpen}
+        onSave={handleSaveExpense}
+        expense={editingExpense}
+        bookings={bookings}
       />
     </div>
   );
