@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Booking } from "@/types/booking";
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths, startOfWeek, endOfWeek } from "date-fns";
 import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, Star } from "lucide-react";
-import { HDate, HebrewCalendar, Event } from "hebcal";
+import { HDate, HebrewCalendar, flags } from "@hebcal/core";
 
 interface BookingCalendarProps {
   bookings: Booking[];
@@ -52,15 +52,16 @@ export function BookingCalendar({ bookings, onDateClick, onBookingClick }: Booki
     return acc;
   }, {} as Record<string, Booking[]>);
 
-  const getJewishHolidays = (date: Date): Event[] => {
+  const getJewishHolidays = (date: Date) => {
     try {
       const hDate = new HDate(date);
-      const events = HebrewCalendar.getHolidaysOnDate(hDate) || [];
-      return events.filter((event: Event) => {
-        const desc = event.getDesc();
-        return desc !== "Rosh Chodesh" && desc !== "Shabbat";
+      const events = HebrewCalendar.getHolidaysOnDate(hDate, false) || [];
+      return events.filter((event: any) => {
+        const mask = event.getFlags();
+        return (mask & flags.MAJOR_FAST) || (mask & flags.MINOR_FAST) || (mask & flags.MODERN_HOLIDAY) || (mask & flags.MAJOR_HOLIDAY) || (mask & flags.MINOR_HOLIDAY);
       });
     } catch (error) {
+      console.error("Error getting holidays:", error);
       return [];
     }
   };
@@ -250,7 +251,7 @@ export function BookingCalendar({ bookings, onDateClick, onBookingClick }: Booki
                   </span>
                 </div>
                 <div className="space-y-1">
-                  {selectedDateHolidays.map((holiday, index) => (
+                  {selectedDateHolidays.map((holiday: any, index: number) => (
                     <p key={index} className="text-sm text-yellow-800 dark:text-yellow-200">
                       {holiday.render()}
                     </p>
