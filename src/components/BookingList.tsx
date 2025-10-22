@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Booking } from "@/types/booking";
 import { formatCurrency } from "@/lib/bookingCalculations";
@@ -32,6 +31,7 @@ export function BookingList({ bookings, onEdit, onDelete }: BookingListProps) {
   const getPaymentStatusBadge = (status: string) => {
     const variants: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
       pending: "destructive",
+      confirmed: "default",
       deposit_paid: "secondary",
       partial: "outline",
       paid: "default",
@@ -40,6 +40,7 @@ export function BookingList({ bookings, onEdit, onDelete }: BookingListProps) {
 
     const labels: Record<string, string> = {
       pending: "Pending",
+      confirmed: "Confirmed",
       deposit_paid: "Deposit Paid",
       partial: "Partial Payment",
       paid: "Fully Paid",
@@ -62,7 +63,7 @@ export function BookingList({ bookings, onEdit, onDelete }: BookingListProps) {
   );
 
   const confirmedBookings = sortedBookings.filter(
-    (b) => b.paymentStatus === "paid"
+    (b) => b.paymentStatus === "confirmed" || b.paymentStatus === "paid"
   );
 
   const renderBookingCard = (booking: Booking) => (
