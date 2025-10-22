@@ -58,7 +58,7 @@ export function BookingCalendar({ bookings, onDateClick, onBookingClick }: Booki
       const events = HebrewCalendar.getHolidaysOnDate(hDate, false) || [];
       return events.filter((event: any) => {
         const mask = event.getFlags();
-        return (mask & flags.MAJOR_FAST) || (mask & flags.MINOR_FAST) || (mask & flags.MODERN_HOLIDAY) || (mask & flags.MAJOR_HOLIDAY) || (mask & flags.MINOR_HOLIDAY);
+        return (mask & flags.FAST_DAY) || (mask & flags.MODERN_HOLIDAY) || (mask & flags.CHAG) || (mask & flags.MINOR_HOLIDAY);
       });
     } catch (error) {
       console.error("Error getting holidays:", error);
