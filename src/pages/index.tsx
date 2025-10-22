@@ -9,6 +9,7 @@ import { BookingList } from "@/components/BookingList";
 import { ExpenseDialog } from "@/components/ExpenseDialog";
 import { ExpenseList } from "@/components/ExpenseList";
 import { BudgetDashboard } from "@/components/BudgetDashboard";
+import { ManagerSalary } from "@/components/ManagerSalary";
 import { Booking, Expense } from "@/types/booking";
 import { BookingCalendar } from "@/components/BookingCalendar";
 
@@ -91,6 +92,12 @@ export default function HomePage() {
 
   const handleDeleteExpense = (expenseId: string) => {
     const updatedExpenses = expenses.filter((e) => e.id !== expenseId);
+    setExpenses(updatedExpenses);
+    localStorage.setItem("trout-lake-expenses", JSON.stringify(updatedExpenses));
+  };
+
+  const handleAddExpense = (expense: Expense) => {
+    const updatedExpenses = [...expenses, expense];
     setExpenses(updatedExpenses);
     localStorage.setItem("trout-lake-expenses", JSON.stringify(updatedExpenses));
   };
@@ -178,11 +185,12 @@ export default function HomePage() {
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4 lg:w-[600px]">
+          <TabsList className="grid w-full grid-cols-5 lg:w-[750px]">
             <TabsTrigger value="bookings">Bookings</TabsTrigger>
             <TabsTrigger value="calendar">Calendar</TabsTrigger>
             <TabsTrigger value="budget">Budget</TabsTrigger>
             <TabsTrigger value="expenses">Expenses</TabsTrigger>
+            <TabsTrigger value="manager">Manager</TabsTrigger>
           </TabsList>
 
           <TabsContent value="bookings" className="space-y-4">
@@ -271,6 +279,20 @@ export default function HomePage() {
                     onDelete={handleDeleteExpense}
                   />
                 )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="manager" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle>Manager Compensation</CardTitle>
+                <CardDescription>
+                  Track maintenance fees, commissions, and payments to manager
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <ManagerSalary bookings={bookings} onAddExpense={handleAddExpense} />
               </CardContent>
             </Card>
           </TabsContent>
