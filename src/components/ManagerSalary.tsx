@@ -1,9 +1,8 @@
 
 import { useState, useEffect } from "react";
-import { Plus, DollarSign, Calendar, TrendingUp, Download } from "lucide-react";
+import { Plus, DollarSign, Calendar, TrendingUp } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
@@ -11,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Booking, ManagerPayment, ManagerSalaryData, Expense, PaymentMethod } from "@/types/booking";
-import { format } from "date-fns";
+import { format, startOfMonth, isAfter, isBefore, differenceInMonths } from "date-fns";
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { CalendarIcon } from "lucide-react";
@@ -50,10 +49,35 @@ export function ManagerSalary({ bookings, onAddExpense }: ManagerSalaryProps) {
   }, []);
 
   const calculateMaintenanceFees = () => {
-    const start = new Date(salaryData.seasonStart);
-    const end = new Date(salaryData.seasonEnd);
-    const months = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24 * 30));
-    return months * salaryData.maintenanceFeePerMonth;
+    const seasonStart = new Date(salaryData.seasonStart);
+    const seasonEnd = new Date(salaryData.seasonEnd);
+    const today = new Date();
+    const currentMonthStart = startOfMonth(today);
+
+    if (isBefore(currentMonthStart, seasonStart)) {
+      return 0;
+    }
+
+    if (isAfter(currentMonthStart, seasonEnd)) {
+      const totalMonths = differenceInMonths(seasonEnd, seasonStart) + 1;
+      return totalMonths * salaryData.maintenanceFeePerMonth;
+    }
+
+    const monthsElapsed = differenceInMonths(currentMonthStart, seasonStart) + 1;
+    return monthsElapsed * salaryData.maintenanceFeePerMonth;
+  };
+
+  const getMonthsElapsedText = () => {
+    const seasonStart = new Date(salaryData.seasonStart);
+    const today = new Date();
+    const currentMonthStart = startOfMonth(today);
+
+    if (isBefore(currentMonthStart, seasonStart)) {
+      return "Season hasn't started";
+    }
+
+    const monthsElapsed = differenceInMonths(currentMonthStart, seasonStart) + 1;
+    return `${monthsElapsed} ${monthsElapsed === 1 ? "month" : "months"} elapsed`;
   };
 
   const calculateCommissions = () => {
@@ -131,7 +155,7 @@ export function ManagerSalary({ bookings, onAddExpense }: ManagerSalaryProps) {
           <CardContent>
             <div className="text-2xl font-bold">${totalMaintenanceFees.toLocaleString()}</div>
             <p className="text-xs text-slate-600 dark:text-slate-400">
-              Oct - July Season
+              {getMonthsElapsedText()}
             </p>
           </CardContent>
         </Card>
