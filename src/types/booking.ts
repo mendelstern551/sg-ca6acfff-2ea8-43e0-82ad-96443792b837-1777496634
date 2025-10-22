@@ -1,7 +1,7 @@
 
 export type BookingType = "yom_tov" | "shabaton" | "night_event";
 
-export type PaymentStatus = "pending" | "deposit_paid" | "partial" | "paid" | "refunded";
+export type PaymentStatus = "pending" | "confirmed" | "deposit_paid" | "partial" | "paid" | "refunded";
 
 export interface Booking {
   id: string;
