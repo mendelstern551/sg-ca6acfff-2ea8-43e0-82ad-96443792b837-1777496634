@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -139,22 +138,28 @@ export function ExpenseDialog({ open, onOpenChange, onSave, expense, bookings }:
 
               <div className="space-y-2">
                 <Label>Date</Label>
-                <Popover>
+                <Popover modal={false}>
                   <PopoverTrigger asChild>
                     <Button
                       type="button"
                       variant="outline"
-                      className="w-full justify-start text-left font-normal"
+                      className="w-full justify-start text-left font-normal pointer-events-auto"
                     >
                       <CalendarIcon className="mr-2 h-4 w-4" />
                       {formData.date ? format(formData.date, "PPP") : "Pick a date"}
                     </Button>
                   </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="start">
+                  <PopoverContent 
+                    className="w-auto p-0 pointer-events-auto" 
+                    align="start"
+                    onOpenAutoFocus={(e) => e.preventDefault()}
+                  >
                     <Calendar
                       mode="single"
                       selected={formData.date}
-                      onSelect={(date) => setFormData({ ...formData, date })}
+                      onSelect={(date) => {
+                        setFormData({ ...formData, date });
+                      }}
                       initialFocus
                     />
                   </PopoverContent>
