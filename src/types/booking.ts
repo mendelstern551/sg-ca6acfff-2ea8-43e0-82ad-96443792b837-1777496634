@@ -15,6 +15,27 @@ export interface Payment {
   createdAt: string;
 }
 
+export interface ManagerPayment {
+  id: string;
+  date: string;
+  amount: number;
+  paymentMethod: PaymentMethod;
+  referenceNumber?: string;
+  type: "maintenance" | "commission" | "other";
+  relatedBookingId?: string;
+  notes: string;
+  createdAt: string;
+}
+
+export interface ManagerSalaryData {
+  maintenanceFeePerMonth: number;
+  commissionPercentage: number;
+  minimumCommissionPerEvent: number;
+  seasonStart: string;
+  seasonEnd: string;
+  payments: ManagerPayment[];
+}
+
 export interface Booking {
   id: string;
   type: BookingType;
