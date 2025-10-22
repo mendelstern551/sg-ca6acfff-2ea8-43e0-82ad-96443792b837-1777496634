@@ -142,6 +142,7 @@ export function ExpenseDialog({ open, onOpenChange, onSave, expense, bookings }:
                 <Popover>
                   <PopoverTrigger asChild>
                     <Button
+                      type="button"
                       variant="outline"
                       className="w-full justify-start text-left font-normal"
                     >
@@ -149,7 +150,7 @@ export function ExpenseDialog({ open, onOpenChange, onSave, expense, bookings }:
                       {formData.date ? format(formData.date, "PPP") : "Pick a date"}
                     </Button>
                   </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0">
+                  <PopoverContent className="w-auto p-0" align="start">
                     <Calendar
                       mode="single"
                       selected={formData.date}
