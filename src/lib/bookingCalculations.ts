@@ -37,7 +37,7 @@ export function calculateBookingCost(
   const cleaningFee = pricing.cleaningFee;
   const additionalCleaningFee =
     numberOfGuests > pricing.additionalCleaningFeeThreshold
-      ? Math.ceil((numberOfGuests - pricing.additionalCleaningFeeThreshold) / 25) *
+      ? Math.ceil((numberOfGuests - pricing.additionalCleaningFeeThreshold) / 50) *
         pricing.additionalCleaningFee
       : 0;
 
