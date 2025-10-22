@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -31,6 +32,7 @@ export function BookingDialog({ open, onOpenChange, onSave, booking }: BookingDi
     endDate: undefined as Date | undefined,
     numberOfGuests: 0,
     notes: "",
+    confirmed: false,
   });
 
   const [calculations, setCalculations] = useState(calculateBookingCost("yom_tov", 0));
@@ -47,6 +49,7 @@ export function BookingDialog({ open, onOpenChange, onSave, booking }: BookingDi
         endDate: new Date(booking.endDate),
         numberOfGuests: booking.numberOfGuests,
         notes: booking.notes,
+        confirmed: booking.paymentStatus === "confirmed" || booking.paymentStatus === "paid",
       });
     }
   }, [booking]);
@@ -82,7 +85,7 @@ export function BookingDialog({ open, onOpenChange, onSave, booking }: BookingDi
       depositAmount: calculations.depositFirst + calculations.depositSecond,
       amountPaid: booking?.amountPaid || 0,
       balanceDue: calculations.totalCost - (booking?.amountPaid || 0),
-      paymentStatus: booking?.paymentStatus || "pending",
+      paymentStatus: formData.confirmed ? "confirmed" : (booking?.paymentStatus || "pending"),
       notes: formData.notes,
       createdAt: booking?.createdAt || new Date().toISOString(),
       updatedAt: new Date().toISOString(),
@@ -104,6 +107,7 @@ export function BookingDialog({ open, onOpenChange, onSave, booking }: BookingDi
       endDate: undefined,
       numberOfGuests: 0,
       notes: "",
+      confirmed: false,
     });
   };
 
@@ -135,6 +139,25 @@ export function BookingDialog({ open, onOpenChange, onSave, booking }: BookingDi
                     <SelectItem value="night_event">Night Event</SelectItem>
                   </SelectContent>
                 </Select>
+              </div>
+
+              <div className="flex items-center space-x-3 p-4 bg-blue-50 dark:bg-blue-950/30 rounded-lg border-2 border-blue-200 dark:border-blue-800">
+                <Checkbox
+                  id="confirmed"
+                  checked={formData.confirmed}
+                  onCheckedChange={(checked) => setFormData({ ...formData, confirmed: checked === true })}
+                />
+                <Label
+                  htmlFor="confirmed"
+                  className="text-sm font-semibold cursor-pointer flex items-center gap-2"
+                >
+                  <span className="text-blue-700 dark:text-blue-300">
+                    ✓ Booking Confirmed
+                  </span>
+                  <span className="text-xs font-normal text-slate-600 dark:text-slate-400">
+                    (Check to mark as confirmed)
+                  </span>
+                </Label>
               </div>
 
               <div className="space-y-2">
