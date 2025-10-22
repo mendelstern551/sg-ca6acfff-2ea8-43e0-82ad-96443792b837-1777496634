@@ -33,9 +33,13 @@ export function BookingDialog({ open, onOpenChange, onSave, booking }: BookingDi
     numberOfGuests: 0,
     notes: "",
     confirmed: false,
+    discountAmount: 0,
+    discountType: "percentage" as "percentage" | "fixed",
+    customPrice: undefined as number | undefined,
   });
 
   const [calculations, setCalculations] = useState(calculateBookingCost("yom_tov", 0));
+  const [finalPrice, setFinalPrice] = useState(0);
 
   useEffect(() => {
     if (booking) {
@@ -50,6 +54,9 @@ export function BookingDialog({ open, onOpenChange, onSave, booking }: BookingDi
         numberOfGuests: booking.numberOfGuests,
         notes: booking.notes,
         confirmed: booking.paymentStatus === "confirmed" || booking.paymentStatus === "paid",
+        discountAmount: 0,
+        discountType: "percentage",
+        customPrice: undefined,
       });
     }
   }, [booking]);
@@ -57,7 +64,22 @@ export function BookingDialog({ open, onOpenChange, onSave, booking }: BookingDi
   useEffect(() => {
     const calc = calculateBookingCost(formData.type, formData.numberOfGuests);
     setCalculations(calc);
-  }, [formData.type, formData.numberOfGuests]);
+
+    let calculatedPrice = calc.totalCost;
+
+    if (formData.customPrice !== undefined && formData.customPrice > 0) {
+      calculatedPrice = formData.customPrice;
+    } else if (formData.discountAmount > 0) {
+      if (formData.discountType === "percentage") {
+        const discountPercent = Math.min(formData.discountAmount, 100);
+        calculatedPrice = calc.totalCost * (1 - discountPercent / 100);
+      } else {
+        calculatedPrice = Math.max(0, calc.totalCost - formData.discountAmount);
+      }
+    }
+
+    setFinalPrice(calculatedPrice);
+  }, [formData.type, formData.numberOfGuests, formData.discountAmount, formData.discountType, formData.customPrice]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -66,6 +88,10 @@ export function BookingDialog({ open, onOpenChange, onSave, booking }: BookingDi
       alert("Please select start and end dates");
       return;
     }
+
+    const actualTotalCost = formData.customPrice !== undefined && formData.customPrice > 0 
+      ? formData.customPrice 
+      : finalPrice;
 
     const newBooking: Booking = {
       id: booking?.id || `booking-${Date.now()}`,
@@ -81,10 +107,10 @@ export function BookingDialog({ open, onOpenChange, onSave, booking }: BookingDi
       perPersonRate: calculations.perPersonRate,
       cleaningFee: calculations.cleaningFee,
       additionalCleaningFee: calculations.additionalCleaningFee,
-      totalCost: calculations.totalCost,
-      depositAmount: calculations.depositFirst + calculations.depositSecond,
+      totalCost: actualTotalCost,
+      depositAmount: actualTotalCost * 0.5,
       amountPaid: booking?.amountPaid || 0,
-      balanceDue: calculations.totalCost - (booking?.amountPaid || 0),
+      balanceDue: actualTotalCost - (booking?.amountPaid || 0),
       paymentStatus: formData.confirmed ? "confirmed" : (booking?.paymentStatus || "pending"),
       notes: formData.notes,
       createdAt: booking?.createdAt || new Date().toISOString(),
@@ -108,6 +134,9 @@ export function BookingDialog({ open, onOpenChange, onSave, booking }: BookingDi
       numberOfGuests: 0,
       notes: "",
       confirmed: false,
+      discountAmount: 0,
+      discountType: "percentage",
+      customPrice: undefined,
     });
   };
 
@@ -267,6 +296,58 @@ export function BookingDialog({ open, onOpenChange, onSave, booking }: BookingDi
                 />
               </div>
 
+              <div className="space-y-2 pt-2 border-t">
+                <Label className="text-blue-600 font-semibold">Pricing Adjustments</Label>
+                
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="space-y-2">
+                    <Label htmlFor="discountType" className="text-sm">Discount Type</Label>
+                    <Select
+                      value={formData.discountType}
+                      onValueChange={(value) => setFormData({ ...formData, discountType: value as "percentage" | "fixed" })}
+                    >
+                      <SelectTrigger id="discountType">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="percentage">Percentage (%)</SelectItem>
+                        <SelectItem value="fixed">Fixed Amount ($)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="discountAmount" className="text-sm">Discount Value</Label>
+                    <Input
+                      id="discountAmount"
+                      type="number"
+                      min="0"
+                      step={formData.discountType === "percentage" ? "1" : "0.01"}
+                      max={formData.discountType === "percentage" ? "100" : undefined}
+                      value={formData.discountAmount || ""}
+                      onChange={(e) => setFormData({ ...formData, discountAmount: parseFloat(e.target.value) || 0 })}
+                      placeholder={formData.discountType === "percentage" ? "0-100" : "0.00"}
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2 pt-2">
+                  <Label htmlFor="customPrice" className="text-sm flex items-center gap-2">
+                    Custom Price Override
+                    <span className="text-xs font-normal text-slate-500">(Leave empty to use calculated price)</span>
+                  </Label>
+                  <Input
+                    id="customPrice"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={formData.customPrice || ""}
+                    onChange={(e) => setFormData({ ...formData, customPrice: e.target.value ? parseFloat(e.target.value) : undefined })}
+                    placeholder="Enter custom total price"
+                  />
+                </div>
+              </div>
+
               <div className="space-y-2">
                 <Label htmlFor="notes">Notes</Label>
                 <Textarea
@@ -310,20 +391,57 @@ export function BookingDialog({ open, onOpenChange, onSave, booking }: BookingDi
                   </div>
                 )}
                 <div className="col-span-2 pt-4 border-t">
-                  <p className="text-sm text-slate-600 dark:text-slate-400">Total Cost</p>
-                  <p className="text-2xl font-bold text-blue-600">{formatCurrency(calculations.totalCost)}</p>
+                  <p className="text-sm text-slate-600 dark:text-slate-400">Subtotal</p>
+                  <p className="text-xl font-bold">{formatCurrency(calculations.totalCost)}</p>
                 </div>
+
+                {(formData.discountAmount > 0 || formData.customPrice) && (
+                  <>
+                    {formData.customPrice !== undefined && formData.customPrice > 0 ? (
+                      <div className="col-span-2 bg-green-50 dark:bg-green-950/30 p-3 rounded-lg">
+                        <p className="text-sm text-green-700 dark:text-green-300 font-semibold">Custom Price Applied</p>
+                        <p className="text-lg font-bold text-green-600">{formatCurrency(formData.customPrice)}</p>
+                      </div>
+                    ) : formData.discountAmount > 0 ? (
+                      <>
+                        <div className="col-span-2 bg-orange-50 dark:bg-orange-950/30 p-3 rounded-lg">
+                          <p className="text-sm text-orange-700 dark:text-orange-300">
+                            Discount: {formData.discountType === "percentage" 
+                              ? `${formData.discountAmount}%` 
+                              : formatCurrency(formData.discountAmount)}
+                          </p>
+                          <p className="text-lg font-semibold text-orange-600">
+                            -{formatCurrency(calculations.totalCost - finalPrice)}
+                          </p>
+                        </div>
+                      </>
+                    ) : null}
+
+                    <div className="col-span-2 pt-2 border-t-2 border-blue-200 dark:border-blue-800">
+                      <p className="text-sm text-slate-600 dark:text-slate-400">Final Total</p>
+                      <p className="text-2xl font-bold text-blue-600">{formatCurrency(finalPrice)}</p>
+                    </div>
+                  </>
+                )}
+
+                {!formData.customPrice && formData.discountAmount === 0 && (
+                  <div className="col-span-2 pt-4 border-t">
+                    <p className="text-sm text-slate-600 dark:text-slate-400">Total Cost</p>
+                    <p className="text-2xl font-bold text-blue-600">{formatCurrency(calculations.totalCost)}</p>
+                  </div>
+                )}
+
                 <div>
                   <p className="text-sm text-slate-600 dark:text-slate-400">1st Deposit (25%)</p>
-                  <p className="font-semibold">{formatCurrency(calculations.depositFirst)}</p>
+                  <p className="font-semibold">{formatCurrency(finalPrice * 0.25)}</p>
                 </div>
                 <div>
                   <p className="text-sm text-slate-600 dark:text-slate-400">2nd Deposit (25%)</p>
-                  <p className="font-semibold">{formatCurrency(calculations.depositSecond)}</p>
+                  <p className="font-semibold">{formatCurrency(finalPrice * 0.25)}</p>
                 </div>
                 <div className="col-span-2">
                   <p className="text-sm text-slate-600 dark:text-slate-400">Balance Due (50%)</p>
-                  <p className="font-semibold">{formatCurrency(calculations.balance)}</p>
+                  <p className="font-semibold">{formatCurrency(finalPrice * 0.5)}</p>
                 </div>
               </div>
             </CardContent>
