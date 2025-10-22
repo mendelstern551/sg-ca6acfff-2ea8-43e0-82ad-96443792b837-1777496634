@@ -47,6 +47,12 @@ export default function HomePage() {
     setEditingBooking(undefined);
   };
 
+  const handleUpdateBooking = (booking: Booking) => {
+    const updatedBookings = bookings.map((b) => (b.id === booking.id ? booking : b));
+    setBookings(updatedBookings);
+    localStorage.setItem("trout-lake-bookings", JSON.stringify(updatedBookings));
+  };
+
   const handleEditBooking = (booking: Booking) => {
     setEditingBooking(booking);
     setBookingDialogOpen(true);
@@ -89,7 +95,7 @@ export default function HomePage() {
   const netProfit = totalRevenue - totalExpenses;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-slate-50 dark:from-slate-950 dark:via-blue-950 dark:to-slate-950">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-slate-50 dark:from-slate-950 dark:via-blue-950 dark:to-slate-50">
       <header className="border-b bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm sticky top-0 z-50">
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
@@ -207,6 +213,7 @@ export default function HomePage() {
                     bookings={bookings}
                     onEdit={handleEditBooking}
                     onDelete={handleDeleteBooking}
+                    onUpdateBooking={handleUpdateBooking}
                   />
                 )}
               </CardContent>

@@ -1,7 +1,19 @@
-
 export type BookingType = "yom_tov" | "shabaton" | "night_event";
 
 export type PaymentStatus = "pending" | "confirmed" | "deposit_paid" | "partial" | "paid" | "refunded";
+
+export type PaymentMethod = "cash" | "check" | "credit_card" | "bank_transfer" | "venmo" | "zelle" | "other";
+
+export interface Payment {
+  id: string;
+  bookingId: string;
+  amount: number;
+  date: string;
+  paymentMethod: PaymentMethod;
+  referenceNumber?: string;
+  notes: string;
+  createdAt: string;
+}
 
 export interface Booking {
   id: string;
@@ -22,6 +34,7 @@ export interface Booking {
   amountPaid: number;
   balanceDue: number;
   paymentStatus: PaymentStatus;
+  payments?: Payment[];
   notes: string;
   createdAt: string;
   updatedAt: string;
