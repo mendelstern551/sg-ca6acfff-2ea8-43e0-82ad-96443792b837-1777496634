@@ -1,12 +1,11 @@
 
-"use client";
-
 import { useState } from "react";
-import { Calendar } from "@/components/ui/calendar";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Booking } from "@/types/booking";
-import { format } from "date-fns";
+import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths, startOfWeek, endOfWeek } from "date-fns";
+import { ChevronLeft, ChevronRight, Calendar as CalendarIcon } from "lucide-react";
 
 interface BookingCalendarProps {
   bookings: Booking[];
@@ -15,109 +14,178 @@ interface BookingCalendarProps {
 }
 
 const bookingTypeColors: { [key: string]: string } = {
-  "Yom Tov": "bg-blue-500",
-  "Shabaton": "bg-green-500",
-  "Night Event": "bg-purple-500",
+  yom_tov: "bg-blue-500",
+  shabaton: "bg-green-500",
+  night_event: "bg-purple-500",
+};
+
+const bookingTypeLabels: { [key: string]: string } = {
+  yom_tov: "Yom Tov",
+  shabaton: "Shabaton",
+  night_event: "Night Event",
 };
 
 export function BookingCalendar({ bookings, onDateClick, onBookingClick }: BookingCalendarProps) {
-  const [date, setDate] = useState<Date | undefined>(new Date());
+  const [currentMonth, setCurrentMonth] = useState(new Date());
+  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
 
-  const bookingDays = bookings.reduce((acc, booking) => {
-    const bookingDate = new Date(booking.startDate);
-    const key = format(bookingDate, "yyyy-MM-dd");
-    if (!acc[key]) {
-      acc[key] = [];
-    }
-    acc[key].push(booking);
+  const monthStart = startOfMonth(currentMonth);
+  const monthEnd = endOfMonth(currentMonth);
+  const calendarStart = startOfWeek(monthStart);
+  const calendarEnd = endOfWeek(monthEnd);
+
+  const days = eachDayOfInterval({ start: calendarStart, end: calendarEnd });
+
+  const bookingsByDate = bookings.reduce((acc, booking) => {
+    const startDate = new Date(booking.startDate);
+    const endDate = new Date(booking.endDate);
+    const dates = eachDayOfInterval({ start: startDate, end: endDate });
+    
+    dates.forEach(date => {
+      const key = format(date, "yyyy-MM-dd");
+      if (!acc[key]) {
+        acc[key] = [];
+      }
+      acc[key].push(booking);
+    });
+    
     return acc;
   }, {} as Record<string, Booking[]>);
 
-  const DayWithBookings = ({ date }: { date: Date }) => {
-    const dayKey = format(date, "yyyy-MM-dd");
-    const dayBookings = bookingDays[dayKey] || [];
-
-    const dayContent = (
-      <div className="relative w-full h-full flex items-center justify-center">
-        {format(date, "d")}
-        {dayBookings.length > 0 && (
-          <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 flex space-x-0.5">
-            {dayBookings.slice(0, 3).map((booking) => (
-              <div
-                key={booking.id}
-                className={`h-1.5 w-1.5 rounded-full ${bookingTypeColors[booking.type] || "bg-gray-400"}`}
-              />
-            ))}
-          </div>
-        )}
-      </div>
-    );
-
-    if (dayBookings.length > 0) {
-      return (
-        <Popover>
-          <PopoverTrigger asChild>
-            {dayContent}
-          </PopoverTrigger>
-          <PopoverContent className="w-80 z-50">
-            <div className="grid gap-4">
-              <div className="space-y-2">
-                <h4 className="font-medium leading-none">
-                  Bookings for {format(date, "PPP")}
-                </h4>
-              </div>
-              <div className="grid gap-2">
-                {dayBookings.map((booking) => (
-                  <div 
-                    key={booking.id} 
-                    className="grid grid-cols-[25px_1fr] items-start pb-4 last:mb-0 last:pb-0 cursor-pointer rounded-md p-2 hover:bg-slate-100 dark:hover:bg-slate-800"
-                    onClick={() => onBookingClick?.(booking)}
-                  >
-                    <span className={`flex h-2 w-2 translate-y-1 rounded-full ${bookingTypeColors[booking.type]}`} />
-                    <div className="grid gap-1">
-                      <p className="text-sm font-medium leading-none">
-                        {booking.name}
-                      </p>
-                      <p className="text-sm text-muted-foreground">
-                        {booking.type} - {booking.numberOfGuests} guests
-                      </p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </PopoverContent>
-        </Popover>
-      );
-    }
-    return dayContent;
+  const handlePreviousMonth = () => {
+    setCurrentMonth(subMonths(currentMonth, 1));
   };
+
+  const handleNextMonth = () => {
+    setCurrentMonth(addMonths(currentMonth, 1));
+  };
+
+  const handleDateClick = (date: Date) => {
+    setSelectedDate(date);
+    onDateClick?.(date);
+  };
+
+  const selectedDateBookings = selectedDate 
+    ? bookingsByDate[format(selectedDate, "yyyy-MM-dd")] || []
+    : [];
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Calendar View</CardTitle>
-        <CardDescription>
-          View all your bookings in a calendar format. Hover over dates with dots for details.
-        </CardDescription>
+        <div className="flex items-center justify-between">
+          <div>
+            <CardTitle className="flex items-center gap-2">
+              <CalendarIcon className="h-5 w-5" />
+              Booking Calendar
+            </CardTitle>
+            <CardDescription>
+              View all your bookings in a calendar format
+            </CardDescription>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" onClick={handlePreviousMonth}>
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+            <span className="text-sm font-medium min-w-[120px] text-center">
+              {format(currentMonth, "MMMM yyyy")}
+            </span>
+            <Button variant="outline" size="sm" onClick={handleNextMonth}>
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
       </CardHeader>
-      <CardContent className="flex justify-center">
-        <Calendar
-          mode="single"
-          selected={date}
-          onSelect={setDate}
-          className="rounded-md border p-4"
-          components={{
-            Day: DayWithBookings as any,
-          }}
-          onDayClick={(day, modifiers) => {
-            if (!modifiers.disabled) {
-              onDateClick?.(day)
-            }
-          }}
-        />
+      <CardContent>
+        <div className="grid grid-cols-7 gap-2 mb-2">
+          {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((day) => (
+            <div key={day} className="text-center text-sm font-medium text-slate-600 dark:text-slate-400 py-2">
+              {day}
+            </div>
+          ))}
+        </div>
+
+        <div className="grid grid-cols-7 gap-2">
+          {days.map((day) => {
+            const dayKey = format(day, "yyyy-MM-dd");
+            const dayBookings = bookingsByDate[dayKey] || [];
+            const isCurrentMonth = isSameMonth(day, currentMonth);
+            const isSelected = selectedDate && isSameDay(day, selectedDate);
+            const isToday = isSameDay(day, new Date());
+
+            return (
+              <button
+                key={day.toString()}
+                onClick={() => handleDateClick(day)}
+                className={`
+                  relative h-16 p-1 rounded-lg border transition-all
+                  ${isCurrentMonth ? "bg-white dark:bg-slate-900" : "bg-slate-50 dark:bg-slate-800/50"}
+                  ${isSelected ? "ring-2 ring-blue-500 border-blue-500" : "border-slate-200 dark:border-slate-700"}
+                  ${isToday ? "border-blue-400 bg-blue-50 dark:bg-blue-950" : ""}
+                  ${dayBookings.length > 0 ? "hover:shadow-md" : ""}
+                  ${!isCurrentMonth ? "opacity-40" : ""}
+                  hover:border-slate-300 dark:hover:border-slate-600
+                `}
+              >
+                <div className="text-sm font-medium mb-1">
+                  {format(day, "d")}
+                </div>
+                {dayBookings.length > 0 && (
+                  <div className="flex flex-wrap gap-0.5 justify-center">
+                    {dayBookings.slice(0, 3).map((booking) => (
+                      <div
+                        key={booking.id}
+                        className={`h-1.5 w-1.5 rounded-full ${bookingTypeColors[booking.type] || "bg-gray-400"}`}
+                        title={booking.name}
+                      />
+                    ))}
+                    {dayBookings.length > 3 && (
+                      <span className="text-[10px] text-slate-600 dark:text-slate-400">
+                        +{dayBookings.length - 3}
+                      </span>
+                    )}
+                  </div>
+                )}
+              </button>
+            );
+          })}
+        </div>
+
+        {selectedDate && selectedDateBookings.length > 0 && (
+          <div className="mt-6 pt-6 border-t">
+            <h4 className="text-sm font-semibold mb-4">
+              Bookings on {format(selectedDate, "MMMM d, yyyy")}
+            </h4>
+            <div className="space-y-3">
+              {selectedDateBookings.map((booking) => (
+                <div
+                  key={booking.id}
+                  onClick={() => onBookingClick?.(booking)}
+                  className="p-4 rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 cursor-pointer transition-colors"
+                >
+                  <div className="flex items-start justify-between mb-2">
+                    <div>
+                      <h5 className="font-medium">{booking.name}</h5>
+                      <p className="text-sm text-slate-600 dark:text-slate-400">
+                        {booking.contactName}
+                      </p>
+                    </div>
+                    <Badge variant="outline">
+                      {bookingTypeLabels[booking.type] || booking.type}
+                    </Badge>
+                  </div>
+                  <div className="flex items-center gap-4 text-sm text-slate-600 dark:text-slate-400">
+                    <span>{booking.numberOfGuests} guests</span>
+                    <span>•</span>
+                    <span>
+                      {format(new Date(booking.startDate), "MMM d")} - {format(new Date(booking.endDate), "MMM d")}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </CardContent>
     </Card>
   );
 }
-
