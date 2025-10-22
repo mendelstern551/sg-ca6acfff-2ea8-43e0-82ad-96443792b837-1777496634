@@ -24,7 +24,7 @@ export function BookingCalendar({ bookings, onDateClick, onBookingClick }: Booki
   const [date, setDate] = useState<Date | undefined>(new Date());
 
   const bookingDays = bookings.reduce((acc, booking) => {
-    const bookingDate = new Date(booking.checkInDate);
+    const bookingDate = new Date(booking.startDate);
     const key = format(bookingDate, "yyyy-MM-dd");
     if (!acc[key]) {
       acc[key] = [];

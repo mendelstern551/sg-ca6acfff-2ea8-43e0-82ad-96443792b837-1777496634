@@ -121,13 +121,13 @@ export function ExpenseDialog({ open, onOpenChange, onSave, expense, bookings }:
                 <Label htmlFor="bookingId">Related Booking (Optional)</Label>
                 <Select
                   value={formData.bookingId}
-                  onValueChange={(value) => setFormData({ ...formData, bookingId: value })}
+                  onValueChange={(value) => setFormData({ ...formData, bookingId: value === "none" ? "" : value })}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Select booking (optional)" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">None</SelectItem>
+                    <SelectItem value="none">None</SelectItem>
                     {bookings.map((booking) => (
                       <SelectItem key={booking.id} value={booking.id}>
                         {booking.name}
