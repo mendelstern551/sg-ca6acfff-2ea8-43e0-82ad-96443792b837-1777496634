@@ -90,6 +90,7 @@ export function BookingDialog({ open, onOpenChange, onSave, booking }: BookingDi
     const currentBookingId = booking?.id;
     
     const hasConflict = existingBookings.some((existingBooking) => {
+      // Skip checking against the current booking being edited
       if (currentBookingId && existingBooking.id === currentBookingId) {
         return false;
       }
@@ -99,6 +100,7 @@ export function BookingDialog({ open, onOpenChange, onSave, booking }: BookingDi
       const newStart = dateRange.from!;
       const newEnd = dateRange.to!;
 
+      // Check if dates overlap
       return (
         (newStart >= existingStart && newStart <= existingEnd) ||
         (newEnd >= existingStart && newEnd <= existingEnd) ||
