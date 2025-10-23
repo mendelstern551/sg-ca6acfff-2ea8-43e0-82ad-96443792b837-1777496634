@@ -84,16 +84,19 @@ export default function HomePage() {
     localStorage.setItem("trout-lake-bookings", JSON.stringify(updatedBookings));
     setBookings(updatedBookings);
     
-    // Force verification after state update
+    // Force immediate re-read from localStorage to ensure UI sync
     setTimeout(() => {
       const savedData = localStorage.getItem("trout-lake-bookings");
       if (savedData) {
         const parsed = JSON.parse(savedData);
+        console.log("✓ Force reloading from localStorage");
+        setBookings([...parsed]); // Force new array reference
+        
         const savedBooking = parsed.find((b: Booking) => b.id === booking.id);
         console.log("✓ Verified saved booking payments:", savedBooking?.payments);
         console.log("✓ Payments count:", savedBooking?.payments?.length);
       }
-    }, 100);
+    }, 50);
   };
 
   const handleEditBooking = (booking: Booking) => {
