@@ -38,7 +38,7 @@ export interface ManagerSalaryData {
 
 export interface Booking {
   id: string;
-  type: BookingType;
+  bookingType: BookingType;
   name: string;
   contactName: string;
   contactEmail: string;
@@ -60,6 +60,8 @@ export interface Booking {
   notes: string;
   createdAt: string;
   updatedAt: string;
+  customPrice?: number;
+  discountPercent?: number;
 }
 
 export interface Expense {

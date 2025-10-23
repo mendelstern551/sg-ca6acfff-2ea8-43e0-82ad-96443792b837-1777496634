@@ -13,6 +13,7 @@ import { format, differenceInDays } from "date-fns";
 import { Booking, BookingType } from "@/types/booking";
 import { calculateBookingCost, formatCurrency } from "@/lib/bookingCalculations";
 import { Card, CardContent } from "@/components/ui/card";
+import { DateRange } from "react-day-picker";
 
 interface BookingDialogProps {
   open: boolean;
@@ -28,10 +29,7 @@ export function BookingDialog({ open, onOpenChange, onSave, booking }: BookingDi
   const [contactName, setContactName] = useState("");
   const [contactEmail, setContactEmail] = useState("");
   const [contactPhone, setContactPhone] = useState("");
-  const [dateRange, setDateRange] = useState<{ from: Date | undefined; to: Date | undefined }>({
-    from: undefined,
-    to: undefined,
-  });
+  const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
   const [numberOfGuests, setNumberOfGuests] = useState(50);
   const [notes, setNotes] = useState("");
   const [customPrice, setCustomPrice] = useState<number | undefined>();
@@ -80,7 +78,7 @@ export function BookingDialog({ open, onOpenChange, onSave, booking }: BookingDi
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!dateRange.from || !dateRange.to) {
+    if (!dateRange?.from || !dateRange?.to) {
       alert("Please select start and end dates");
       return;
     }
@@ -145,7 +143,7 @@ export function BookingDialog({ open, onOpenChange, onSave, booking }: BookingDi
     setContactName("");
     setContactEmail("");
     setContactPhone("");
-    setDateRange({ from: undefined, to: undefined });
+    setDateRange(undefined);
     setNumberOfGuests(50);
     setNotes("");
     setCustomPrice(undefined);
@@ -258,17 +256,17 @@ export function BookingDialog({ open, onOpenChange, onSave, booking }: BookingDi
                   <EnhancedCalendar
                     mode="range"
                     selected={dateRange}
-                    onSelect={(range) => setDateRange(range || { from: undefined, to: undefined })}
+                    onSelect={setDateRange}
                     numberOfMonths={2}
                     className="rounded-md"
                   />
                 </div>
-                {dateRange.from && dateRange.to && (
+                {dateRange?.from && dateRange?.to && (
                   <div className="p-3 bg-blue-50 dark:bg-blue-950 rounded-lg">
                     <p className="text-sm font-medium text-blue-900 dark:text-blue-100">
                       Selected: {format(dateRange.from, "MMM d, yyyy")} - {format(dateRange.to, "MMM d, yyyy")}
                       <span className="ml-2 text-blue-600 dark:text-blue-400">
-                        ({differenceInDays(dateRange.to, dateRange.from) + 1} nights)
+                        ({differenceInDays(dateRange.to, dateRange.from)} nights)
                       </span>
                     </p>
                   </div>
