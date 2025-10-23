@@ -5,16 +5,23 @@ import { Badge } from "@/components/ui/badge";
 import { Booking, Expense } from "@/types/booking";
 import { formatCurrency } from "@/lib/bookingCalculations";
 import { format } from "date-fns";
-import { DollarSign, TrendingUp, TrendingDown, Receipt, Calendar } from "lucide-react";
+import { DollarSign, TrendingUp, TrendingDown, Receipt, Calendar, Users } from "lucide-react";
 
 interface ClientDetailsDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   booking: Booking;
   allExpenses: Expense[];
+  onNavigateToExpenses?: (bookingId: string) => void;
 }
 
-export function ClientDetailsDialog({ open, onOpenChange, booking, allExpenses }: ClientDetailsDialogProps) {
+export function ClientDetailsDialog({ 
+  open, 
+  onOpenChange, 
+  booking, 
+  allExpenses,
+  onNavigateToExpenses 
+}: ClientDetailsDialogProps) {
   const clientExpenses = allExpenses.filter(e => e.bookingId === booking.id);
   const totalExpenses = clientExpenses.reduce((sum, e) => sum + e.amount, 0);
   const netProfit = booking.totalCost - totalExpenses;
@@ -38,13 +45,40 @@ export function ClientDetailsDialog({ open, onOpenChange, booking, allExpenses }
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="text-2xl">Client Financial Details</DialogTitle>
-          <DialogDescription>
-            Complete financial breakdown for {booking.name}
-          </DialogDescription>
+          <DialogTitle className="flex items-center gap-2 text-xl">
+            <Users className="h-5 w-5 text-blue-600" />
+            Client Details - {booking.contactName}
+          </DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-6 py-4">
+        <div className="space-y-6">
+          <div className="grid grid-cols-3 gap-4">
+            <div className="text-center p-4 bg-blue-50 dark:bg-blue-950 rounded-lg">
+              <p className="text-sm text-slate-600 dark:text-slate-400 mb-1">Revenue</p>
+              <p className="text-2xl font-bold text-blue-600">{formatCurrency(booking.totalCost)}</p>
+            </div>
+            <div 
+              className="text-center p-4 bg-red-50 dark:bg-red-950 rounded-lg cursor-pointer hover:bg-red-100 dark:hover:bg-red-900 transition-colors"
+              onClick={() => {
+                if (onNavigateToExpenses) {
+                  onNavigateToExpenses(booking.id);
+                  onOpenChange(false);
+                }
+              }}
+              title="Click to view expenses for this booking"
+            >
+              <p className="text-sm text-slate-600 dark:text-slate-400 mb-1">Expenses</p>
+              <p className="text-2xl font-bold text-red-600">{formatCurrency(totalExpenses)}</p>
+              <p className="text-xs text-slate-500 mt-1">Click to view details</p>
+            </div>
+            <div className="text-center p-4 bg-green-50 dark:bg-green-950 rounded-lg">
+              <p className="text-sm text-slate-600 dark:text-slate-400 mb-1">Net profit</p>
+              <p className={`text-2xl font-bold ${netProfit >= 0 ? "text-green-600" : "text-red-600"}`}>
+                {formatCurrency(netProfit)}
+              </p>
+            </div>
+          </div>
+
           <div className="grid gap-4 md:grid-cols-2">
             <Card>
               <CardHeader className="pb-3">

@@ -23,6 +23,7 @@ export default function HomePage() {
   const [editingBooking, setEditingBooking] = useState<Booking | undefined>();
   const [editingExpense, setEditingExpense] = useState<Expense | undefined>();
   const [refreshKey, setRefreshKey] = useState(0);
+  const [filteredBookingId, setFilteredBookingId] = useState<string | undefined>();
 
   useEffect(() => {
     const savedBookings = localStorage.getItem("trout-lake-bookings");
@@ -124,6 +125,15 @@ export default function HomePage() {
     });
   };
 
+  const handleNavigateToExpenses = (bookingId: string) => {
+    setFilteredBookingId(bookingId);
+    setActiveTab("expenses");
+  };
+
+  const handleClearExpenseFilter = () => {
+    setFilteredBookingId(undefined);
+  };
+
   const totalGuests = bookings.reduce((sum, b) => sum + b.numberOfGuests, 0);
   const totalRevenue = bookings.reduce((sum, b) => sum + b.totalCost, 0);
   const totalExpenses = expenses.reduce((sum, e) => sum + e.amount, 0);
@@ -206,7 +216,12 @@ export default function HomePage() {
           </Card>
         </div>
 
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+        <Tabs value={activeTab} onValueChange={(value) => {
+          setActiveTab(value);
+          if (value !== "expenses") {
+            setFilteredBookingId(undefined);
+          }
+        }} className="space-y-6">
           <TabsList className="grid w-full grid-cols-6 lg:w-[900px]">
             <TabsTrigger value="bookings">Bookings</TabsTrigger>
             <TabsTrigger value="calendar">Calendar</TabsTrigger>
@@ -253,6 +268,7 @@ export default function HomePage() {
                     onDelete={handleDeleteBooking}
                     onUpdateBooking={handleUpdateBooking}
                     expenses={expenses}
+                    onNavigateToExpenses={handleNavigateToExpenses}
                   />
                 )}
               </CardContent>
@@ -309,6 +325,7 @@ export default function HomePage() {
                     bookings={bookings}
                     onEdit={handleEditExpense}
                     onDelete={handleDeleteExpense}
+                    filterBookingId={filteredBookingId}
                   />
                 )}
               </CardContent>

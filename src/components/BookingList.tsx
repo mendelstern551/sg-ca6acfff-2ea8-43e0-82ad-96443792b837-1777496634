@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Booking, Payment, Expense } from "@/types/booking";
 import { formatCurrency } from "@/lib/bookingCalculations";
@@ -18,9 +17,17 @@ interface BookingListProps {
   onDelete: (bookingId: string) => void;
   onUpdateBooking: (booking: Booking) => void;
   expenses?: Expense[];
+  onNavigateToExpenses?: (bookingId: string) => void;
 }
 
-export function BookingList({ bookings, onEdit, onDelete, onUpdateBooking, expenses = [] }: BookingListProps) {
+export function BookingList({ 
+  bookings, 
+  onEdit, 
+  onDelete, 
+  onUpdateBooking, 
+  expenses = [],
+  onNavigateToExpenses 
+}: BookingListProps) {
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState("all");
   const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
@@ -303,6 +310,7 @@ export function BookingList({ bookings, onEdit, onDelete, onUpdateBooking, expen
           onOpenChange={setDetailsDialogOpen}
           booking={selectedBooking}
           allExpenses={expenses}
+          onNavigateToExpenses={onNavigateToExpenses}
         />
       )}
 

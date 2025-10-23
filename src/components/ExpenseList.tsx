@@ -1,11 +1,11 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Expense, Booking } from "@/types/booking";
 import { formatCurrency } from "@/lib/bookingCalculations";
 import { format } from "date-fns";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Edit, Trash2, FileText, Image, ExternalLink, Search } from "lucide-react";
+import { Edit, Trash2, FileText, Image, ExternalLink, Search, Calendar } from "lucide-react";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 
@@ -14,11 +14,24 @@ interface ExpenseListProps {
   bookings: Booking[];
   onEdit: (expense: Expense) => void;
   onDelete: (expenseId: string) => void;
+  filterBookingId?: string;
 }
 
-export function ExpenseList({ expenses, bookings, onEdit, onDelete }: ExpenseListProps) {
+export function ExpenseList({ expenses, bookings, onEdit, onDelete, filterBookingId }: ExpenseListProps) {
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState<string>("all");
+  const [selectedBooking, setSelectedBooking] = useState<string>(filterBookingId || "all");
+  const [minAmount, setMinAmount] = useState<string>("");
+  const [maxAmount, setMaxAmount] = useState<string>("");
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [amountSearch, setAmountSearch] = useState("");
+
+  // Update selected booking when filter changes
+  useEffect(() => {
+    if (filterBookingId) {
+      setSelectedBooking(filterBookingId);
+    }
+  }, [filterBookingId]);
 
   console.log("ExpenseList received expenses:", expenses);
   console.log("Manager Salary expenses:", expenses.filter(e => e.category === "Manager Salary"));
@@ -123,8 +136,31 @@ export function ExpenseList({ expenses, bookings, onEdit, onDelete }: ExpenseLis
   }
 
   return (
-    <>
-      <div className="mb-6">
+    <div className="space-y-6">
+      {filterBookingId && (
+        <div className="bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Calendar className="h-4 w-4 text-blue-600" />
+              <span className="text-sm font-medium text-blue-900 dark:text-blue-100">
+                Showing expenses for: {getBookingName(filterBookingId)}
+              </span>
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                setSelectedBooking("all");
+              }}
+              className="text-blue-600 hover:text-blue-700"
+            >
+              Clear Filter
+            </Button>
+          </div>
+        </div>
+      )}
+
+      <div className="flex flex-col md:flex-row gap-4">
         <div className="relative max-w-md">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
           <Input
@@ -275,6 +311,6 @@ export function ExpenseList({ expenses, bookings, onEdit, onDelete }: ExpenseLis
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </>
+    </div>
   );
 }
