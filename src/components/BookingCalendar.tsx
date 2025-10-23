@@ -192,6 +192,36 @@ export function BookingCalendar({ bookings, onDateClick, onBookingClick, onAddBo
               <CardDescription>
                 English & Hebrew dates with Jewish holidays • Click dates to add or view bookings
               </CardDescription>
+              
+              {/* DEBUG PANEL - Remove after testing */}
+              {bookings.length > 0 && (
+                <div className="mt-4 p-4 bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-lg">
+                  <div className="text-xs space-y-2">
+                    <div><strong>Debug Info:</strong></div>
+                    <div>Total bookings loaded: {bookings.length}</div>
+                    <div>Dates with bookings: {Object.keys(bookingsByDate).length}</div>
+                    {bookings.length > 0 && (
+                      <div className="space-y-1">
+                        <div className="font-semibold">Sample booking:</div>
+                        <div>ID: {bookings[0].id}</div>
+                        <div>Name: {bookings[0].name}</div>
+                        <div>Start: {typeof bookings[0].startDate === 'string' ? bookings[0].startDate : bookings[0].startDate.toString()}</div>
+                        <div>End: {typeof bookings[0].endDate === 'string' ? bookings[0].endDate : bookings[0].endDate.toString()}</div>
+                        <div>Confirmed: {bookings[0].confirmed ? 'Yes' : 'No'}</div>
+                        <div>Type: {bookings[0].bookingType}</div>
+                      </div>
+                    )}
+                    {Object.keys(bookingsByDate).length > 0 && (
+                      <div className="mt-2">
+                        <div className="font-semibold">Booked dates:</div>
+                        <div className="max-h-20 overflow-y-auto">
+                          {Object.keys(bookingsByDate).slice(0, 10).join(', ')}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
             <div className="flex flex-col items-end gap-2">
               <div className="flex items-center gap-2">
