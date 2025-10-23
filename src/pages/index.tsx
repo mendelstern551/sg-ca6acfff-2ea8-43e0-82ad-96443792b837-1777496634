@@ -77,26 +77,17 @@ export default function HomePage() {
     
     // Create completely new array and objects to force React re-render
     const updatedBookings = bookings.map((b) => 
-      b.id === booking.id ? booking : b
+      b.id === booking.id ? { ...booking, _updateTimestamp: Date.now() } : b
     );
     
     console.log("Saving to state and localStorage");
     localStorage.setItem("trout-lake-bookings", JSON.stringify(updatedBookings));
-    setBookings(updatedBookings);
     
-    // Force immediate re-read from localStorage to ensure UI sync
-    setTimeout(() => {
-      const savedData = localStorage.getItem("trout-lake-bookings");
-      if (savedData) {
-        const parsed = JSON.parse(savedData);
-        console.log("✓ Force reloading from localStorage");
-        setBookings([...parsed]); // Force new array reference
-        
-        const savedBooking = parsed.find((b: Booking) => b.id === booking.id);
-        console.log("✓ Verified saved booking payments:", savedBooking?.payments);
-        console.log("✓ Payments count:", savedBooking?.payments?.length);
-      }
-    }, 50);
+    // Force immediate state update with new reference
+    setBookings([...updatedBookings]);
+    
+    console.log("✓ Bookings state updated");
+    console.log("✓ Updated booking payments:", booking.payments?.length);
   };
 
   const handleEditBooking = (booking: Booking) => {
@@ -270,7 +261,7 @@ export default function HomePage() {
                   </div>
                 ) : (
                   <BookingList
-                    key={`bookings-${bookings.length}-${bookings.reduce((acc, b) => acc + (b.payments?.length || 0), 0)}`}
+                    key={Date.now()}
                     bookings={bookings}
                     onEdit={handleEditBooking}
                     onDelete={handleDeleteBooking}
