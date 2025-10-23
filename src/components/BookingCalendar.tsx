@@ -1,5 +1,4 @@
-
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -42,6 +41,17 @@ export function BookingCalendar({ bookings, onDateClick, onBookingClick, onAddBo
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [dateDialogOpen, setDateDialogOpen] = useState(false);
 
+  // Debug: Log bookings data when component mounts or bookings change
+  useEffect(() => {
+    console.log("BookingCalendar received bookings:", bookings);
+    console.log("Total bookings:", bookings.length);
+    if (bookings.length > 0) {
+      console.log("First booking:", bookings[0]);
+      console.log("Start date:", bookings[0].startDate, "Type:", typeof bookings[0].startDate);
+      console.log("End date:", bookings[0].endDate, "Type:", typeof bookings[0].endDate);
+    }
+  }, [bookings]);
+
   const monthStart = startOfMonth(currentMonth);
   const monthEnd = endOfMonth(currentMonth);
   const calendarStart = startOfWeek(monthStart);
@@ -50,20 +60,56 @@ export function BookingCalendar({ bookings, onDateClick, onBookingClick, onAddBo
   const days = eachDayOfInterval({ start: calendarStart, end: calendarEnd });
 
   const bookingsByDate = bookings.reduce((acc, booking) => {
-    const startDate = new Date(booking.startDate);
-    const endDate = new Date(booking.endDate);
-    const dates = eachDayOfInterval({ start: startDate, end: endDate });
-    
-    dates.forEach(date => {
-      const key = format(date, "yyyy-MM-dd");
-      if (!acc[key]) {
-        acc[key] = [];
+    try {
+      // Parse dates - handle both string and Date objects
+      let startDate: Date;
+      let endDate: Date;
+      
+      if (typeof booking.startDate === 'string') {
+        startDate = new Date(booking.startDate);
+      } else {
+        startDate = booking.startDate;
       }
-      acc[key].push(booking);
-    });
+      
+      if (typeof booking.endDate === 'string') {
+        endDate = new Date(booking.endDate);
+      } else {
+        endDate = booking.endDate;
+      }
+      
+      // Validate dates
+      if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
+        console.error("❌ Invalid dates for booking:", booking.id, "Start:", booking.startDate, "End:", booking.endDate);
+        return acc;
+      }
+      
+      console.log("✅ Processing booking:", booking.name, "from", format(startDate, "yyyy-MM-dd"), "to", format(endDate, "yyyy-MM-dd"));
+      
+      // Get all dates in the booking range
+      const dates = eachDayOfInterval({ start: startDate, end: endDate });
+      console.log("  → Spans", dates.length, "days");
+      
+      dates.forEach(date => {
+        const key = format(date, "yyyy-MM-dd");
+        if (!acc[key]) {
+          acc[key] = [];
+        }
+        acc[key].push(booking);
+        console.log("  → Added to date:", key);
+      });
+    } catch (error) {
+      console.error("❌ Error processing booking dates:", booking.id, error);
+    }
     
     return acc;
   }, {} as Record<string, Booking[]>);
+
+  // Debug: Log processed bookings by date
+  useEffect(() => {
+    console.log("📅 Bookings by date:", bookingsByDate);
+    console.log("📊 Number of dates with bookings:", Object.keys(bookingsByDate).length);
+    console.log("📋 Date keys:", Object.keys(bookingsByDate));
+  }, [bookingsByDate]);
 
   const getJewishHolidays = (date: Date) => {
     try {
