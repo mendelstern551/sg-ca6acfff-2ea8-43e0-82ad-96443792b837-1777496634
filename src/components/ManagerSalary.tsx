@@ -71,16 +71,18 @@ export function ManagerSalary({ bookings, onAddExpense }: ManagerSalaryProps) {
       const monthDate = new Date(seasonStart);
       monthDate.setMonth(monthDate.getMonth() + i);
       const monthKey = format(startOfMonth(monthDate), "yyyy-MM");
+      const expenseId = `maintenance-${monthKey}`;
       
       const expenseExists = existingExpenses.some((exp: Expense) => 
-        exp.category === "Manager Salary" && 
-        exp.description === `Monthly Maintenance Fee - ${format(monthDate, "MMMM yyyy")}` &&
-        format(new Date(exp.date), "yyyy-MM") === monthKey
+        exp.id === expenseId || (
+          exp.category === "Manager Salary" && 
+          exp.description === `Monthly Maintenance Fee - ${format(monthDate, "MMMM yyyy")}`
+        )
       );
 
       if (!expenseExists) {
         const expense: Expense = {
-          id: `maintenance-${monthKey}`,
+          id: expenseId,
           date: startOfMonth(monthDate).toISOString(),
           amount: salaryData.maintenanceFeePerMonth,
           category: "Manager Salary",
@@ -91,6 +93,7 @@ export function ManagerSalary({ bookings, onAddExpense }: ManagerSalaryProps) {
           createdAt: new Date().toISOString()
         };
         onAddExpense(expense);
+        existingExpenses.push(expense);
       }
     }
   };
@@ -104,15 +107,18 @@ export function ManagerSalary({ bookings, onAddExpense }: ManagerSalaryProps) {
         salaryData.minimumCommissionPerEvent
       );
 
+      const expenseId = `commission-${booking.id}`;
       const expenseExists = existingExpenses.some((exp: Expense) => 
-        exp.category === "Manager Salary" && 
-        exp.bookingId === booking.id &&
-        exp.description.includes("Manager Commission")
+        exp.id === expenseId || (
+          exp.category === "Manager Salary" && 
+          exp.bookingId === booking.id &&
+          exp.description.includes("Manager Commission")
+        )
       );
 
       if (!expenseExists) {
         const expense: Expense = {
-          id: `commission-${booking.id}`,
+          id: expenseId,
           bookingId: booking.id,
           date: booking.startDate,
           amount: commission,
@@ -124,6 +130,7 @@ export function ManagerSalary({ bookings, onAddExpense }: ManagerSalaryProps) {
           createdAt: new Date().toISOString()
         };
         onAddExpense(expense);
+        existingExpenses.push(expense);
       }
     });
   };

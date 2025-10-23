@@ -97,11 +97,15 @@ export default function HomePage() {
   };
 
   const handleAddExpense = (expense: Expense) => {
-    const updatedExpenses = [...expenses, expense];
-    setExpenses(updatedExpenses);
-    localStorage.setItem("trout-lake-expenses", JSON.stringify(updatedExpenses));
-    console.log("Expense added:", expense);
-    console.log("Total expenses now:", updatedExpenses.length);
+    setExpenses(prev => {
+      const exists = prev.some(e => e.id === expense.id);
+      if (exists) {
+        return prev;
+      }
+      const updated = [...prev, expense];
+      localStorage.setItem("trout-lake-expenses", JSON.stringify(updated));
+      return updated;
+    });
   };
 
   const totalGuests = bookings.reduce((sum, b) => sum + b.numberOfGuests, 0);
