@@ -41,6 +41,15 @@ export function BookingCalendar({ bookings, onDateClick, onBookingClick, onAddBo
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [dateDialogOpen, setDateDialogOpen] = useState(false);
 
+  // Helper for debug panel to safely format dates
+  const formatDebugDate = (date: string | Date | undefined): string => {
+    if (!date) return "Not set";
+    if (date instanceof Date) {
+      return date.toISOString(); // Use ISO string for clarity
+    }
+    return date; // It's already a string
+  };
+
   // Debug: Log bookings data when component mounts or bookings change
   useEffect(() => {
     console.log("BookingCalendar received bookings:", bookings);
@@ -205,8 +214,8 @@ export function BookingCalendar({ bookings, onDateClick, onBookingClick, onAddBo
                         <div className="font-semibold">Sample booking:</div>
                         <div>ID: {bookings[0].id}</div>
                         <div>Name: {bookings[0].name}</div>
-                        <div>Start: {typeof bookings[0].startDate === 'string' ? bookings[0].startDate : bookings[0].startDate.toString()}</div>
-                        <div>End: {typeof bookings[0].endDate === 'string' ? bookings[0].endDate : bookings[0].endDate.toString()}</div>
+                        <div>Start: {formatDebugDate(bookings[0].startDate)}</div>
+                        <div>End: {formatDebugDate(bookings[0].endDate)}</div>
                         <div>Confirmed: {bookings[0].confirmed ? 'Yes' : 'No'}</div>
                         <div>Type: {bookings[0].bookingType}</div>
                       </div>
