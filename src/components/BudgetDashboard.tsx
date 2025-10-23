@@ -258,7 +258,7 @@ export function BudgetDashboard({ bookings, expenses }: BudgetDashboardProps) {
             <Percent className="h-4 w-4 text-blue-600" />
           </CardHeader>
           <CardContent>
-            <div className={`text-2xl font-bold ${profitMargin >= 0 ? "text-blue-600" : "text-red-600"}`}>
+            <div className={`text-2xl font-bold ${parseFloat(profitMargin) >= 0 ? "text-blue-600" : "text-red-600"}`}>
               {profitMargin}%
             </div>
             <p className="text-xs text-slate-600 dark:text-slate-400 mt-1">
