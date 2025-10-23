@@ -49,7 +49,8 @@ export function ManagerSalary({ bookings, onAddExpense }: ManagerSalaryProps) {
 
   useEffect(() => {
     createMonthlyMaintenanceExpenses();
-  }, [salaryData.seasonStart, salaryData.seasonEnd, salaryData.maintenanceFeePerMonth]);
+    createBookingCommissionExpenses();
+  }, [salaryData.seasonStart, salaryData.seasonEnd, salaryData.maintenanceFeePerMonth, bookings]);
 
   const createMonthlyMaintenanceExpenses = () => {
     const seasonStart = new Date(salaryData.seasonStart);
@@ -92,6 +93,39 @@ export function ManagerSalary({ bookings, onAddExpense }: ManagerSalaryProps) {
         onAddExpense(expense);
       }
     }
+  };
+
+  const createBookingCommissionExpenses = () => {
+    const existingExpenses = JSON.parse(localStorage.getItem("trout-lake-expenses") || "[]");
+    
+    bookings.forEach((booking) => {
+      const commission = Math.max(
+        booking.totalCost * (salaryData.commissionPercentage / 100),
+        salaryData.minimumCommissionPerEvent
+      );
+
+      const expenseExists = existingExpenses.some((exp: Expense) => 
+        exp.category === "Manager Salary" && 
+        exp.bookingId === booking.id &&
+        exp.description.includes("Manager Commission")
+      );
+
+      if (!expenseExists) {
+        const expense: Expense = {
+          id: `commission-${booking.id}`,
+          bookingId: booking.id,
+          date: booking.startDate,
+          amount: commission,
+          category: "Manager Salary",
+          description: `Manager Commission - ${booking.name}`,
+          paymentMethod: "pending",
+          vendor: "Manager",
+          notes: `15% commission (min $1,000) for ${booking.type.replace("_", " ")} booking`,
+          createdAt: new Date().toISOString()
+        };
+        onAddExpense(expense);
+      }
+    });
   };
 
   const calculateMaintenanceFees = () => {
