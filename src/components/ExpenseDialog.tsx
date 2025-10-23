@@ -60,6 +60,54 @@ export function ExpenseDialog({ open, onOpenChange, onSave, expense, bookings }:
     }
   };
 
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>, type: "receipt" | "proof" | "additional") => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    if (type === "additional") {
+      // Handle multiple files for additional uploads
+      const newFiles: { id: string; url: string; name: string; uploadedAt: string }[] = [];
+      
+      Array.from(files).forEach((file) => {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          const dataUrl = reader.result as string;
+          newFiles.push({
+            id: `file-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+            url: dataUrl,
+            name: file.name,
+            uploadedAt: new Date().toISOString(),
+          });
+          
+          // Update state after all files are read
+          if (newFiles.length === files.length) {
+            setFormData({
+              ...formData,
+              receiptFiles: [...formData.receiptFiles, ...newFiles],
+            });
+          }
+        };
+        reader.readAsDataURL(file);
+      });
+    } else {
+      // Handle single file for receipt/proof
+      const file = files[0];
+      const reader = new FileReader();
+
+      reader.onloadend = () => {
+        const dataUrl = reader.result as string;
+
+        if (type === "receipt") {
+          setFormData({ ...formData, receiptUrl: dataUrl });
+        } else if (type === "proof") {
+          setFormData({ ...formData, proofOfPaymentUrl: dataUrl });
+        }
+      };
+
+      reader.readAsDataURL(file);
+    }
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -315,6 +363,43 @@ export function ExpenseDialog({ open, onOpenChange, onSave, expense, bookings }:
                 <p className="text-sm text-slate-600 dark:text-slate-400">
                   Selected: {proofFile.name}
                 </p>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="additionalFiles" className="flex items-center gap-2">
+                <Upload className="h-4 w-4" />
+                Additional Files (Multiple)
+              </Label>
+              <Input
+                id="additionalFiles"
+                type="file"
+                accept="image/*,application/pdf"
+                onChange={(e) => {
+                  handleFileUpload(e, "additional");
+                  // Clear the input so the same file can be selected again
+                  e.target.value = "";
+                }}
+                multiple
+              />
+              <p className="text-xs text-slate-500 dark:text-slate-400">
+                Select multiple files to upload at once
+              </p>
+              {formData.receiptFiles.length > 0 && (
+                <div className="flex flex-wrap gap-2 mt-2">
+                  {formData.receiptFiles.map((file) => (
+                    <Badge key={file.id} variant="secondary" className="flex items-center gap-2">
+                      {file.name}
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveReceiptFile(file.id)}
+                        className="hover:text-red-600"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </Badge>
+                  ))}
+                </div>
               )}
             </div>
           </div>
