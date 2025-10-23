@@ -244,7 +244,14 @@ export default function HomePage() {
           </TabsContent>
 
           <TabsContent value="calendar" className="space-y-4">
-            <BookingCalendar bookings={bookings} onBookingClick={handleEditBooking} />
+            <BookingCalendar 
+              bookings={bookings} 
+              onBookingClick={handleEditBooking}
+              onAddBooking={(date) => {
+                setEditingBooking(undefined);
+                setBookingDialogOpen(true);
+              }}
+            />
           </TabsContent>
 
           <TabsContent value="budget" className="space-y-4">

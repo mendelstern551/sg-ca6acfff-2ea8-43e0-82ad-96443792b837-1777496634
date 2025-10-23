@@ -89,6 +89,34 @@ export function BookingDialog({ open, onOpenChange, onSave, booking }: BookingDi
       return;
     }
 
+    // Check for overlapping bookings (double-booking prevention)
+    const existingBookings = JSON.parse(localStorage.getItem("trout-lake-bookings") || "[]") as Booking[];
+    const currentBookingId = booking?.id;
+    
+    const hasConflict = existingBookings.some((existingBooking) => {
+      // Skip checking against the current booking being edited
+      if (currentBookingId && existingBooking.id === currentBookingId) {
+        return false;
+      }
+
+      const existingStart = new Date(existingBooking.startDate);
+      const existingEnd = new Date(existingBooking.endDate);
+      const newStart = formData.startDate!;
+      const newEnd = formData.endDate!;
+
+      // Check if dates overlap
+      return (
+        (newStart >= existingStart && newStart <= existingEnd) ||
+        (newEnd >= existingStart && newEnd <= existingEnd) ||
+        (newStart <= existingStart && newEnd >= existingEnd)
+      );
+    });
+
+    if (hasConflict) {
+      alert("⚠️ Double Booking Conflict!\n\nThese dates overlap with an existing booking. Please choose different dates or check the calendar for availability.");
+      return;
+    }
+
     const actualTotalCost = formData.customPrice !== undefined && formData.customPrice > 0 
       ? formData.customPrice 
       : finalPrice;
