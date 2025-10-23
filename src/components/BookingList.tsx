@@ -7,9 +7,10 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Edit, Trash2, Users, Calendar, DollarSign, Clock, CheckCircle2, Eye } from "lucide-react";
+import { Edit, Trash2, Users, Calendar, DollarSign, Clock, CheckCircle2, Eye, Plus } from "lucide-react";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { ClientDetailsDialog } from "./ClientDetailsDialog";
+import { PaymentDialog } from "./PaymentDialog";
 
 interface BookingListProps {
   bookings: Booking[];
@@ -24,97 +25,200 @@ export function BookingList({ bookings, onEdit, onDelete, onUpdateBooking, expen
   const [activeTab, setActiveTab] = useState("all");
   const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
+  const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
+  const [editingPayment, setEditingPayment] = useState<Payment | undefined>();
+  const [currentBookingForPayment, setCurrentBookingForPayment] = useState<Booking | null>(null);
 
   const handleViewDetails = (booking: Booking) => {
     setSelectedBooking(booking);
     setDetailsDialogOpen(true);
   };
 
-  const renderBookingCard = (booking: Booking) => (
-    <Card key={booking.id} className="overflow-hidden hover:shadow-lg transition-shadow">
-      <CardContent className="pt-4">
-        <div className="flex justify-between items-start">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4 flex-grow">
-                <div>
-                  <p className="text-xs text-slate-600 dark:text-slate-400 mb-1">Customer</p>
+  const handleAddPayment = (booking: Booking) => {
+    setCurrentBookingForPayment(booking);
+    setEditingPayment(undefined);
+    setPaymentDialogOpen(true);
+  };
+
+  const handleEditPayment = (booking: Booking, payment: Payment) => {
+    setCurrentBookingForPayment(booking);
+    setEditingPayment(payment);
+    setPaymentDialogOpen(true);
+  };
+
+  const handleSavePayment = (payment: Payment) => {
+    if (!currentBookingForPayment) return;
+
+    const existingPayments = currentBookingForPayment.payments || [];
+    let updatedPayments: Payment[];
+
+    if (editingPayment) {
+      updatedPayments = existingPayments.map(p => p.id === payment.id ? payment : p);
+    } else {
+      updatedPayments = [...existingPayments, payment];
+    }
+
+    const totalPaid = updatedPayments.reduce((sum, p) => sum + p.amount, 0);
+    const updatedBooking: Booking = {
+      ...currentBookingForPayment,
+      payments: updatedPayments,
+      amountPaid: totalPaid,
+      balanceDue: currentBookingForPayment.totalCost - totalPaid
+    };
+
+    onUpdateBooking(updatedBooking);
+    setPaymentDialogOpen(false);
+    setEditingPayment(undefined);
+    setCurrentBookingForPayment(null);
+  };
+
+  const renderBookingCard = (booking: Booking) => {
+    const payments = booking.payments || [];
+    const sortedPayments = [...payments].sort((a, b) => 
+      new Date(b.date).getTime() - new Date(a.date).getTime()
+    );
+
+    return (
+      <Card key={booking.id} className="overflow-hidden hover:shadow-lg transition-shadow">
+        <CardContent className="pt-4">
+          <div className="flex justify-between items-start">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4 flex-grow">
+                  <div>
+                    <p className="text-xs text-slate-600 dark:text-slate-400 mb-1">Customer</p>
+                    <div className="flex items-center gap-2">
+                      <p className="font-medium">{booking.contactName}</p>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleViewDetails(booking)}
+                        className="h-6 px-2 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                      >
+                        <Eye className="h-3 w-3 mr-1" />
+                        <span className="text-xs">Details</span>
+                      </Button>
+                    </div>
+                    <p className="text-xs text-slate-500">{booking.contactEmail}</p>
+                  </div>
                   <div className="flex items-center gap-2">
-                    <p className="font-medium">{booking.contactName}</p>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleViewDetails(booking)}
-                      className="h-6 px-2 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
-                    >
-                      <Eye className="h-3 w-3 mr-1" />
-                      <span className="text-xs">Details</span>
-                    </Button>
+                    <Calendar className="h-4 w-4 text-blue-600" />
+                    <div>
+                      <p className="text-xs text-slate-600 dark:text-slate-400">Dates</p>
+                      <p className="text-sm font-medium">
+                        {format(new Date(booking.startDate), "MMM d")} - {format(new Date(booking.endDate), "MMM d, yyyy")}
+                      </p>
+                    </div>
                   </div>
-                  <p className="text-xs text-slate-500">{booking.contactEmail}</p>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Calendar className="h-4 w-4 text-blue-600" />
-                  <div>
-                    <p className="text-xs text-slate-600 dark:text-slate-400">Dates</p>
-                    <p className="text-sm font-medium">
-                      {format(new Date(booking.startDate), "MMM d")} - {format(new Date(booking.endDate), "MMM d, yyyy")}
-                    </p>
-                  </div>
-                </div>
 
-                <div className="flex items-center gap-2">
-                  <Users className="h-4 w-4 text-green-600" />
-                  <div>
-                    <p className="text-xs text-slate-600 dark:text-slate-400">Guests</p>
-                    <p className="text-sm font-medium">{booking.numberOfGuests} people</p>
+                  <div className="flex items-center gap-2">
+                    <Users className="h-4 w-4 text-green-600" />
+                    <div>
+                      <p className="text-xs text-slate-600 dark:text-slate-400">Guests</p>
+                      <p className="text-sm font-medium">{booking.numberOfGuests} people</p>
+                    </div>
                   </div>
-                </div>
 
-                <div className="flex items-center gap-2">
-                  <DollarSign className="h-4 w-4 text-emerald-600" />
-                  <div>
-                    <p className="text-xs text-slate-600 dark:text-slate-400">Total Cost</p>
-                    <p className="text-sm font-medium">{formatCurrency(booking.totalCost)}</p>
+                  <div className="flex items-center gap-2">
+                    <DollarSign className="h-4 w-4 text-emerald-600" />
+                    <div>
+                      <p className="text-xs text-slate-600 dark:text-slate-400">Total Cost</p>
+                      <p className="text-sm font-medium">{formatCurrency(booking.totalCost)}</p>
+                    </div>
                   </div>
-                </div>
 
-                <div className="flex items-center gap-2">
-                  <DollarSign className="h-4 w-4 text-orange-600" />
-                  <div>
-                    <p className="text-xs text-slate-600 dark:text-slate-400">Balance Due</p>
-                    <p className="text-sm font-medium text-orange-600 dark:text-orange-500">
-                      {formatCurrency(booking.balanceDue)}
-                    </p>
+                  <div className="flex items-center gap-2">
+                    <DollarSign className="h-4 w-4 text-orange-600" />
+                    <div>
+                      <p className="text-xs text-slate-600 dark:text-slate-400">Balance Due</p>
+                      <p className="text-sm font-medium text-orange-600 dark:text-orange-500">
+                        {formatCurrency(booking.balanceDue)}
+                      </p>
+                    </div>
                   </div>
-                </div>
-            </div>
-            <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => onEdit(booking)}
-                >
-                  <Edit className="h-4 w-4" />
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setDeleteId(booking.id)}
-                >
-                  <Trash2 className="h-4 w-4 text-red-600" />
-                </Button>
-            </div>
-        </div>
-
-        {booking.notes && (
-          <div className="mt-4 pt-4 border-t">
-            <p className="text-sm text-slate-600 dark:text-slate-400">
-              <span className="font-medium">Notes:</span> {booking.notes}
-            </p>
+              </div>
+              <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => onEdit(booking)}
+                  >
+                    <Edit className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setDeleteId(booking.id)}
+                  >
+                    <Trash2 className="h-4 w-4 text-red-600" />
+                  </Button>
+              </div>
           </div>
-        )}
-      </CardContent>
-    </Card>
-  );
+
+          <div className="mt-4 pt-4 border-t">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <DollarSign className="h-4 w-4 text-green-600" />
+                <span className="text-sm font-medium">Payments ({payments.length})</span>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handleAddPayment(booking)}
+                className="h-8 text-green-600 hover:text-green-700 hover:bg-green-50"
+              >
+                <Plus className="h-3 w-3 mr-1" />
+                Add Payment
+              </Button>
+            </div>
+
+            {payments.length === 0 ? (
+              <p className="text-sm text-slate-500 text-center py-3 bg-slate-50 dark:bg-slate-900 rounded">
+                No payments recorded yet
+              </p>
+            ) : (
+              <div className="space-y-2">
+                {sortedPayments.map((payment) => (
+                  <div
+                    key={payment.id}
+                    className="flex items-center justify-between p-2 bg-slate-50 dark:bg-slate-900 rounded hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+                    onClick={() => handleEditPayment(booking, payment)}
+                  >
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-medium text-green-600">
+                          {formatCurrency(payment.amount)}
+                        </span>
+                        <span className="text-xs text-slate-500">
+                          {format(new Date(payment.date), "MMM d, yyyy")}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2 mt-1">
+                        <Badge variant="secondary" className="text-xs">
+                          {payment.paymentMethod.replace("_", " ")}
+                        </Badge>
+                        {payment.referenceNumber && (
+                          <span className="text-xs text-slate-500">
+                            Ref: {payment.referenceNumber}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {booking.notes && (
+            <div className="mt-4 pt-4 border-t">
+              <p className="text-sm text-slate-600 dark:text-slate-400">
+                <span className="font-medium">Notes:</span> {booking.notes}
+              </p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    );
+  };
 
   const renderEmptyState = (message: string, icon: React.ReactNode) => (
     <div className="text-center py-12 text-slate-500 dark:text-slate-400">
@@ -199,6 +303,16 @@ export function BookingList({ bookings, onEdit, onDelete, onUpdateBooking, expen
           onOpenChange={setDetailsDialogOpen}
           booking={selectedBooking}
           allExpenses={expenses}
+        />
+      )}
+
+      {currentBookingForPayment && (
+        <PaymentDialog
+          open={paymentDialogOpen}
+          onOpenChange={setPaymentDialogOpen}
+          payment={editingPayment}
+          bookingId={currentBookingForPayment.id}
+          onSave={handleSavePayment}
         />
       )}
 
