@@ -1,9 +1,14 @@
-
 import { Booking, Expense } from "@/types/booking";
 import { formatCurrency } from "@/lib/bookingCalculations";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import { TrendingUp, TrendingDown, DollarSign, Percent } from "lucide-react";
+import { TrendingUp, TrendingDown, DollarSign, Percent, Filter, Calendar as CalendarIcon } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { EnhancedCalendar } from "@/components/ui/enhanced-calendar";
+import { format } from "date-fns";
+import { useState } from "react";
 
 interface BudgetDashboardProps {
   bookings: Booking[];
@@ -11,21 +16,40 @@ interface BudgetDashboardProps {
 }
 
 export function BudgetDashboard({ bookings, expenses }: BudgetDashboardProps) {
-  const totalRevenue = bookings.reduce((sum, b) => sum + b.totalCost, 0);
-  const totalPaid = bookings.reduce((sum, b) => sum + b.amountPaid, 0);
-  const totalBalance = bookings.reduce((sum, b) => sum + b.balanceDue, 0);
-  const totalExpenses = expenses.reduce((sum, e) => sum + e.amount, 0);
+  const [selectedBooking, setSelectedBooking] = useState<string>("all");
+  const [selectedCategory, setSelectedCategory] = useState<string>("all");
+  const [startDate, setStartDate] = useState<Date | undefined>();
+  const [endDate, setEndDate] = useState<Date | undefined>();
+
+  // Filter bookings based on selected filters
+  const filteredBookings = bookings.filter(booking => {
+    const bookingMatch = selectedBooking === "all" || booking.id === selectedBooking;
+    
+    const bookingDate = new Date(booking.startDate);
+    const dateMatch = (!startDate || bookingDate >= startDate) && 
+                     (!endDate || bookingDate <= endDate);
+    
+    return bookingMatch && dateMatch;
+  });
+
+  // Filter expenses based on selected filters
+  const filteredExpenses = expenses.filter(expense => {
+    const bookingMatch = selectedBooking === "all" || expense.bookingId === selectedBooking;
+    const categoryMatch = selectedCategory === "all" || expense.category === selectedCategory;
+    
+    const expenseDate = new Date(expense.date);
+    const dateMatch = (!startDate || expenseDate >= startDate) && 
+                     (!endDate || expenseDate <= endDate);
+    
+    return bookingMatch && categoryMatch && dateMatch;
+  });
+
+  const totalRevenue = filteredBookings.reduce((sum, booking) => sum + booking.totalCost, 0);
+  const totalExpenses = filteredExpenses.reduce((sum, expense) => sum + expense.amount, 0);
   const netProfit = totalRevenue - totalExpenses;
-  const profitMargin = totalRevenue > 0 ? ((netProfit / totalRevenue) * 100) : 0;
+  const profitMargin = totalRevenue > 0 ? ((netProfit / totalRevenue) * 100).toFixed(1) : "0";
 
-  const expensesByCategory = expenses.reduce((acc, expense) => {
-    acc[expense.category] = (acc[expense.category] || 0) + expense.amount;
-    return acc;
-  }, {} as Record<string, number>);
-
-  const topCategories = Object.entries(expensesByCategory)
-    .sort(([, a], [, b]) => b - a)
-    .slice(0, 5);
+  const categories = ["all", "food", "cleaning", "supplies", "utilities", "staff", "equipment", "Manager Salary", "other"];
 
   const getCategoryLabel = (category: string) => {
     const labels: Record<string, string> = {
@@ -35,13 +59,134 @@ export function BudgetDashboard({ bookings, expenses }: BudgetDashboardProps) {
       utilities: "Utilities",
       staff: "Staff & Labor",
       equipment: "Equipment",
+      "Manager Salary": "Manager Salary",
       other: "Other",
     };
     return labels[category] || category;
   };
 
+  const hasActiveFilters = selectedBooking !== "all" || selectedCategory !== "all" || startDate || endDate;
+
+  const clearFilters = () => {
+    setSelectedBooking("all");
+    setSelectedCategory("all");
+    setStartDate(undefined);
+    setEndDate(undefined);
+  };
+
   return (
     <div className="space-y-6">
+      {/* Filter Section */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Filter className="h-5 w-5 text-blue-600" />
+            Filter Budget Data
+          </CardTitle>
+          <CardDescription>
+            Filter by booking, category, and date range to see specific financial summaries
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Booking</label>
+              <Select value={selectedBooking} onValueChange={setSelectedBooking}>
+                <SelectTrigger>
+                  <SelectValue placeholder="All Bookings" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Bookings</SelectItem>
+                  {bookings.map((booking) => (
+                    <SelectItem key={booking.id} value={booking.id}>
+                      {booking.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Expense Category</label>
+              <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+                <SelectTrigger>
+                  <SelectValue placeholder="All Categories" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Categories</SelectItem>
+                  {categories.filter(c => c !== "all").map((category) => (
+                    <SelectItem key={category} value={category}>
+                      {getCategoryLabel(category)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Start Date</label>
+              <Popover modal={false}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className="w-full justify-start text-left font-normal"
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {startDate ? format(startDate, "PPP") : <span>Pick a date</span>}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <EnhancedCalendar
+                    mode="single"
+                    selected={startDate}
+                    onSelect={setStartDate}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">End Date</label>
+              <Popover modal={false}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className="w-full justify-start text-left font-normal"
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {endDate ? format(endDate, "PPP") : <span>Pick a date</span>}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <EnhancedCalendar
+                    mode="single"
+                    selected={endDate}
+                    onSelect={setEndDate}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
+          </div>
+
+          {hasActiveFilters && (
+            <div className="flex items-center justify-between mt-4 pt-4 border-t">
+              <p className="text-sm text-slate-600 dark:text-slate-400">
+                Showing {filteredBookings.length} of {bookings.length} bookings and {filteredExpenses.length} of {expenses.length} expenses
+              </p>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={clearFilters}
+              >
+                Clear Filters
+              </Button>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -99,7 +244,7 @@ export function BudgetDashboard({ bookings, expenses }: BudgetDashboardProps) {
           </CardHeader>
           <CardContent>
             <div className={`text-2xl font-bold ${profitMargin >= 0 ? "text-blue-600" : "text-red-600"}`}>
-              {profitMargin.toFixed(1)}%
+              {profitMargin}%
             </div>
             <p className="text-xs text-slate-600 dark:text-slate-400 mt-1">
               Net profit margin
