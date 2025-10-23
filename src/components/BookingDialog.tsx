@@ -22,69 +22,65 @@ interface BookingDialogProps {
 }
 
 export function BookingDialog({ open, onOpenChange, onSave, booking }: BookingDialogProps) {
-  const [formData, setFormData] = useState({
-    type: "yom_tov" as BookingType,
-    name: "",
-    contactName: "",
-    contactEmail: "",
-    contactPhone: "",
-    startDate: undefined as Date | undefined,
-    endDate: undefined as Date | undefined,
-    numberOfGuests: 0,
-    notes: "",
-    confirmed: false,
-    discountAmount: 0,
-    discountType: "percentage" as "percentage" | "fixed",
-    customPrice: undefined as number | undefined,
+  const [step, setStep] = useState(1);
+  const [bookingType, setBookingType] = useState<BookingType>("yom_tov");
+  const [name, setName] = useState("");
+  const [contactName, setContactName] = useState("");
+  const [contactEmail, setContactEmail] = useState("");
+  const [contactPhone, setContactPhone] = useState("");
+  const [dateRange, setDateRange] = useState<{ from: Date | undefined; to: Date | undefined }>({
+    from: undefined,
+    to: undefined,
   });
+  const [numberOfGuests, setNumberOfGuests] = useState(50);
+  const [notes, setNotes] = useState("");
+  const [customPrice, setCustomPrice] = useState<number | undefined>();
+  const [discountPercent, setDiscountPercent] = useState(0);
 
   const [calculations, setCalculations] = useState(calculateBookingCost("yom_tov", 0));
   const [finalPrice, setFinalPrice] = useState(0);
 
   useEffect(() => {
     if (booking) {
-      setFormData({
-        type: booking.type,
-        name: booking.name,
-        contactName: booking.contactName,
-        contactEmail: booking.contactEmail,
-        contactPhone: booking.contactPhone,
-        startDate: new Date(booking.startDate),
-        endDate: new Date(booking.endDate),
-        numberOfGuests: booking.numberOfGuests,
-        notes: booking.notes,
-        confirmed: booking.confirmed,
-        discountAmount: 0,
-        discountType: "percentage",
-        customPrice: undefined,
+      setStep(1);
+      setBookingType(booking.bookingType);
+      setName(booking.name);
+      setContactName(booking.contactName);
+      setContactEmail(booking.contactEmail);
+      setContactPhone(booking.contactPhone);
+      setDateRange({
+        from: new Date(booking.startDate),
+        to: new Date(booking.endDate),
       });
+      setNumberOfGuests(booking.numberOfGuests);
+      setNotes(booking.notes);
+      setCustomPrice(booking.customPrice);
+      setDiscountPercent(booking.discountPercent || 0);
+    } else {
+      resetForm();
     }
-  }, [booking]);
+  }, [booking, open]);
 
   useEffect(() => {
-    const calc = calculateBookingCost(formData.type, formData.numberOfGuests);
+    const calc = calculateBookingCost(bookingType, numberOfGuests);
     setCalculations(calc);
 
     let calculatedPrice = calc.totalCost;
 
-    if (formData.customPrice !== undefined && formData.customPrice > 0) {
-      calculatedPrice = formData.customPrice;
-    } else if (formData.discountAmount > 0) {
-      if (formData.discountType === "percentage") {
-        const discountPercent = Math.min(formData.discountAmount, 100);
-        calculatedPrice = calc.totalCost * (1 - discountPercent / 100);
-      } else {
-        calculatedPrice = Math.max(0, calc.totalCost - formData.discountAmount);
-      }
+    if (customPrice !== undefined && customPrice > 0) {
+      calculatedPrice = customPrice;
+    } else if (discountPercent > 0) {
+      const discountAmount = (calc.totalCost * discountPercent) / 100;
+      calculatedPrice = Math.max(0, calc.totalCost - discountAmount);
     }
 
     setFinalPrice(calculatedPrice);
-  }, [formData.type, formData.numberOfGuests, formData.discountAmount, formData.discountType, formData.customPrice]);
+  }, [bookingType, numberOfGuests, customPrice, discountPercent]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!formData.startDate || !formData.endDate) {
+    if (!dateRange.from || !dateRange.to) {
       alert("Please select start and end dates");
       return;
     }
@@ -94,17 +90,15 @@ export function BookingDialog({ open, onOpenChange, onSave, booking }: BookingDi
     const currentBookingId = booking?.id;
     
     const hasConflict = existingBookings.some((existingBooking) => {
-      // Skip checking against the current booking being edited
       if (currentBookingId && existingBooking.id === currentBookingId) {
         return false;
       }
 
       const existingStart = new Date(existingBooking.startDate);
       const existingEnd = new Date(existingBooking.endDate);
-      const newStart = formData.startDate!;
-      const newEnd = formData.endDate!;
+      const newStart = dateRange.from!;
+      const newEnd = dateRange.to!;
 
-      // Check if dates overlap
       return (
         (newStart >= existingStart && newStart <= existingEnd) ||
         (newEnd >= existingStart && newEnd <= existingEnd) ||
@@ -117,33 +111,26 @@ export function BookingDialog({ open, onOpenChange, onSave, booking }: BookingDi
       return;
     }
 
-    const actualTotalCost = formData.customPrice !== undefined && formData.customPrice > 0 
-      ? formData.customPrice 
-      : finalPrice;
-
     const newBooking: Booking = {
       id: booking?.id || `booking-${Date.now()}`,
-      type: formData.type,
-      name: formData.name,
-      contactName: formData.contactName,
-      contactEmail: formData.contactEmail,
-      contactPhone: formData.contactPhone,
-      startDate: formData.startDate.toISOString(),
-      endDate: formData.endDate.toISOString(),
-      numberOfGuests: formData.numberOfGuests,
-      baseRate: calculations.baseRate,
-      perPersonRate: calculations.perPersonRate,
-      cleaningFee: calculations.cleaningFee,
-      additionalCleaningFee: calculations.additionalCleaningFee,
-      totalCost: actualTotalCost,
-      depositAmount: actualTotalCost * 0.5,
+      bookingType,
+      name,
+      contactName,
+      contactEmail,
+      contactPhone,
+      startDate: dateRange.from.toISOString(),
+      endDate: dateRange.to.toISOString(),
+      numberOfGuests,
+      totalCost: calculations.totalCost,
       amountPaid: booking?.amountPaid || 0,
-      balanceDue: actualTotalCost - (booking?.amountPaid || 0),
-      paymentStatus: booking?.paymentStatus || "pending",
-      confirmed: formData.confirmed,
-      notes: formData.notes,
+      balanceDue: calculations.totalCost - (booking?.amountPaid || 0),
+      confirmed: booking?.confirmed || false,
+      notes,
       createdAt: booking?.createdAt || new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
+      payments: booking?.payments || [],
+      customPrice,
+      discountPercent,
+      ...calculations,
     };
 
     onSave(newBooking);
@@ -152,21 +139,17 @@ export function BookingDialog({ open, onOpenChange, onSave, booking }: BookingDi
   };
 
   const resetForm = () => {
-    setFormData({
-      type: "yom_tov",
-      name: "",
-      contactName: "",
-      contactEmail: "",
-      contactPhone: "",
-      startDate: undefined,
-      endDate: undefined,
-      numberOfGuests: 0,
-      notes: "",
-      confirmed: false,
-      discountAmount: 0,
-      discountType: "percentage",
-      customPrice: undefined,
-    });
+    setStep(1);
+    setBookingType("yom_tov");
+    setName("");
+    setContactName("");
+    setContactEmail("");
+    setContactPhone("");
+    setDateRange({ from: undefined, to: undefined });
+    setNumberOfGuests(50);
+    setNotes("");
+    setCustomPrice(undefined);
+    setDiscountPercent(0);
   };
 
   return (
@@ -185,8 +168,8 @@ export function BookingDialog({ open, onOpenChange, onSave, booking }: BookingDi
               <div className="space-y-2">
                 <Label htmlFor="type">Booking Type</Label>
                 <Select
-                  value={formData.type}
-                  onValueChange={(value) => setFormData({ ...formData, type: value as BookingType })}
+                  value={bookingType}
+                  onValueChange={(value) => setBookingType(value as BookingType)}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Select booking type" />
@@ -202,8 +185,8 @@ export function BookingDialog({ open, onOpenChange, onSave, booking }: BookingDi
               <div className="flex items-center space-x-3 p-4 bg-blue-50 dark:bg-blue-950/30 rounded-lg border-2 border-blue-200 dark:border-blue-800">
                 <Checkbox
                   id="confirmed"
-                  checked={formData.confirmed}
-                  onCheckedChange={(checked) => setFormData({ ...formData, confirmed: checked === true })}
+                  checked={booking?.confirmed || false}
+                  onCheckedChange={(checked) => setStep(1)}
                 />
                 <Label
                   htmlFor="confirmed"
@@ -222,8 +205,8 @@ export function BookingDialog({ open, onOpenChange, onSave, booking }: BookingDi
                 <Label htmlFor="name">Event Name</Label>
                 <Input
                   id="name"
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
                   placeholder="e.g., Pesach 2025"
                   required
                 />
@@ -233,8 +216,8 @@ export function BookingDialog({ open, onOpenChange, onSave, booking }: BookingDi
                 <Label htmlFor="contactName">Contact Name</Label>
                 <Input
                   id="contactName"
-                  value={formData.contactName}
-                  onChange={(e) => setFormData({ ...formData, contactName: e.target.value })}
+                  value={contactName}
+                  onChange={(e) => setContactName(e.target.value)}
                   placeholder="Primary contact person"
                   required
                 />
@@ -245,8 +228,8 @@ export function BookingDialog({ open, onOpenChange, onSave, booking }: BookingDi
                 <Input
                   id="contactEmail"
                   type="email"
-                  value={formData.contactEmail}
-                  onChange={(e) => setFormData({ ...formData, contactEmail: e.target.value })}
+                  value={contactEmail}
+                  onChange={(e) => setContactEmail(e.target.value)}
                   placeholder="email@example.com"
                   required
                 />
@@ -257,8 +240,8 @@ export function BookingDialog({ open, onOpenChange, onSave, booking }: BookingDi
                 <Input
                   id="contactPhone"
                   type="tel"
-                  value={formData.contactPhone}
-                  onChange={(e) => setFormData({ ...formData, contactPhone: e.target.value })}
+                  value={contactPhone}
+                  onChange={(e) => setContactPhone(e.target.value)}
                   placeholder="(555) 123-4567"
                   required
                 />
@@ -274,26 +257,18 @@ export function BookingDialog({ open, onOpenChange, onSave, booking }: BookingDi
                 <div className="border rounded-lg p-4 bg-white dark:bg-slate-900">
                   <EnhancedCalendar
                     mode="range"
-                    selected={formData}
-                    onSelect={(range) => {
-                      if (range) {
-                        setFormData({
-                          ...formData,
-                          startDate: range.from,
-                          endDate: range.to,
-                        });
-                      }
-                    }}
+                    selected={dateRange}
+                    onSelect={(range) => setDateRange(range || { from: undefined, to: undefined })}
                     numberOfMonths={2}
                     className="rounded-md"
                   />
                 </div>
-                {formData.startDate && formData.endDate && (
+                {dateRange.from && dateRange.to && (
                   <div className="p-3 bg-blue-50 dark:bg-blue-950 rounded-lg">
                     <p className="text-sm font-medium text-blue-900 dark:text-blue-100">
-                      Selected: {format(formData.startDate, "MMM d, yyyy")} - {format(formData.endDate, "MMM d, yyyy")}
+                      Selected: {format(dateRange.from, "MMM d, yyyy")} - {format(dateRange.to, "MMM d, yyyy")}
                       <span className="ml-2 text-blue-600 dark:text-blue-400">
-                        ({differenceInDays(formData.endDate, formData.startDate) + 1} nights)
+                        ({differenceInDays(dateRange.to, dateRange.from) + 1} nights)
                       </span>
                     </p>
                   </div>
@@ -306,8 +281,8 @@ export function BookingDialog({ open, onOpenChange, onSave, booking }: BookingDi
                   id="numberOfGuests"
                   type="number"
                   min="0"
-                  value={formData.numberOfGuests}
-                  onChange={(e) => setFormData({ ...formData, numberOfGuests: parseInt(e.target.value) || 0 })}
+                  value={numberOfGuests}
+                  onChange={(e) => setNumberOfGuests(parseInt(e.target.value) || 0)}
                   placeholder="0"
                   required
                 />
@@ -320,8 +295,8 @@ export function BookingDialog({ open, onOpenChange, onSave, booking }: BookingDi
                   <div className="space-y-2">
                     <Label htmlFor="discountType" className="text-sm">Discount Type</Label>
                     <Select
-                      value={formData.discountType}
-                      onValueChange={(value) => setFormData({ ...formData, discountType: value as "percentage" | "fixed" })}
+                      value={discountPercent > 0 ? "percentage" : "fixed"}
+                      onValueChange={(value) => setDiscountPercent(value === "percentage" ? 0 : 100)}
                     >
                       <SelectTrigger id="discountType">
                         <SelectValue />
@@ -339,11 +314,11 @@ export function BookingDialog({ open, onOpenChange, onSave, booking }: BookingDi
                       id="discountAmount"
                       type="number"
                       min="0"
-                      step={formData.discountType === "percentage" ? "1" : "0.01"}
-                      max={formData.discountType === "percentage" ? "100" : undefined}
-                      value={formData.discountAmount || ""}
-                      onChange={(e) => setFormData({ ...formData, discountAmount: parseFloat(e.target.value) || 0 })}
-                      placeholder={formData.discountType === "percentage" ? "0-100" : "0.00"}
+                      step={discountPercent > 0 ? "1" : "0.01"}
+                      max={discountPercent > 0 ? "100" : undefined}
+                      value={discountPercent || ""}
+                      onChange={(e) => setDiscountPercent(parseFloat(e.target.value) || 0)}
+                      placeholder={discountPercent > 0 ? "0-100" : "0.00"}
                     />
                   </div>
                 </div>
@@ -358,8 +333,8 @@ export function BookingDialog({ open, onOpenChange, onSave, booking }: BookingDi
                     type="number"
                     min="0"
                     step="0.01"
-                    value={formData.customPrice || ""}
-                    onChange={(e) => setFormData({ ...formData, customPrice: e.target.value ? parseFloat(e.target.value) : undefined })}
+                    value={customPrice || ""}
+                    onChange={(e) => setCustomPrice(e.target.value ? parseFloat(e.target.value) : undefined)}
                     placeholder="Enter custom total price"
                   />
                 </div>
@@ -369,8 +344,8 @@ export function BookingDialog({ open, onOpenChange, onSave, booking }: BookingDi
                 <Label htmlFor="notes">Notes</Label>
                 <Textarea
                   id="notes"
-                  value={formData.notes}
-                  onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
                   placeholder="Additional notes or special requirements"
                   rows={4}
                 />
@@ -389,10 +364,10 @@ export function BookingDialog({ open, onOpenChange, onSave, booking }: BookingDi
                   <p className="text-sm text-slate-600 dark:text-slate-400">Base Rate</p>
                   <p className="text-lg font-semibold">{formatCurrency(calculations.baseRate)}</p>
                 </div>
-                {formData.type !== "night_event" && (
+                {bookingType !== "night_event" && (
                   <>
                     <div>
-                      <p className="text-sm text-slate-600 dark:text-slate-400">Per Person ({formData.numberOfGuests} guests)</p>
+                      <p className="text-sm text-slate-600 dark:text-slate-400">Per Person ({numberOfGuests} guests)</p>
                       <p className="text-lg font-semibold">{formatCurrency(calculations.perPersonTotal)}</p>
                     </div>
                   </>
@@ -412,20 +387,18 @@ export function BookingDialog({ open, onOpenChange, onSave, booking }: BookingDi
                   <p className="text-xl font-bold">{formatCurrency(calculations.totalCost)}</p>
                 </div>
 
-                {(formData.discountAmount > 0 || formData.customPrice) && (
+                {(customPrice !== undefined && customPrice > 0 || discountPercent > 0) && (
                   <>
-                    {formData.customPrice !== undefined && formData.customPrice > 0 ? (
+                    {customPrice !== undefined && customPrice > 0 ? (
                       <div className="col-span-2 bg-green-50 dark:bg-green-950/30 p-3 rounded-lg">
                         <p className="text-sm text-green-700 dark:text-green-300 font-semibold">Custom Price Applied</p>
-                        <p className="text-lg font-bold text-green-600">{formatCurrency(formData.customPrice)}</p>
+                        <p className="text-lg font-bold text-green-600">{formatCurrency(customPrice)}</p>
                       </div>
-                    ) : formData.discountAmount > 0 ? (
+                    ) : discountPercent > 0 ? (
                       <>
                         <div className="col-span-2 bg-orange-50 dark:bg-orange-950/30 p-3 rounded-lg">
                           <p className="text-sm text-orange-700 dark:text-orange-300">
-                            Discount: {formData.discountType === "percentage" 
-                              ? `${formData.discountAmount}%` 
-                              : formatCurrency(formData.discountAmount)}
+                            Discount: {discountPercent}%
                           </p>
                           <p className="text-lg font-semibold text-orange-600">
                             -{formatCurrency(calculations.totalCost - finalPrice)}
@@ -441,7 +414,7 @@ export function BookingDialog({ open, onOpenChange, onSave, booking }: BookingDi
                   </>
                 )}
 
-                {!formData.customPrice && formData.discountAmount === 0 && (
+                {!customPrice && discountPercent === 0 && (
                   <div className="col-span-2 pt-4 border-t">
                     <p className="text-sm text-slate-600 dark:text-slate-400">Total Cost</p>
                     <p className="text-2xl font-bold text-blue-600">{formatCurrency(calculations.totalCost)}</p>
