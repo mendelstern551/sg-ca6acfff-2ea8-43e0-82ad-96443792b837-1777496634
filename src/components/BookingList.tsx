@@ -98,6 +98,10 @@ export function BookingList({ bookings, onEdit, onDelete, onUpdateBooking, expen
   const handleSavePayment = (payment: Payment) => {
     if (!selectedBooking) return;
 
+    console.log("=== SAVING PAYMENT ===");
+    console.log("Payment:", payment);
+    console.log("Selected Booking ID:", selectedBooking.id);
+
     const updatedBooking = { ...selectedBooking };
     
     if (!updatedBooking.payments) {
@@ -108,13 +112,19 @@ export function BookingList({ bookings, onEdit, onDelete, onUpdateBooking, expen
     
     if (existingIndex >= 0) {
       updatedBooking.payments[existingIndex] = payment;
+      console.log("Updated existing payment at index:", existingIndex);
     } else {
       updatedBooking.payments.push(payment);
+      console.log("Added new payment. Total payments:", updatedBooking.payments.length);
     }
 
     const totalPaid = updatedBooking.payments.reduce((sum, p) => sum + p.amount, 0);
     updatedBooking.amountPaid = totalPaid;
     updatedBooking.balanceDue = updatedBooking.totalCost - totalPaid;
+
+    console.log("Total Paid:", totalPaid);
+    console.log("Balance Due:", updatedBooking.balanceDue);
+    console.log("All Payments:", updatedBooking.payments);
 
     if (totalPaid === 0) {
       updatedBooking.paymentStatus = "pending";
@@ -126,7 +136,9 @@ export function BookingList({ bookings, onEdit, onDelete, onUpdateBooking, expen
       updatedBooking.paymentStatus = "deposit_paid";
     }
 
+    console.log("Calling onUpdateBooking with:", updatedBooking);
     onUpdateBooking(updatedBooking);
+    setPaymentDialogOpen(false);
   };
 
   const handleViewDetails = (booking: Booking) => {
