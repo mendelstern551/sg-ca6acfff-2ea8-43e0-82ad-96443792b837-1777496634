@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Plus, DollarSign, Calendar, TrendingUp } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -47,6 +46,53 @@ export function ManagerSalary({ bookings, onAddExpense }: ManagerSalaryProps) {
       setSalaryData(JSON.parse(saved));
     }
   }, []);
+
+  useEffect(() => {
+    createMonthlyMaintenanceExpenses();
+  }, [salaryData.seasonStart, salaryData.seasonEnd, salaryData.maintenanceFeePerMonth]);
+
+  const createMonthlyMaintenanceExpenses = () => {
+    const seasonStart = new Date(salaryData.seasonStart);
+    const seasonEnd = new Date(salaryData.seasonEnd);
+    const today = new Date();
+    const currentMonthStart = startOfMonth(today);
+
+    if (isBefore(currentMonthStart, seasonStart)) {
+      return;
+    }
+
+    const endDate = isAfter(currentMonthStart, seasonEnd) ? seasonEnd : currentMonthStart;
+    const monthsToCreate = differenceInMonths(endDate, seasonStart) + 1;
+
+    const existingExpenses = JSON.parse(localStorage.getItem("trout-lake-expenses") || "[]");
+    
+    for (let i = 0; i < monthsToCreate; i++) {
+      const monthDate = new Date(seasonStart);
+      monthDate.setMonth(monthDate.getMonth() + i);
+      const monthKey = format(startOfMonth(monthDate), "yyyy-MM");
+      
+      const expenseExists = existingExpenses.some((exp: Expense) => 
+        exp.category === "Manager Salary" && 
+        exp.description === `Monthly Maintenance Fee - ${format(monthDate, "MMMM yyyy")}` &&
+        format(new Date(exp.date), "yyyy-MM") === monthKey
+      );
+
+      if (!expenseExists) {
+        const expense: Expense = {
+          id: `maintenance-${monthKey}`,
+          date: startOfMonth(monthDate).toISOString(),
+          amount: salaryData.maintenanceFeePerMonth,
+          category: "Manager Salary",
+          description: `Monthly Maintenance Fee - ${format(monthDate, "MMMM yyyy")}`,
+          paymentMethod: "pending",
+          vendor: "Manager",
+          notes: "Automatic monthly maintenance fee",
+          createdAt: new Date().toISOString()
+        };
+        onAddExpense(expense);
+      }
+    }
+  };
 
   const calculateMaintenanceFees = () => {
     const seasonStart = new Date(salaryData.seasonStart);
