@@ -22,6 +22,7 @@ export default function HomePage() {
   const [expenseDialogOpen, setExpenseDialogOpen] = useState(false);
   const [editingBooking, setEditingBooking] = useState<Booking | undefined>();
   const [editingExpense, setEditingExpense] = useState<Expense | undefined>();
+  const [refreshKey, setRefreshKey] = useState(0);
 
   useEffect(() => {
     const savedBookings = localStorage.getItem("trout-lake-bookings");
@@ -65,12 +66,14 @@ export default function HomePage() {
     setBookings(updatedBookings);
     localStorage.setItem("trout-lake-bookings", JSON.stringify(updatedBookings));
     setEditingBooking(undefined);
+    setRefreshKey(prev => prev + 1);
   };
 
   const handleUpdateBooking = (booking: Booking) => {
     const updatedBookings = bookings.map((b) => (b.id === booking.id ? booking : b));
     setBookings(updatedBookings);
     localStorage.setItem("trout-lake-bookings", JSON.stringify(updatedBookings));
+    setRefreshKey(prev => prev + 1);
   };
 
   const handleEditBooking = (booking: Booking) => {
@@ -244,6 +247,7 @@ export default function HomePage() {
                   </div>
                 ) : (
                   <BookingList
+                    key={refreshKey}
                     bookings={bookings}
                     onEdit={handleEditBooking}
                     onDelete={handleDeleteBooking}
