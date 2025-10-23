@@ -12,6 +12,7 @@ import { BudgetDashboard } from "@/components/BudgetDashboard";
 import { ManagerSalary } from "@/components/ManagerSalary";
 import { Booking, Expense } from "@/types/booking";
 import { BookingCalendar } from "@/components/BookingCalendar";
+import { ReceiptLibrary } from "@/components/ReceiptLibrary";
 
 export default function HomePage() {
   const [activeTab, setActiveTab] = useState("bookings");
@@ -191,11 +192,12 @@ export default function HomePage() {
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-5 lg:w-[750px]">
+          <TabsList className="grid w-full grid-cols-6 lg:w-[900px]">
             <TabsTrigger value="bookings">Bookings</TabsTrigger>
             <TabsTrigger value="calendar">Calendar</TabsTrigger>
             <TabsTrigger value="budget">Budget</TabsTrigger>
             <TabsTrigger value="expenses">Expenses</TabsTrigger>
+            <TabsTrigger value="receipts">Receipts</TabsTrigger>
             <TabsTrigger value="manager">Manager</TabsTrigger>
           </TabsList>
 
@@ -288,6 +290,10 @@ export default function HomePage() {
                 )}
               </CardContent>
             </Card>
+          </TabsContent>
+
+          <TabsContent value="receipts" className="space-y-4">
+            <ReceiptLibrary expenses={expenses} bookings={bookings} />
           </TabsContent>
 
           <TabsContent value="manager" className="space-y-4">

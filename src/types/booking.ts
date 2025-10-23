@@ -73,6 +73,7 @@ export interface Expense {
   vendor: string;
   receiptUrl?: string;
   proofOfPaymentUrl?: string;
+  receiptFiles?: { id: string; url: string; name: string; uploadedAt: string }[];
   notes: string;
   createdAt: string;
 }

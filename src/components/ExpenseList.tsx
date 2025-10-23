@@ -115,7 +115,7 @@ export function ExpenseList({ expenses, bookings, onEdit, onDelete }: ExpenseLis
                   </p>
                 </div>
 
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2">
                   {expense.receiptUrl && (
                     <Button
                       variant="outline"
@@ -135,6 +135,22 @@ export function ExpenseList({ expenses, bookings, onEdit, onDelete }: ExpenseLis
                       <FileText className="h-4 w-4 mr-1" />
                       Proof
                     </Button>
+                  )}
+                  {expense.receiptFiles && expense.receiptFiles.length > 0 && (
+                    <div className="flex flex-wrap gap-2">
+                      {expense.receiptFiles.map((file) => (
+                        <Button
+                          key={file.id}
+                          variant="outline"
+                          size="sm"
+                          onClick={() => window.open(file.url, "_blank")}
+                          className="text-xs"
+                        >
+                          <ExternalLink className="h-3 w-3 mr-1" />
+                          {file.name}
+                        </Button>
+                      ))}
+                    </div>
                   )}
                 </div>
               </div>
