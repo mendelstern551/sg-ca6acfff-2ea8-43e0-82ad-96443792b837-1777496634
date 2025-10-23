@@ -5,8 +5,9 @@ import { format } from "date-fns";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Edit, Trash2, FileText, Image, ExternalLink } from "lucide-react";
+import { Edit, Trash2, FileText, Image, ExternalLink, Search } from "lucide-react";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { Input } from "@/components/ui/input";
 
 interface ExpenseListProps {
   expenses: Expense[];
@@ -17,6 +18,7 @@ interface ExpenseListProps {
 
 export function ExpenseList({ expenses, bookings, onEdit, onDelete }: ExpenseListProps) {
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [amountSearch, setAmountSearch] = useState("");
 
   console.log("ExpenseList received expenses:", expenses);
   console.log("Manager Salary expenses:", expenses.filter(e => e.category === "Manager Salary"));
@@ -59,113 +61,195 @@ export function ExpenseList({ expenses, bookings, onEdit, onDelete }: ExpenseLis
     new Date(b.date).getTime() - new Date(a.date).getTime()
   );
 
+  const filterByAmount = (expense: Expense, searchTerm: string): boolean => {
+    if (!searchTerm.trim()) return true;
+    
+    const amount = expense.amount;
+    const term = searchTerm.trim();
+    
+    // Check for range (e.g., "100-500")
+    if (term.includes("-")) {
+      const [min, max] = term.split("-").map(v => parseFloat(v.trim()));
+      if (!isNaN(min) && !isNaN(max)) {
+        return amount >= min && amount <= max;
+      }
+    }
+    
+    // Check for greater than (e.g., ">100")
+    if (term.startsWith(">")) {
+      const value = parseFloat(term.substring(1).trim());
+      if (!isNaN(value)) {
+        return amount > value;
+      }
+    }
+    
+    // Check for less than (e.g., "<500")
+    if (term.startsWith("<")) {
+      const value = parseFloat(term.substring(1).trim());
+      if (!isNaN(value)) {
+        return amount < value;
+      }
+    }
+    
+    // Check for greater than or equal (e.g., ">=100")
+    if (term.startsWith(">=")) {
+      const value = parseFloat(term.substring(2).trim());
+      if (!isNaN(value)) {
+        return amount >= value;
+      }
+    }
+    
+    // Check for less than or equal (e.g., "<=500")
+    if (term.startsWith("<=")) {
+      const value = parseFloat(term.substring(2).trim());
+      if (!isNaN(value)) {
+        return amount <= value;
+      }
+    }
+    
+    // Check for exact amount
+    const exactValue = parseFloat(term);
+    if (!isNaN(exactValue)) {
+      return Math.abs(amount - exactValue) < 0.01; // Account for floating point precision
+    }
+    
+    return true;
+  };
+
+  const filteredExpenses = sortedExpenses.filter(expense => filterByAmount(expense, amountSearch));
+
   if (expenses.length === 0) {
     return null;
   }
 
   return (
     <>
-      <div className="grid gap-4">
-        {sortedExpenses.map((expense) => (
-          <Card key={expense.id} className="hover:shadow-lg transition-shadow">
-            <CardContent className="pt-6">
-              <div className="flex items-start justify-between mb-4">
-                <div className="flex-1">
-                  <div className="flex items-center gap-3 mb-2 flex-wrap">
-                    <h3 className="text-lg font-semibold">{expense.description}</h3>
-                    <Badge className={getCategoryColor(expense.category)}>
-                      {getCategoryLabel(expense.category)}
-                    </Badge>
-                    <Badge variant="outline">{getBookingName(expense.bookingId)}</Badge>
-                  </div>
-                  <p className="text-sm text-slate-600 dark:text-slate-400">
-                    Vendor: {expense.vendor} • {expense.paymentMethod.replace("_", " ")}
-                  </p>
-                </div>
-                <div className="flex gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => onEdit(expense)}
-                  >
-                    <Edit className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setDeleteId(expense.id)}
-                  >
-                    <Trash2 className="h-4 w-4 text-red-600" />
-                  </Button>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-4 border-t">
-                <div>
-                  <p className="text-xs text-slate-600 dark:text-slate-400">Date</p>
-                  <p className="text-sm font-medium">
-                    {format(new Date(expense.date), "MMM d, yyyy")}
-                  </p>
-                </div>
-
-                <div>
-                  <p className="text-xs text-slate-600 dark:text-slate-400">Amount</p>
-                  <p className="text-lg font-bold text-red-600">
-                    {formatCurrency(expense.amount)}
-                  </p>
-                </div>
-
-                <div className="flex flex-wrap items-center gap-2">
-                  {expense.receiptUrl && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => window.open(expense.receiptUrl, "_blank")}
-                    >
-                      <Image className="h-4 w-4 mr-1" />
-                      Receipt
-                    </Button>
-                  )}
-                  {expense.proofOfPaymentUrl && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => window.open(expense.proofOfPaymentUrl, "_blank")}
-                    >
-                      <FileText className="h-4 w-4 mr-1" />
-                      Proof
-                    </Button>
-                  )}
-                  {expense.receiptFiles && expense.receiptFiles.length > 0 && (
-                    <div className="flex flex-wrap gap-2">
-                      {expense.receiptFiles.map((file) => (
-                        <Button
-                          key={file.id}
-                          variant="outline"
-                          size="sm"
-                          onClick={() => window.open(file.url, "_blank")}
-                          className="text-xs"
-                        >
-                          <ExternalLink className="h-3 w-3 mr-1" />
-                          {file.name}
-                        </Button>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {expense.notes && (
-                <div className="mt-4 pt-4 border-t">
-                  <p className="text-sm text-slate-600 dark:text-slate-400">
-                    <span className="font-medium">Notes:</span> {expense.notes}
-                  </p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        ))}
+      <div className="mb-6">
+        <div className="relative max-w-md">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
+          <Input
+            placeholder="Search by amount (e.g., 500, 100-500, >100, <500)"
+            value={amountSearch}
+            onChange={(e) => setAmountSearch(e.target.value)}
+            className="pl-10"
+          />
+        </div>
+        {amountSearch && (
+          <p className="text-xs text-slate-600 dark:text-slate-400 mt-2">
+            Showing {filteredExpenses.length} of {expenses.length} expenses
+          </p>
+        )}
       </div>
+
+      {filteredExpenses.length === 0 ? (
+        <div className="text-center py-12 text-slate-500 dark:text-slate-400">
+          <Search className="h-12 w-12 mx-auto mb-4 opacity-50" />
+          <p className="text-lg font-medium mb-2">No expenses found</p>
+          <p className="text-sm">Try adjusting your search criteria</p>
+        </div>
+      ) : (
+        <div className="grid gap-4">
+          {filteredExpenses.map((expense) => (
+            <Card key={expense.id} className="hover:shadow-lg transition-shadow">
+              <CardContent className="pt-6">
+                <div className="flex items-start justify-between mb-4">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-3 mb-2 flex-wrap">
+                      <h3 className="text-lg font-semibold">{expense.description}</h3>
+                      <Badge className={getCategoryColor(expense.category)}>
+                        {getCategoryLabel(expense.category)}
+                      </Badge>
+                      <Badge variant="outline">{getBookingName(expense.bookingId)}</Badge>
+                    </div>
+                    <p className="text-sm text-slate-600 dark:text-slate-400">
+                      Vendor: {expense.vendor} • {expense.paymentMethod.replace("_", " ")}
+                    </p>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => onEdit(expense)}
+                    >
+                      <Edit className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setDeleteId(expense.id)}
+                    >
+                      <Trash2 className="h-4 w-4 text-red-600" />
+                    </Button>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-4 border-t">
+                  <div>
+                    <p className="text-xs text-slate-600 dark:text-slate-400">Date</p>
+                    <p className="text-sm font-medium">
+                      {format(new Date(expense.date), "MMM d, yyyy")}
+                    </p>
+                  </div>
+
+                  <div>
+                    <p className="text-xs text-slate-600 dark:text-slate-400">Amount</p>
+                    <p className="text-lg font-bold text-red-600">
+                      {formatCurrency(expense.amount)}
+                    </p>
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-2">
+                    {expense.receiptUrl && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => window.open(expense.receiptUrl, "_blank")}
+                      >
+                        <Image className="h-4 w-4 mr-1" />
+                        Receipt
+                      </Button>
+                    )}
+                    {expense.proofOfPaymentUrl && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => window.open(expense.proofOfPaymentUrl, "_blank")}
+                      >
+                        <FileText className="h-4 w-4 mr-1" />
+                        Proof
+                      </Button>
+                    )}
+                    {expense.receiptFiles && expense.receiptFiles.length > 0 && (
+                      <div className="flex flex-wrap gap-2">
+                        {expense.receiptFiles.map((file) => (
+                          <Button
+                            key={file.id}
+                            variant="outline"
+                            size="sm"
+                            onClick={() => window.open(file.url, "_blank")}
+                            className="text-xs"
+                          >
+                            <ExternalLink className="h-3 w-3 mr-1" />
+                            {file.name}
+                          </Button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {expense.notes && (
+                  <div className="mt-4 pt-4 border-t">
+                    <p className="text-sm text-slate-600 dark:text-slate-400">
+                      <span className="font-medium">Notes:</span> {expense.notes}
+                    </p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
 
       <AlertDialog open={!!deleteId} onOpenChange={() => setDeleteId(null)}>
         <AlertDialogContent>
