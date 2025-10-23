@@ -101,7 +101,17 @@ export function BookingList({ bookings, onEdit, onDelete, onUpdateBooking, expen
     setDetailsDialogOpen(true);
   };
 
-  const renderBookingCard = (booking: Booking) => (
+  const renderBookingCard = (booking: Booking) => {
+    // Debug logging for this specific booking
+    console.log("=== RENDERING BOOKING CARD ===");
+    console.log("Booking ID:", booking.id);
+    console.log("Booking customer:", booking.contactName);
+    console.log("Booking.payments:", booking.payments);
+    console.log("Payments is array?", Array.isArray(booking.payments));
+    console.log("Payments length:", booking.payments?.length);
+    console.log("Has payments?", booking.payments && booking.payments.length > 0);
+    
+    return (
     <Card key={booking.id} className="overflow-hidden hover:shadow-lg transition-shadow">
       <CardContent className="pt-4">
         <div className="flex justify-between items-start">
@@ -193,9 +203,18 @@ export function BookingList({ bookings, onEdit, onDelete, onUpdateBooking, expen
             </Button>
           </div>
 
-          {booking.payments && booking.payments.length > 0 ? (
+          {(() => {
+            console.log("Evaluating payment display condition...");
+            console.log("booking.payments:", booking.payments);
+            console.log("booking.payments?.length:", booking.payments?.length);
+            const hasPayments = booking.payments && booking.payments.length > 0;
+            console.log("hasPayments result:", hasPayments);
+            return hasPayments;
+          })() ? (
             <div className="space-y-2">
-              {booking.payments.map((payment) => (
+              {booking.payments!.map((payment) => {
+                console.log("Rendering payment:", payment);
+                return (
                 <div
                   key={payment.id}
                   className="flex items-center justify-between p-3 rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800"

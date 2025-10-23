@@ -69,37 +69,37 @@ export default function HomePage() {
   };
 
   const handleUpdateBooking = (booking: Booking) => {
-    console.log("=== UPDATING BOOKING ===");
-    console.log("Booking ID:", booking.id);
-    console.log("Payments:", booking.payments);
-    console.log("Payments Length:", booking.payments?.length);
-    console.log("Amount Paid:", booking.amountPaid);
-    console.log("Balance Due:", booking.balanceDue);
+    console.log("=== HANDLE UPDATE BOOKING START ===");
+    console.log("Incoming booking object:", JSON.stringify(booking, null, 2));
+    console.log("Payments in incoming booking:", booking.payments);
+    console.log("Payment count:", booking.payments?.length);
     
-    // Create completely new array with updated booking
-    const updatedBookings = bookings.map((b) => 
-      b.id === booking.id ? booking : b
-    );
+    // Create new bookings array with the updated booking
+    const updatedBookings = bookings.map((b) => {
+      if (b.id === booking.id) {
+        console.log("Found matching booking, replacing with:", booking);
+        return booking;
+      }
+      return b;
+    });
     
-    console.log("Saving to localStorage");
+    console.log("Updated bookings array:", updatedBookings);
+    console.log("Saving to localStorage...");
+    
+    // Save to localStorage
     localStorage.setItem("trout-lake-bookings", JSON.stringify(updatedBookings));
     
-    // Immediately reload from localStorage to force fresh data
-    const reloadedData = localStorage.getItem("trout-lake-bookings");
-    if (reloadedData) {
-      const parsed = JSON.parse(reloadedData);
-      console.log("✓ Reloaded from localStorage");
-      
-      // Log the specific booking we just updated
-      const reloadedBooking = parsed.find((b: Booking) => b.id === booking.id);
-      console.log("✓ Reloaded booking payments:", reloadedBooking?.payments);
-      console.log("✓ Reloaded booking payments length:", reloadedBooking?.payments?.length);
-      
-      // Update state with fresh data
-      setBookings([...parsed]);
-    }
+    // Verify what was saved
+    const savedData = localStorage.getItem("trout-lake-bookings");
+    const parsedSaved = JSON.parse(savedData || "[]");
+    const savedBooking = parsedSaved.find((b: Booking) => b.id === booking.id);
+    console.log("✓ Verified in localStorage - payments:", savedBooking?.payments);
+    console.log("✓ Verified in localStorage - payment count:", savedBooking?.payments?.length);
     
-    console.log("✓ Bookings state updated");
+    // Update React state
+    setBookings(updatedBookings);
+    
+    console.log("=== HANDLE UPDATE BOOKING COMPLETE ===");
   };
 
   const handleEditBooking = (booking: Booking) => {
