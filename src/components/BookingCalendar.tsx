@@ -339,12 +339,17 @@ export function BookingCalendar({ bookings, onDateClick, onBookingClick, onAddBo
                   onClick={() => handleDateClick(day)}
                   className={`
                     relative min-h-[120px] p-2 rounded-lg border-2 transition-all flex flex-col
-                    ${isCurrentMonth ? dateBackgroundColor || "bg-white dark:bg-slate-900" : "bg-slate-50 dark:bg-slate-800/50"}
-                    ${isSelected ? "ring-2 ring-blue-500 border-blue-500" : hasBookings ? borderColor : "border-slate-200 dark:border-slate-700"}
-                    ${isToday && !hasBookings ? "border-blue-400 bg-blue-50 dark:bg-blue-950" : ""}
-                    ${hasHoliday && !hasBookings ? "bg-yellow-50 dark:bg-yellow-950/20 border-yellow-300 dark:border-yellow-700" : ""}
+                    ${!isCurrentMonth ? "bg-slate-50 dark:bg-slate-800/50 opacity-40" : ""}
+                    ${isCurrentMonth && !hasBookings && !hasHoliday && !isToday ? "bg-white dark:bg-slate-900" : ""}
+                    ${isCurrentMonth && !hasBookings && hasHoliday ? "bg-yellow-50 dark:bg-yellow-950/20" : ""}
+                    ${isCurrentMonth && !hasBookings && isToday ? "bg-blue-50 dark:bg-blue-950" : ""}
+                    ${isCurrentMonth && hasBookings ? dateBackgroundColor : ""}
+                    ${isSelected ? "ring-2 ring-blue-500 border-blue-500" : ""}
+                    ${!isSelected && hasBookings ? borderColor : ""}
+                    ${!isSelected && !hasBookings && isToday ? "border-blue-400" : ""}
+                    ${!isSelected && !hasBookings && hasHoliday ? "border-yellow-300 dark:border-yellow-700" : ""}
+                    ${!isSelected && !hasBookings && !hasHoliday && !isToday ? "border-slate-200 dark:border-slate-700" : ""}
                     ${hasBookings || hasHoliday ? "hover:shadow-md" : ""}
-                    ${!isCurrentMonth ? "opacity-40" : ""}
                     hover:border-slate-300 dark:hover:border-slate-600 cursor-pointer
                   `}
                 >
