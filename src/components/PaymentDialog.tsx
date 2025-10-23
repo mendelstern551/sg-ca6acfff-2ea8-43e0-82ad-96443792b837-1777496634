@@ -119,7 +119,7 @@ export function PaymentDialog({ open, onOpenChange, payment, bookingId, onSave }
 
             <div className="space-y-2">
               <Label>Payment Date *</Label>
-              <Popover>
+              <Popover modal={false}>
                 <PopoverTrigger asChild>
                   <Button
                     variant="outline"

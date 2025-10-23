@@ -268,7 +268,7 @@ export function BookingDialog({ open, onOpenChange, onSave, booking }: BookingDi
             <div className="space-y-4">
               <div className="space-y-2">
                 <Label>Start Date</Label>
-                <Popover modal={true}>
+                <Popover modal={false}>
                   <PopoverTrigger asChild>
                     <Button
                       variant="outline"
@@ -291,7 +291,7 @@ export function BookingDialog({ open, onOpenChange, onSave, booking }: BookingDi
 
               <div className="space-y-2">
                 <Label>End Date</Label>
-                <Popover modal={true}>
+                <Popover modal={false}>
                   <PopoverTrigger asChild>
                     <Button
                       variant="outline"
