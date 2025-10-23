@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Edit, Trash2, FileText, Image, ExternalLink, Search, Calendar } from "lucide-react";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 interface ExpenseListProps {
   expenses: Expense[];
@@ -24,7 +25,6 @@ export function ExpenseList({ expenses, bookings, onEdit, onDelete, filterBookin
   const [minAmount, setMinAmount] = useState<string>("");
   const [maxAmount, setMaxAmount] = useState<string>("");
   const [deleteId, setDeleteId] = useState<string | null>(null);
-  const [amountSearch, setAmountSearch] = useState("");
 
   // Update selected booking when filter changes
   useEffect(() => {
@@ -74,62 +74,28 @@ export function ExpenseList({ expenses, bookings, onEdit, onDelete, filterBookin
     new Date(b.date).getTime() - new Date(a.date).getTime()
   );
 
-  const filterByAmount = (expense: Expense, searchTerm: string): boolean => {
-    if (!searchTerm.trim()) return true;
-    
-    const amount = expense.amount;
-    const term = searchTerm.trim();
-    
-    // Check for range (e.g., "100-500")
-    if (term.includes("-")) {
-      const [min, max] = term.split("-").map(v => parseFloat(v.trim()));
-      if (!isNaN(min) && !isNaN(max)) {
-        return amount >= min && amount <= max;
-      }
-    }
-    
-    // Check for greater than (e.g., ">100")
-    if (term.startsWith(">")) {
-      const value = parseFloat(term.substring(1).trim());
-      if (!isNaN(value)) {
-        return amount > value;
-      }
-    }
-    
-    // Check for less than (e.g., "<500")
-    if (term.startsWith("<")) {
-      const value = parseFloat(term.substring(1).trim());
-      if (!isNaN(value)) {
-        return amount < value;
-      }
-    }
-    
-    // Check for greater than or equal (e.g., ">=100")
-    if (term.startsWith(">=")) {
-      const value = parseFloat(term.substring(2).trim());
-      if (!isNaN(value)) {
-        return amount >= value;
-      }
-    }
-    
-    // Check for less than or equal (e.g., "<=500")
-    if (term.startsWith("<=")) {
-      const value = parseFloat(term.substring(2).trim());
-      if (!isNaN(value)) {
-        return amount <= value;
-      }
-    }
-    
-    // Check for exact amount
-    const exactValue = parseFloat(term);
-    if (!isNaN(exactValue)) {
-      return Math.abs(amount - exactValue) < 0.01; // Account for floating point precision
-    }
-    
-    return true;
-  };
+  const filteredExpenses = sortedExpenses.filter(expense => {
+    // Search query filter
+    const matchesSearch = searchQuery === "" || 
+      expense.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      expense.vendor.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      expense.notes.toLowerCase().includes(searchQuery.toLowerCase());
 
-  const filteredExpenses = sortedExpenses.filter(expense => filterByAmount(expense, amountSearch));
+    // Category filter
+    const matchesCategory = selectedCategory === "all" || expense.category === selectedCategory;
+
+    // Booking filter
+    const matchesBooking = selectedBooking === "all" || expense.bookingId === selectedBooking;
+
+    // Amount range filter
+    const min = minAmount ? parseFloat(minAmount) : 0;
+    const max = maxAmount ? parseFloat(maxAmount) : Infinity;
+    const matchesAmount = expense.amount >= min && expense.amount <= max;
+
+    return matchesSearch && matchesCategory && matchesBooking && matchesAmount;
+  });
+
+  const categories = ["all", "food", "cleaning", "supplies", "utilities", "staff", "equipment", "Manager Salary", "other"];
 
   if (expenses.length === 0) {
     return null;
@@ -160,22 +126,85 @@ export function ExpenseList({ expenses, bookings, onEdit, onDelete, filterBookin
         </div>
       )}
 
-      <div className="flex flex-col md:flex-row gap-4">
-        <div className="relative max-w-md">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <div className="relative">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
           <Input
-            placeholder="Search by amount (e.g., 500, 100-500, >100, <500)"
-            value={amountSearch}
-            onChange={(e) => setAmountSearch(e.target.value)}
+            placeholder="Search expenses..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
             className="pl-10"
           />
         </div>
-        {amountSearch && (
-          <p className="text-xs text-slate-600 dark:text-slate-400 mt-2">
+
+        <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+          <SelectTrigger>
+            <SelectValue placeholder="Filter by category" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Categories</SelectItem>
+            {categories.filter(c => c !== "all").map((category) => (
+              <SelectItem key={category} value={category}>
+                {getCategoryLabel(category)}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        <Select value={selectedBooking} onValueChange={setSelectedBooking}>
+          <SelectTrigger>
+            <SelectValue placeholder="Filter by booking" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Bookings</SelectItem>
+            {bookings.map((booking) => (
+              <SelectItem key={booking.id} value={booking.id}>
+                {booking.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        <div className="flex gap-2">
+          <Input
+            type="number"
+            placeholder="Min $"
+            value={minAmount}
+            onChange={(e) => setMinAmount(e.target.value)}
+            className="w-24"
+          />
+          <Input
+            type="number"
+            placeholder="Max $"
+            value={maxAmount}
+            onChange={(e) => setMaxAmount(e.target.value)}
+            className="w-24"
+          />
+        </div>
+      </div>
+
+      {(searchQuery || selectedCategory !== "all" || selectedBooking !== "all" || minAmount || maxAmount) && (
+        <div className="flex items-center justify-between text-sm text-slate-600 dark:text-slate-400">
+          <p>
             Showing {filteredExpenses.length} of {expenses.length} expenses
           </p>
-        )}
-      </div>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => {
+              setSearchQuery("");
+              setSelectedCategory("all");
+              if (!filterBookingId) {
+                setSelectedBooking("all");
+              }
+              setMinAmount("");
+              setMaxAmount("");
+            }}
+          >
+            Clear Filters
+          </Button>
+        </div>
+      )}
 
       {filteredExpenses.length === 0 ? (
         <div className="text-center py-12 text-slate-500 dark:text-slate-400">
