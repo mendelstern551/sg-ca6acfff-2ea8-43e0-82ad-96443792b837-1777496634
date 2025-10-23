@@ -7,9 +7,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Edit, Trash2, Users, Calendar, DollarSign, Clock, CheckCircle2, Plus, Pencil, Eye } from "lucide-react";
+import { Edit, Trash2, Users, Calendar, DollarSign, Clock, CheckCircle2, Eye } from "lucide-react";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { PaymentDialog } from "./PaymentDialog";
 import { ClientDetailsDialog } from "./ClientDetailsDialog";
 
 interface BookingListProps {
@@ -20,81 +19,11 @@ interface BookingListProps {
   expenses?: Expense[];
 }
 
-const paymentMethodColors: Record<string, string> = {
-  cash: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300",
-  check: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300",
-  credit_card: "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300",
-  bank_transfer: "bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-300",
-  venmo: "bg-cyan-100 text-cyan-800 dark:bg-cyan-900 dark:text-cyan-300",
-  zelle: "bg-violet-100 text-violet-800 dark:bg-violet-900 dark:text-violet-300",
-  other: "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-300",
-};
-
-const paymentMethodLabels: Record<string, string> = {
-  cash: "Cash",
-  check: "Check",
-  credit_card: "Credit Card",
-  bank_transfer: "Bank Transfer",
-  venmo: "Venmo",
-  zelle: "Zelle",
-  other: "Other",
-};
-
 export function BookingList({ bookings, onEdit, onDelete, onUpdateBooking, expenses = [] }: BookingListProps) {
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState("all");
-  const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
   const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
-  const [selectedPayment, setSelectedPayment] = useState<Payment | undefined>(undefined);
-
-  const handleAddPayment = (booking: Booking) => {
-    setSelectedBooking(booking);
-    setSelectedPayment(undefined);
-    setPaymentDialogOpen(true);
-  };
-
-  const handleEditPayment = (booking: Booking, payment: Payment) => {
-    setSelectedBooking(booking);
-    setSelectedPayment(payment);
-    setPaymentDialogOpen(true);
-  };
-
-  const handleSavePayment = (payment: Payment) => {
-    if (!selectedBooking) return;
-
-    const updatedBooking = { ...selectedBooking };
-    
-    if (!updatedBooking.payments) {
-      updatedBooking.payments = [];
-    }
-
-    const existingIndex = updatedBooking.payments.findIndex(p => p.id === payment.id);
-    
-    if (existingIndex >= 0) {
-      updatedBooking.payments[existingIndex] = payment;
-    } else {
-      updatedBooking.payments.push(payment);
-    }
-
-    const totalPaid = updatedBooking.payments.reduce((sum, p) => sum + p.amount, 0);
-    updatedBooking.amountPaid = totalPaid;
-    updatedBooking.balanceDue = updatedBooking.totalCost - totalPaid;
-
-    if (totalPaid === 0) {
-      updatedBooking.paymentStatus = "pending";
-    } else if (totalPaid >= updatedBooking.totalCost) {
-      updatedBooking.paymentStatus = "paid";
-    } else if (selectedBooking.depositAmount && totalPaid >= selectedBooking.depositAmount) {
-      updatedBooking.paymentStatus = "partial";
-    } else {
-      updatedBooking.paymentStatus = "deposit_paid";
-    }
-
-    onUpdateBooking(updatedBooking);
-    setPaymentDialogOpen(false);
-    setSelectedBooking(null);
-  };
 
   const handleViewDetails = (booking: Booking) => {
     setSelectedBooking(booking);
@@ -174,84 +103,6 @@ export function BookingList({ bookings, onEdit, onDelete, onUpdateBooking, expen
                   <Trash2 className="h-4 w-4 text-red-600" />
                 </Button>
             </div>
-        </div>
-
-        <div className="mt-4 pt-4 border-t">
-          <div className="flex items-center justify-between mb-3">
-            <h4 className="text-sm font-semibold flex items-center gap-2">
-              <DollarSign className="h-4 w-4 text-green-600" />
-              Payments ({booking.payments?.length || 0})
-            </h4>
-            <Button
-              size="sm"
-              variant="outline"
-              className="h-7 gap-1 text-green-600 hover:text-green-700 hover:bg-green-50 dark:hover:bg-green-950"
-              onClick={() => handleAddPayment(booking)}
-            >
-              <Plus className="h-3 w-3" />
-              Add Payment
-            </Button>
-          </div>
-
-          {booking.payments && booking.payments.length > 0 ? (
-            <div className="space-y-2">
-              {booking.payments.map((payment) => (
-                <div
-                  key={payment.id}
-                  className="flex items-center justify-between p-3 rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800"
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="flex flex-col">
-                      <div className="flex items-center gap-2">
-                        <span className="font-semibold text-green-600 dark:text-green-500">
-                          {formatCurrency(payment.amount)}
-                        </span>
-                        <Badge className={paymentMethodColors[payment.paymentMethod]} variant="secondary">
-                          {paymentMethodLabels[payment.paymentMethod]}
-                        </Badge>
-                      </div>
-                      <div className="flex items-center gap-2 mt-1">
-                        <span className="text-xs text-slate-600 dark:text-slate-400">
-                          {format(new Date(payment.date), "MMM d, yyyy")}
-                        </span>
-                        {payment.referenceNumber && (
-                          <>
-                            <span className="text-xs text-slate-400">•</span>
-                            <span className="text-xs text-slate-600 dark:text-slate-400">
-                              Ref: {payment.referenceNumber}
-                            </span>
-                          </>
-                        )}
-                      </div>
-                      {payment.notes && (
-                        <p className="text-xs text-slate-500 dark:text-slate-500 mt-1">
-                          {payment.notes}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleEditPayment(booking, payment)}
-                    className="h-8 w-8 p-0"
-                  >
-                    <Pencil className="h-3 w-3" />
-                  </Button>
-                </div>
-              ))}
-              <div className="flex items-center justify-between pt-2 mt-2 border-t border-slate-200 dark:border-slate-800">
-                <span className="text-sm font-medium">Total Paid:</span>
-                <span className="text-sm font-semibold text-green-600 dark:text-green-500">
-                  {formatCurrency(booking.amountPaid)}
-                </span>
-              </div>
-            </div>
-          ) : (
-            <div className="text-center py-4 text-sm text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-900 rounded-lg border border-dashed border-slate-300 dark:border-slate-700">
-              No payments recorded yet
-            </div>
-          )}
         </div>
 
         {booking.notes && (
@@ -341,16 +192,6 @@ export function BookingList({ bookings, onEdit, onDelete, onUpdateBooking, expen
           </div>
         </TabsContent>
       </Tabs>
-
-      {selectedBooking && (
-        <PaymentDialog
-          open={paymentDialogOpen}
-          onOpenChange={setPaymentDialogOpen}
-          payment={selectedPayment}
-          bookingId={selectedBooking.id}
-          onSave={handleSavePayment}
-        />
-      )}
 
       {selectedBooking && (
         <ClientDetailsDialog
