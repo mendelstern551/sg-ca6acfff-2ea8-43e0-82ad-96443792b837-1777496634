@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Calendar } from "@/components/ui/calendar";
+import { EnhancedCalendar } from "@/components/ui/enhanced-calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { CalendarIcon, Calculator } from "lucide-react";
 import { format } from "date-fns";
@@ -251,7 +251,7 @@ export function BookingDialog({ open, onOpenChange, onSave, booking }: BookingDi
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar
+                    <EnhancedCalendar
                       mode="single"
                       selected={formData.startDate}
                       onSelect={(date) => setFormData({ ...formData, startDate: date })}
@@ -274,7 +274,7 @@ export function BookingDialog({ open, onOpenChange, onSave, booking }: BookingDi
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar
+                    <EnhancedCalendar
                       mode="single"
                       selected={formData.endDate}
                       onSelect={(date) => setFormData({ ...formData, endDate: date })}

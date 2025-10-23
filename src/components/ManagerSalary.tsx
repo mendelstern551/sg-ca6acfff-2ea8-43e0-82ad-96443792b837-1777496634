@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Plus, DollarSign, Calendar, TrendingUp } from "lucide-react";
+import { Plus, DollarSign, TrendingUp } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { Booking, ManagerPayment, ManagerSalaryData, Expense, PaymentMethod } from "@/types/booking";
 import { format, startOfMonth, isAfter, isBefore, differenceInMonths } from "date-fns";
-import { Calendar as CalendarComponent } from "@/components/ui/calendar";
+import { EnhancedCalendar } from "@/components/ui/enhanced-calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { CalendarIcon } from "lucide-react";
 
@@ -237,7 +237,7 @@ export function ManagerSalary({ bookings, onAddExpense }: ManagerSalaryProps) {
         <Card className="hover:shadow-lg transition-shadow">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Maintenance Fees</CardTitle>
-            <Calendar className="h-4 w-4 text-blue-600" />
+            <DollarSign className="h-4 w-4 text-blue-600" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">${totalMaintenanceFees.toLocaleString()}</div>
@@ -367,7 +367,7 @@ export function ManagerSalary({ bookings, onAddExpense }: ManagerSalaryProps) {
                           </Button>
                         </PopoverTrigger>
                         <PopoverContent className="w-auto p-0" align="start">
-                          <CalendarComponent
+                          <EnhancedCalendar
                             mode="single"
                             selected={paymentForm.date}
                             onSelect={(date) => date && setPaymentForm({ ...paymentForm, date })}
