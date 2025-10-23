@@ -234,6 +234,7 @@ export default function HomePage() {
                     onEdit={handleEditBooking}
                     onDelete={handleDeleteBooking}
                     onUpdateBooking={handleUpdateBooking}
+                    expenses={expenses}
                   />
                 )}
               </CardContent>
