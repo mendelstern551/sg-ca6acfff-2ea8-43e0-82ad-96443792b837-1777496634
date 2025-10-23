@@ -72,22 +72,34 @@ export default function HomePage() {
     console.log("=== UPDATING BOOKING ===");
     console.log("Booking ID:", booking.id);
     console.log("Payments:", booking.payments);
+    console.log("Payments Length:", booking.payments?.length);
     console.log("Amount Paid:", booking.amountPaid);
     console.log("Balance Due:", booking.balanceDue);
     
-    // Create completely new array and objects to force React re-render
+    // Create completely new array with updated booking
     const updatedBookings = bookings.map((b) => 
-      b.id === booking.id ? { ...booking, _updateTimestamp: Date.now() } : b
+      b.id === booking.id ? booking : b
     );
     
-    console.log("Saving to state and localStorage");
+    console.log("Saving to localStorage");
     localStorage.setItem("trout-lake-bookings", JSON.stringify(updatedBookings));
     
-    // Force immediate state update with new reference
-    setBookings([...updatedBookings]);
+    // Immediately reload from localStorage to force fresh data
+    const reloadedData = localStorage.getItem("trout-lake-bookings");
+    if (reloadedData) {
+      const parsed = JSON.parse(reloadedData);
+      console.log("✓ Reloaded from localStorage");
+      
+      // Log the specific booking we just updated
+      const reloadedBooking = parsed.find((b: Booking) => b.id === booking.id);
+      console.log("✓ Reloaded booking payments:", reloadedBooking?.payments);
+      console.log("✓ Reloaded booking payments length:", reloadedBooking?.payments?.length);
+      
+      // Update state with fresh data
+      setBookings([...parsed]);
+    }
     
     console.log("✓ Bookings state updated");
-    console.log("✓ Updated booking payments:", booking.payments?.length);
   };
 
   const handleEditBooking = (booking: Booking) => {

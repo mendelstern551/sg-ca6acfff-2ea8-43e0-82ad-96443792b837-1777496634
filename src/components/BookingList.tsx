@@ -47,12 +47,6 @@ export function BookingList({ bookings, onEdit, onDelete, onUpdateBooking, expen
   const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
   const [selectedPayment, setSelectedPayment] = useState<Payment | undefined>(undefined);
-  const [refreshKey, setRefreshKey] = useState(0);
-
-  // Force refresh when bookings data changes
-  useEffect(() => {
-    setRefreshKey(prev => prev + 1);
-  }, [bookings]);
 
   const getBookingTypeLabel = (type: string) => {
     switch (type) {
@@ -143,12 +137,10 @@ export function BookingList({ bookings, onEdit, onDelete, onUpdateBooking, expen
     }
 
     console.log("Calling onUpdateBooking with:", updatedBooking);
+    console.log("Payment count before update:", updatedBooking.payments.length);
     onUpdateBooking(updatedBooking);
     setPaymentDialogOpen(false);
     setSelectedBooking(null);
-    
-    // Force a refresh after short delay
-    setTimeout(() => setRefreshKey(prev => prev + 1), 50);
   };
 
   const handleViewDetails = (booking: Booking) => {
@@ -168,8 +160,16 @@ export function BookingList({ bookings, onEdit, onDelete, onUpdateBooking, expen
     (b) => b.confirmed === true
   );
 
-  const renderBookingCard = (booking: Booking) => (
-    <Card key={`${booking.id}-${refreshKey}`} className="hover:shadow-lg transition-shadow">
+  const renderBookingCard = (booking: Booking) => {
+    // Log payment data for debugging
+    console.log(`Rendering booking ${booking.id}:`, {
+      paymentsArray: booking.payments,
+      paymentsLength: booking.payments?.length,
+      amountPaid: booking.amountPaid
+    });
+
+    return (
+    <Card key={booking.id} className="hover:shadow-lg transition-shadow">
       <CardContent className="pt-6">
         <div className="flex items-start justify-between mb-4">
           <div>
