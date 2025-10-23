@@ -277,6 +277,7 @@ export default function HomePage() {
 
           <TabsContent value="calendar" className="space-y-4">
             <BookingCalendar 
+              key={`calendar-${refreshKey}-${bookings.length}`}
               bookings={bookings} 
               onBookingClick={handleEditBooking}
               onAddBooking={(date) => {

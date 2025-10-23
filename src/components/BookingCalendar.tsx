@@ -178,6 +178,11 @@ export function BookingCalendar({ bookings, onDateClick, onBookingClick, onAddBo
               <CardTitle className="flex items-center gap-2">
                 <CalendarIcon className="h-5 w-5" />
                 Booking Calendar
+                {bookings.length > 0 && (
+                  <Badge variant="secondary" className="ml-2">
+                    {bookings.length} booking{bookings.length !== 1 ? 's' : ''} loaded
+                  </Badge>
+                )}
               </CardTitle>
               <CardDescription>
                 English & Hebrew dates with Jewish holidays • Click dates to add or view bookings
