@@ -69,10 +69,23 @@ export default function HomePage() {
   };
 
   const handleUpdateBooking = (booking: Booking) => {
+    console.log("=== UPDATING BOOKING ===");
+    console.log("Booking ID:", booking.id);
+    console.log("Payments:", booking.payments);
+    console.log("Amount Paid:", booking.amountPaid);
+    console.log("Balance Due:", booking.balanceDue);
+    
     const updatedBookings = bookings.map((b) => (b.id === booking.id ? booking : b));
     setBookings(updatedBookings);
     localStorage.setItem("trout-lake-bookings", JSON.stringify(updatedBookings));
-    console.log("Updated booking with payments:", booking);
+    
+    // Verify the save
+    const savedData = localStorage.getItem("trout-lake-bookings");
+    if (savedData) {
+      const parsed = JSON.parse(savedData);
+      const savedBooking = parsed.find((b: Booking) => b.id === booking.id);
+      console.log("Verified saved booking payments:", savedBooking?.payments);
+    }
   };
 
   const handleEditBooking = (booking: Booking) => {
