@@ -9,6 +9,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { EnhancedCalendar } from "@/components/ui/enhanced-calendar";
 import { format } from "date-fns";
 import { useState } from "react";
+import { Button } from "@/components/ui/button";
 
 interface BudgetDashboardProps {
   bookings: Booking[];
@@ -48,6 +49,20 @@ export function BudgetDashboard({ bookings, expenses }: BudgetDashboardProps) {
   const totalExpenses = filteredExpenses.reduce((sum, expense) => sum + expense.amount, 0);
   const netProfit = totalRevenue - totalExpenses;
   const profitMargin = totalRevenue > 0 ? ((netProfit / totalRevenue) * 100).toFixed(1) : "0";
+
+  // Payment collection calculations
+  const totalPaid = filteredBookings.reduce((sum, booking) => sum + (booking.amountPaid || 0), 0);
+  const totalBalance = filteredBookings.reduce((sum, booking) => sum + booking.balanceDue, 0);
+
+  // Category analysis
+  const categoryExpenses = filteredExpenses.reduce((acc, expense) => {
+    acc[expense.category] = (acc[expense.category] || 0) + expense.amount;
+    return acc;
+  }, {} as Record<string, number>);
+
+  const topCategories = Object.entries(categoryExpenses)
+    .sort(([, a], [, b]) => b - a)
+    .slice(0, 5);
 
   const categories = ["all", "food", "cleaning", "supplies", "utilities", "staff", "equipment", "Manager Salary", "other"];
 
