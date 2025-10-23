@@ -34,6 +34,7 @@ export function BookingDialog({ open, onOpenChange, onSave, booking }: BookingDi
   const [notes, setNotes] = useState("");
   const [customPrice, setCustomPrice] = useState<number | undefined>();
   const [discountPercent, setDiscountPercent] = useState(0);
+  const [confirmed, setConfirmed] = useState(false);
 
   const [calculations, setCalculations] = useState(calculateBookingCost("yom_tov", 0));
   const [finalPrice, setFinalPrice] = useState(0);
@@ -54,6 +55,7 @@ export function BookingDialog({ open, onOpenChange, onSave, booking }: BookingDi
       setNotes(booking.notes);
       setCustomPrice(booking.customPrice);
       setDiscountPercent(booking.discountPercent || 0);
+      setConfirmed(booking.confirmed);
     } else {
       resetForm();
     }
@@ -119,12 +121,15 @@ export function BookingDialog({ open, onOpenChange, onSave, booking }: BookingDi
       startDate: dateRange.from.toISOString(),
       endDate: dateRange.to.toISOString(),
       numberOfGuests,
-      totalCost: calculations.totalCost,
+      totalCost: finalPrice,
+      depositAmount: finalPrice * 0.25, // Assuming 25% deposit
       amountPaid: booking?.amountPaid || 0,
-      balanceDue: calculations.totalCost - (booking?.amountPaid || 0),
-      confirmed: booking?.confirmed || false,
+      balanceDue: finalPrice - (booking?.amountPaid || 0),
+      paymentStatus: "pending", // Default status
+      confirmed,
       notes,
       createdAt: booking?.createdAt || new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
       payments: booking?.payments || [],
       customPrice,
       discountPercent,
@@ -148,6 +153,7 @@ export function BookingDialog({ open, onOpenChange, onSave, booking }: BookingDi
     setNotes("");
     setCustomPrice(undefined);
     setDiscountPercent(0);
+    setConfirmed(false);
   };
 
   return (
@@ -183,8 +189,8 @@ export function BookingDialog({ open, onOpenChange, onSave, booking }: BookingDi
               <div className="flex items-center space-x-3 p-4 bg-blue-50 dark:bg-blue-950/30 rounded-lg border-2 border-blue-200 dark:border-blue-800">
                 <Checkbox
                   id="confirmed"
-                  checked={booking?.confirmed || false}
-                  onCheckedChange={(checked) => setStep(1)}
+                  checked={confirmed}
+                  onCheckedChange={(checked) => setConfirmed(Boolean(checked))}
                 />
                 <Label
                   htmlFor="confirmed"

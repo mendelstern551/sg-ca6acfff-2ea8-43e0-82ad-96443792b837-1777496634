@@ -211,11 +211,11 @@ export function BookingCalendar({ bookings, onDateClick, onBookingClick, onAddBo
                   // Only confirmed bookings - use booking type color
                   const confirmedBooking = dayBookings.find(b => b.confirmed);
                   if (confirmedBooking) {
-                    if (confirmedBooking.type === "yom_tov") {
+                    if (confirmedBooking.bookingType === "yom_tov") {
                       dateBackgroundColor = "bg-blue-100 dark:bg-blue-950/40";
-                    } else if (confirmedBooking.type === "shabaton") {
+                    } else if (confirmedBooking.bookingType === "shabaton") {
                       dateBackgroundColor = "bg-green-100 dark:bg-green-950/40";
-                    } else if (confirmedBooking.type === "night_event") {
+                    } else if (confirmedBooking.bookingType === "night_event") {
                       dateBackgroundColor = "bg-purple-100 dark:bg-purple-950/40";
                     }
                   }
@@ -268,7 +268,7 @@ export function BookingCalendar({ bookings, onDateClick, onBookingClick, onAddBo
                   {hasBookings && (
                     <div className="space-y-1 mt-auto flex-1 overflow-hidden">
                       {dayBookings.slice(0, 2).map((booking) => {
-                        const colors = bookingTypeColors[booking.type] || bookingTypeColors.yom_tov;
+                        const colors = bookingTypeColors[booking.bookingType] || bookingTypeColors.yom_tov;
                         const colorClass = booking.confirmed ? colors.confirmed : colors.pending;
                         
                         return (
@@ -362,7 +362,7 @@ export function BookingCalendar({ bookings, onDateClick, onBookingClick, onAddBo
                             {booking.confirmed ? "Confirmed" : "Pending"}
                           </Badge>
                           <Badge variant="outline">
-                            {bookingTypeLabels[booking.type] || booking.type}
+                            {bookingTypeLabels[booking.bookingType] || booking.bookingType}
                           </Badge>
                         </div>
                       </div>

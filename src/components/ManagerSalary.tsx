@@ -126,7 +126,7 @@ export function ManagerSalary({ bookings, onAddExpense }: ManagerSalaryProps) {
           description: `Manager Commission - ${booking.name}`,
           paymentMethod: "pending",
           vendor: "Manager",
-          notes: `15% commission (min $1,000) for ${booking.type.replace("_", " ")} booking`,
+          notes: `15% commission (min $1,000) for ${booking.bookingType.replace("_", " ")} booking`,
           createdAt: new Date().toISOString()
         };
         onAddExpense(expense);
