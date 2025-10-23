@@ -34,6 +34,11 @@ export function calculateBookingCost(
   const baseRate = pricing.baseRate;
   const perPersonRate = numberOfGuests > 75 ? pricing.perPersonRateOver75 : pricing.perPersonRate;
   const perPersonTotal = numberOfGuests * perPersonRate;
+  
+  // Use the MAXIMUM of base rate or per-person total
+  // Base rate only applies if per-person total is less than $6,000
+  const accommodationCost = Math.max(baseRate, perPersonTotal);
+  
   const cleaningFee = pricing.cleaningFee;
   const additionalCleaningFee =
     numberOfGuests > pricing.additionalCleaningFeeThreshold
@@ -41,7 +46,7 @@ export function calculateBookingCost(
         pricing.additionalCleaningFee
       : 0;
 
-  const totalCost = baseRate + perPersonTotal + cleaningFee + additionalCleaningFee;
+  const totalCost = accommodationCost + cleaningFee + additionalCleaningFee;
 
   return {
     baseRate,
