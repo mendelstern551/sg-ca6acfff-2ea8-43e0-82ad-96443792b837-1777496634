@@ -64,42 +64,13 @@ export default function HomePage() {
     
     setBookings(updatedBookings);
     localStorage.setItem("trout-lake-bookings", JSON.stringify(updatedBookings));
-    console.log("Saved bookings:", updatedBookings);
     setEditingBooking(undefined);
   };
 
   const handleUpdateBooking = (booking: Booking) => {
-    console.log("=== HANDLE UPDATE BOOKING START ===");
-    console.log("Incoming booking object:", JSON.stringify(booking, null, 2));
-    console.log("Payments in incoming booking:", booking.payments);
-    console.log("Payment count:", booking.payments?.length);
-    
-    // Create new bookings array with the updated booking
-    const updatedBookings = bookings.map((b) => {
-      if (b.id === booking.id) {
-        console.log("Found matching booking, replacing with:", booking);
-        return booking;
-      }
-      return b;
-    });
-    
-    console.log("Updated bookings array:", updatedBookings);
-    console.log("Saving to localStorage...");
-    
-    // Save to localStorage
-    localStorage.setItem("trout-lake-bookings", JSON.stringify(updatedBookings));
-    
-    // Verify what was saved
-    const savedData = localStorage.getItem("trout-lake-bookings");
-    const parsedSaved = JSON.parse(savedData || "[]");
-    const savedBooking = parsedSaved.find((b: Booking) => b.id === booking.id);
-    console.log("✓ Verified in localStorage - payments:", savedBooking?.payments);
-    console.log("✓ Verified in localStorage - payment count:", savedBooking?.payments?.length);
-    
-    // Update React state
+    const updatedBookings = bookings.map((b) => (b.id === booking.id ? booking : b));
     setBookings(updatedBookings);
-    
-    console.log("=== HANDLE UPDATE BOOKING COMPLETE ===");
+    localStorage.setItem("trout-lake-bookings", JSON.stringify(updatedBookings));
   };
 
   const handleEditBooking = (booking: Booking) => {
@@ -273,7 +244,7 @@ export default function HomePage() {
                   </div>
                 ) : (
                   <BookingList
-                    key={Date.now()}
+                    key={JSON.stringify(bookings)}
                     bookings={bookings}
                     onEdit={handleEditBooking}
                     onDelete={handleDeleteBooking}
