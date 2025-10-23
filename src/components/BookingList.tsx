@@ -1,5 +1,6 @@
-import { useState, useEffect } from "react";
-import { Booking, Payment } from "@/types/booking";
+
+import { useState } from "react";
+import { Booking, Payment, Expense } from "@/types/booking";
 import { formatCurrency } from "@/lib/bookingCalculations";
 import { format } from "date-fns";
 import { Card, CardContent } from "@/components/ui/card";
@@ -10,7 +11,6 @@ import { Edit, Trash2, Users, Calendar, DollarSign, Clock, CheckCircle2, Plus, P
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { PaymentDialog } from "./PaymentDialog";
 import { ClientDetailsDialog } from "./ClientDetailsDialog";
-import { Expense } from "@/types/booking";
 
 interface BookingListProps {
   bookings: Booking[];
@@ -48,41 +48,6 @@ export function BookingList({ bookings, onEdit, onDelete, onUpdateBooking, expen
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
   const [selectedPayment, setSelectedPayment] = useState<Payment | undefined>(undefined);
 
-  const getBookingTypeLabel = (type: string) => {
-    switch (type) {
-      case "yom_tov": return "Yom Tov";
-      case "shabaton": return "Shabaton";
-      case "night_event": return "Night Event";
-      default: return type;
-    }
-  };
-
-  const getPaymentStatusBadge = (status: string) => {
-    const variants: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
-      pending: "destructive",
-      confirmed: "default",
-      deposit_paid: "secondary",
-      partial: "outline",
-      paid: "default",
-      refunded: "outline",
-    };
-
-    const labels: Record<string, string> = {
-      pending: "Pending",
-      confirmed: "Confirmed",
-      deposit_paid: "Deposit Paid",
-      partial: "Partial Payment",
-      paid: "Fully Paid",
-      refunded: "Refunded",
-    };
-
-    return (
-      <Badge variant={variants[status] || "default"}>
-        {labels[status] || status}
-      </Badge>
-    );
-  };
-
   const handleAddPayment = (booking: Booking) => {
     setSelectedBooking(booking);
     setSelectedPayment(undefined);
@@ -98,10 +63,6 @@ export function BookingList({ bookings, onEdit, onDelete, onUpdateBooking, expen
   const handleSavePayment = (payment: Payment) => {
     if (!selectedBooking) return;
 
-    console.log("=== SAVING PAYMENT ===");
-    console.log("Payment:", payment);
-    console.log("Selected Booking ID:", selectedBooking.id);
-
     const updatedBooking = { ...selectedBooking };
     
     if (!updatedBooking.payments) {
@@ -112,32 +73,24 @@ export function BookingList({ bookings, onEdit, onDelete, onUpdateBooking, expen
     
     if (existingIndex >= 0) {
       updatedBooking.payments[existingIndex] = payment;
-      console.log("Updated existing payment at index:", existingIndex);
     } else {
       updatedBooking.payments.push(payment);
-      console.log("Added new payment. Total payments:", updatedBooking.payments.length);
     }
 
     const totalPaid = updatedBooking.payments.reduce((sum, p) => sum + p.amount, 0);
     updatedBooking.amountPaid = totalPaid;
     updatedBooking.balanceDue = updatedBooking.totalCost - totalPaid;
 
-    console.log("Total Paid:", totalPaid);
-    console.log("Balance Due:", updatedBooking.balanceDue);
-    console.log("All Payments:", updatedBooking.payments);
-
     if (totalPaid === 0) {
       updatedBooking.paymentStatus = "pending";
     } else if (totalPaid >= updatedBooking.totalCost) {
       updatedBooking.paymentStatus = "paid";
-    } else if (totalPaid >= updatedBooking.depositAmount) {
+    } else if (selectedBooking.depositAmount && totalPaid >= selectedBooking.depositAmount) {
       updatedBooking.paymentStatus = "partial";
     } else {
       updatedBooking.paymentStatus = "deposit_paid";
     }
 
-    console.log("Calling onUpdateBooking with:", updatedBooking);
-    console.log("Payment count before update:", updatedBooking.payments.length);
     onUpdateBooking(updatedBooking);
     setPaymentDialogOpen(false);
     setSelectedBooking(null);
@@ -148,94 +101,79 @@ export function BookingList({ bookings, onEdit, onDelete, onUpdateBooking, expen
     setDetailsDialogOpen(true);
   };
 
-  const sortedBookings = [...bookings].sort((a, b) => 
-    new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-  );
+  const renderBookingCard = (booking: Booking) => (
+    <Card key={booking.id} className="overflow-hidden hover:shadow-lg transition-shadow">
+      <CardContent className="pt-4">
+        <div className="flex justify-between items-start">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4 flex-grow">
+                <div>
+                  <p className="text-xs text-slate-600 dark:text-slate-400 mb-1">Customer</p>
+                  <div className="flex items-center gap-2">
+                    <p className="font-medium">{booking.contactName}</p>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleViewDetails(booking)}
+                      className="h-6 px-2 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                    >
+                      <Eye className="h-3 w-3 mr-1" />
+                      <span className="text-xs">Details</span>
+                    </Button>
+                  </div>
+                  <p className="text-xs text-slate-500">{booking.contactEmail}</p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Calendar className="h-4 w-4 text-blue-600" />
+                  <div>
+                    <p className="text-xs text-slate-600 dark:text-slate-400">Dates</p>
+                    <p className="text-sm font-medium">
+                      {format(new Date(booking.startDate), "MMM d")} - {format(new Date(booking.endDate), "MMM d, yyyy")}
+                    </p>
+                  </div>
+                </div>
 
-  const pendingBookings = sortedBookings.filter(
-    (b) => !b.confirmed
-  );
+                <div className="flex items-center gap-2">
+                  <Users className="h-4 w-4 text-green-600" />
+                  <div>
+                    <p className="text-xs text-slate-600 dark:text-slate-400">Guests</p>
+                    <p className="text-sm font-medium">{booking.numberOfGuests} people</p>
+                  </div>
+                </div>
 
-  const confirmedBookings = sortedBookings.filter(
-    (b) => b.confirmed === true
-  );
+                <div className="flex items-center gap-2">
+                  <DollarSign className="h-4 w-4 text-emerald-600" />
+                  <div>
+                    <p className="text-xs text-slate-600 dark:text-slate-400">Total Cost</p>
+                    <p className="text-sm font-medium">{formatCurrency(booking.totalCost)}</p>
+                  </div>
+                </div>
 
-  const renderBookingCard = (booking: Booking) => {
-    // Log payment data for debugging
-    console.log(`Rendering booking ${booking.id}:`, {
-      paymentsArray: booking.payments,
-      paymentsLength: booking.payments?.length,
-      amountPaid: booking.amountPaid
-    });
-
-    return (
-    <Card key={booking.id} className="hover:shadow-lg transition-shadow">
-      <CardContent className="pt-6">
-        <div className="flex items-start justify-between mb-4">
-          <div>
-            <div className="flex items-center gap-3 mb-2">
-              <h3 className="text-xl font-semibold">{booking.name}</h3>
-              <Badge variant="outline">{getBookingTypeLabel(booking.type)}</Badge>
-              {getPaymentStatusBadge(booking.paymentStatus)}
+                <div className="flex items-center gap-2">
+                  <DollarSign className="h-4 w-4 text-orange-600" />
+                  <div>
+                    <p className="text-xs text-slate-600 dark:text-slate-400">Balance Due</p>
+                    <p className="text-sm font-medium text-orange-600 dark:text-orange-500">
+                      {formatCurrency(booking.balanceDue)}
+                    </p>
+                  </div>
+                </div>
             </div>
-            <p className="text-sm text-slate-600 dark:text-slate-400">
-              Contact: {booking.contactName} • {booking.contactEmail}
-            </p>
-          </div>
-          <div className="flex gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => onEdit(booking)}
-            >
-              <Edit className="h-4 w-4" />
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setDeleteId(booking.id)}
-            >
-              <Trash2 className="h-4 w-4 text-red-600" />
-            </Button>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 pt-4 border-t">
-          <div className="flex items-center gap-2">
-            <Calendar className="h-4 w-4 text-blue-600" />
-            <div>
-              <p className="text-xs text-slate-600 dark:text-slate-400">Dates</p>
-              <p className="text-sm font-medium">
-                {format(new Date(booking.startDate), "MMM d")} - {format(new Date(booking.endDate), "MMM d, yyyy")}
-              </p>
+            <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => onEdit(booking)}
+                >
+                  <Edit className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setDeleteId(booking.id)}
+                >
+                  <Trash2 className="h-4 w-4 text-red-600" />
+                </Button>
             </div>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <Users className="h-4 w-4 text-green-600" />
-            <div>
-              <p className="text-xs text-slate-600 dark:text-slate-400">Guests</p>
-              <p className="text-sm font-medium">{booking.numberOfGuests} people</p>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <DollarSign className="h-4 w-4 text-emerald-600" />
-            <div>
-              <p className="text-xs text-slate-600 dark:text-slate-400">Total Cost</p>
-              <p className="text-sm font-medium">{formatCurrency(booking.totalCost)}</p>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <DollarSign className="h-4 w-4 text-orange-600" />
-            <div>
-              <p className="text-xs text-slate-600 dark:text-slate-400">Balance Due</p>
-              <p className="text-sm font-medium text-orange-600 dark:text-orange-500">
-                {formatCurrency(booking.balanceDue)}
-              </p>
-            </div>
-          </div>
         </div>
 
         <div className="mt-4 pt-4 border-t">
@@ -338,6 +276,19 @@ export function BookingList({ bookings, onEdit, onDelete, onUpdateBooking, expen
   if (bookings.length === 0) {
     return null;
   }
+  
+  const sortedBookings = [...bookings].sort((a, b) => 
+    new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+  );
+
+  const pendingBookings = sortedBookings.filter(
+    (b) => !b.confirmed
+  );
+
+  const confirmedBookings = sortedBookings.filter(
+    (b) => b.confirmed === true
+  );
+
 
   return (
     <>
@@ -368,451 +319,25 @@ export function BookingList({ bookings, onEdit, onDelete, onUpdateBooking, expen
 
         <TabsContent value="all">
           <div className="space-y-4">
-            {sortedBookings.map((booking) => (
-              <Card key={booking.id} className="overflow-hidden hover:shadow-lg transition-shadow">
-                <CardContent className="pt-4">
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                    <div>
-                      <p className="text-xs text-slate-600 dark:text-slate-400 mb-1">Customer</p>
-                      <div className="flex items-center gap-2">
-                        <p className="font-medium">{booking.contactName}</p>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleViewDetails(booking)}
-                          className="h-6 px-2 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
-                        >
-                          <Eye className="h-3 w-3 mr-1" />
-                          <span className="text-xs">Details</span>
-                        </Button>
-                      </div>
-                      <p className="text-xs text-slate-500">{booking.contactEmail}</p>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Calendar className="h-4 w-4 text-blue-600" />
-                      <div>
-                        <p className="text-xs text-slate-600 dark:text-slate-400">Dates</p>
-                        <p className="text-sm font-medium">
-                          {format(new Date(booking.startDate), "MMM d")} - {format(new Date(booking.endDate), "MMM d, yyyy")}
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-2">
-                      <Users className="h-4 w-4 text-green-600" />
-                      <div>
-                        <p className="text-xs text-slate-600 dark:text-slate-400">Guests</p>
-                        <p className="text-sm font-medium">{booking.numberOfGuests} people</p>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-2">
-                      <DollarSign className="h-4 w-4 text-emerald-600" />
-                      <div>
-                        <p className="text-xs text-slate-600 dark:text-slate-400">Total Cost</p>
-                        <p className="text-sm font-medium">{formatCurrency(booking.totalCost)}</p>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-2">
-                      <DollarSign className="h-4 w-4 text-orange-600" />
-                      <div>
-                        <p className="text-xs text-slate-600 dark:text-slate-400">Balance Due</p>
-                        <p className="text-sm font-medium text-orange-600 dark:text-orange-500">
-                          {formatCurrency(booking.balanceDue)}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="mt-4 pt-4 border-t">
-                    <div className="flex items-center justify-between mb-3">
-                      <h4 className="text-sm font-semibold flex items-center gap-2">
-                        <DollarSign className="h-4 w-4 text-green-600" />
-                        Payments ({booking.payments?.length || 0})
-                      </h4>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="h-7 gap-1 text-green-600 hover:text-green-700 hover:bg-green-50 dark:hover:bg-green-950"
-                        onClick={() => handleAddPayment(booking)}
-                      >
-                        <Plus className="h-3 w-3" />
-                        Add Payment
-                      </Button>
-                    </div>
-
-                    {booking.payments && booking.payments.length > 0 ? (
-                      <div className="space-y-2">
-                        {booking.payments.map((payment) => (
-                          <div
-                            key={payment.id}
-                            className="flex items-center justify-between p-3 rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800"
-                          >
-                            <div className="flex items-center gap-3">
-                              <div className="flex flex-col">
-                                <div className="flex items-center gap-2">
-                                  <span className="font-semibold text-green-600 dark:text-green-500">
-                                    {formatCurrency(payment.amount)}
-                                  </span>
-                                  <Badge className={paymentMethodColors[payment.paymentMethod]} variant="secondary">
-                                    {paymentMethodLabels[payment.paymentMethod]}
-                                  </Badge>
-                                </div>
-                                <div className="flex items-center gap-2 mt-1">
-                                  <span className="text-xs text-slate-600 dark:text-slate-400">
-                                    {format(new Date(payment.date), "MMM d, yyyy")}
-                                  </span>
-                                  {payment.referenceNumber && (
-                                    <>
-                                      <span className="text-xs text-slate-400">•</span>
-                                      <span className="text-xs text-slate-600 dark:text-slate-400">
-                                        Ref: {payment.referenceNumber}
-                                      </span>
-                                    </>
-                                  )}
-                                </div>
-                                {payment.notes && (
-                                  <p className="text-xs text-slate-500 dark:text-slate-500 mt-1">
-                                    {payment.notes}
-                                  </p>
-                                )}
-                              </div>
-                            </div>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleEditPayment(booking, payment)}
-                              className="h-8 w-8 p-0"
-                            >
-                              <Pencil className="h-3 w-3" />
-                            </Button>
-                          </div>
-                        ))}
-                        <div className="flex items-center justify-between pt-2 mt-2 border-t border-slate-200 dark:border-slate-800">
-                          <span className="text-sm font-medium">Total Paid:</span>
-                          <span className="text-sm font-semibold text-green-600 dark:text-green-500">
-                            {formatCurrency(booking.amountPaid)}
-                          </span>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="text-center py-4 text-sm text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-900 rounded-lg border border-dashed border-slate-300 dark:border-slate-700">
-                        No payments recorded yet
-                      </div>
-                    )}
-                  </div>
-
-                  {booking.notes && (
-                    <div className="mt-4 pt-4 border-t">
-                      <p className="text-sm text-slate-600 dark:text-slate-400">
-                        <span className="font-medium">Notes:</span> {booking.notes}
-                      </p>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            ))}
+            {sortedBookings.map(renderBookingCard)}
           </div>
         </TabsContent>
 
         <TabsContent value="pending">
           <div className="space-y-4">
-            {pendingBookings.map((booking) => (
-              <Card key={booking.id} className="overflow-hidden hover:shadow-lg transition-shadow">
-                <CardContent className="pt-4">
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                    <div>
-                      <p className="text-xs text-slate-600 dark:text-slate-400 mb-1">Customer</p>
-                      <div className="flex items-center gap-2">
-                        <p className="font-medium">{booking.contactName}</p>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleViewDetails(booking)}
-                          className="h-6 px-2 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
-                        >
-                          <Eye className="h-3 w-3 mr-1" />
-                          <span className="text-xs">Details</span>
-                        </Button>
-                      </div>
-                      <p className="text-xs text-slate-500">{booking.contactEmail}</p>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Calendar className="h-4 w-4 text-blue-600" />
-                      <div>
-                        <p className="text-xs text-slate-600 dark:text-slate-400">Dates</p>
-                        <p className="text-sm font-medium">
-                          {format(new Date(booking.startDate), "MMM d")} - {format(new Date(booking.endDate), "MMM d, yyyy")}
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-2">
-                      <Users className="h-4 w-4 text-green-600" />
-                      <div>
-                        <p className="text-xs text-slate-600 dark:text-slate-400">Guests</p>
-                        <p className="text-sm font-medium">{booking.numberOfGuests} people</p>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-2">
-                      <DollarSign className="h-4 w-4 text-emerald-600" />
-                      <div>
-                        <p className="text-xs text-slate-600 dark:text-slate-400">Total Cost</p>
-                        <p className="text-sm font-medium">{formatCurrency(booking.totalCost)}</p>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-2">
-                      <DollarSign className="h-4 w-4 text-orange-600" />
-                      <div>
-                        <p className="text-xs text-slate-600 dark:text-slate-400">Balance Due</p>
-                        <p className="text-sm font-medium text-orange-600 dark:text-orange-500">
-                          {formatCurrency(booking.balanceDue)}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="mt-4 pt-4 border-t">
-                    <div className="flex items-center justify-between mb-3">
-                      <h4 className="text-sm font-semibold flex items-center gap-2">
-                        <DollarSign className="h-4 w-4 text-green-600" />
-                        Payments ({booking.payments?.length || 0})
-                      </h4>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="h-7 gap-1 text-green-600 hover:text-green-700 hover:bg-green-50 dark:hover:bg-green-950"
-                        onClick={() => handleAddPayment(booking)}
-                      >
-                        <Plus className="h-3 w-3" />
-                        Add Payment
-                      </Button>
-                    </div>
-
-                    {booking.payments && booking.payments.length > 0 ? (
-                      <div className="space-y-2">
-                        {booking.payments.map((payment) => (
-                          <div
-                            key={payment.id}
-                            className="flex items-center justify-between p-3 rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800"
-                          >
-                            <div className="flex items-center gap-3">
-                              <div className="flex flex-col">
-                                <div className="flex items-center gap-2">
-                                  <span className="font-semibold text-green-600 dark:text-green-500">
-                                    {formatCurrency(payment.amount)}
-                                  </span>
-                                  <Badge className={paymentMethodColors[payment.paymentMethod]} variant="secondary">
-                                    {paymentMethodLabels[payment.paymentMethod]}
-                                  </Badge>
-                                </div>
-                                <div className="flex items-center gap-2 mt-1">
-                                  <span className="text-xs text-slate-600 dark:text-slate-400">
-                                    {format(new Date(payment.date), "MMM d, yyyy")}
-                                  </span>
-                                  {payment.referenceNumber && (
-                                    <>
-                                      <span className="text-xs text-slate-400">•</span>
-                                      <span className="text-xs text-slate-600 dark:text-slate-400">
-                                        Ref: {payment.referenceNumber}
-                                      </span>
-                                    </>
-                                  )}
-                                </div>
-                                {payment.notes && (
-                                  <p className="text-xs text-slate-500 dark:text-slate-500 mt-1">
-                                    {payment.notes}
-                                  </p>
-                                )}
-                              </div>
-                            </div>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleEditPayment(booking, payment)}
-                              className="h-8 w-8 p-0"
-                            >
-                              <Pencil className="h-3 w-3" />
-                            </Button>
-                          </div>
-                        ))}
-                        <div className="flex items-center justify-between pt-2 mt-2 border-t border-slate-200 dark:border-slate-800">
-                          <span className="text-sm font-medium">Total Paid:</span>
-                          <span className="text-sm font-semibold text-green-600 dark:text-green-500">
-                            {formatCurrency(booking.amountPaid)}
-                          </span>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="text-center py-4 text-sm text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-900 rounded-lg border border-dashed border-slate-300 dark:border-slate-700">
-                        No payments recorded yet
-                      </div>
-                    )}
-                  </div>
-
-                  {booking.notes && (
-                    <div className="mt-4 pt-4 border-t">
-                      <p className="text-sm text-slate-600 dark:text-slate-400">
-                        <span className="font-medium">Notes:</span> {booking.notes}
-                      </p>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            ))}
+            {pendingBookings.length > 0 
+                ? pendingBookings.map(renderBookingCard) 
+                : renderEmptyState("No Pending Bookings", <Clock className="h-12 w-12 mx-auto mb-4 opacity-50" />)
+            }
           </div>
         </TabsContent>
 
         <TabsContent value="confirmed">
           <div className="space-y-4">
-            {confirmedBookings.map((booking) => (
-              <Card key={booking.id} className="overflow-hidden hover:shadow-lg transition-shadow">
-                <CardContent className="pt-4">
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                    <div>
-                      <p className="text-xs text-slate-600 dark:text-slate-400 mb-1">Customer</p>
-                      <div className="flex items-center gap-2">
-                        <p className="font-medium">{booking.contactName}</p>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleViewDetails(booking)}
-                          className="h-6 px-2 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
-                        >
-                          <Eye className="h-3 w-3 mr-1" />
-                          <span className="text-xs">Details</span>
-                        </Button>
-                      </div>
-                      <p className="text-xs text-slate-500">{booking.contactEmail}</p>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Calendar className="h-4 w-4 text-blue-600" />
-                      <div>
-                        <p className="text-xs text-slate-600 dark:text-slate-400">Dates</p>
-                        <p className="text-sm font-medium">
-                          {format(new Date(booking.startDate), "MMM d")} - {format(new Date(booking.endDate), "MMM d, yyyy")}
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-2">
-                      <Users className="h-4 w-4 text-green-600" />
-                      <div>
-                        <p className="text-xs text-slate-600 dark:text-slate-400">Guests</p>
-                        <p className="text-sm font-medium">{booking.numberOfGuests} people</p>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-2">
-                      <DollarSign className="h-4 w-4 text-emerald-600" />
-                      <div>
-                        <p className="text-xs text-slate-600 dark:text-slate-400">Total Cost</p>
-                        <p className="text-sm font-medium">{formatCurrency(booking.totalCost)}</p>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-2">
-                      <DollarSign className="h-4 w-4 text-orange-600" />
-                      <div>
-                        <p className="text-xs text-slate-600 dark:text-slate-400">Balance Due</p>
-                        <p className="text-sm font-medium text-orange-600 dark:text-orange-500">
-                          {formatCurrency(booking.balanceDue)}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="mt-4 pt-4 border-t">
-                    <div className="flex items-center justify-between mb-3">
-                      <h4 className="text-sm font-semibold flex items-center gap-2">
-                        <DollarSign className="h-4 w-4 text-green-600" />
-                        Payments ({booking.payments?.length || 0})
-                      </h4>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="h-7 gap-1 text-green-600 hover:text-green-700 hover:bg-green-50 dark:hover:bg-green-950"
-                        onClick={() => handleAddPayment(booking)}
-                      >
-                        <Plus className="h-3 w-3" />
-                        Add Payment
-                      </Button>
-                    </div>
-
-                    {booking.payments && booking.payments.length > 0 ? (
-                      <div className="space-y-2">
-                        {booking.payments.map((payment) => (
-                          <div
-                            key={payment.id}
-                            className="flex items-center justify-between p-3 rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800"
-                          >
-                            <div className="flex items-center gap-3">
-                              <div className="flex flex-col">
-                                <div className="flex items-center gap-2">
-                                  <span className="font-semibold text-green-600 dark:text-green-500">
-                                    {formatCurrency(payment.amount)}
-                                  </span>
-                                  <Badge className={paymentMethodColors[payment.paymentMethod]} variant="secondary">
-                                    {paymentMethodLabels[payment.paymentMethod]}
-                                  </Badge>
-                                </div>
-                                <div className="flex items-center gap-2 mt-1">
-                                  <span className="text-xs text-slate-600 dark:text-slate-400">
-                                    {format(new Date(payment.date), "MMM d, yyyy")}
-                                  </span>
-                                  {payment.referenceNumber && (
-                                    <>
-                                      <span className="text-xs text-slate-400">•</span>
-                                      <span className="text-xs text-slate-600 dark:text-slate-400">
-                                        Ref: {payment.referenceNumber}
-                                      </span>
-                                    </>
-                                  )}
-                                </div>
-                                {payment.notes && (
-                                  <p className="text-xs text-slate-500 dark:text-slate-500 mt-1">
-                                    {payment.notes}
-                                  </p>
-                                )}
-                              </div>
-                            </div>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleEditPayment(booking, payment)}
-                              className="h-8 w-8 p-0"
-                            >
-                              <Pencil className="h-3 w-3" />
-                            </Button>
-                          </div>
-                        ))}
-                        <div className="flex items-center justify-between pt-2 mt-2 border-t border-slate-200 dark:border-slate-800">
-                          <span className="text-sm font-medium">Total Paid:</span>
-                          <span className="text-sm font-semibold text-green-600 dark:text-green-500">
-                            {formatCurrency(booking.amountPaid)}
-                          </span>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="text-center py-4 text-sm text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-900 rounded-lg border border-dashed border-slate-300 dark:border-slate-700">
-                        No payments recorded yet
-                      </div>
-                    )}
-                  </div>
-
-                  {booking.notes && (
-                    <div className="mt-4 pt-4 border-t">
-                      <p className="text-sm text-slate-600 dark:text-slate-400">
-                        <span className="font-medium">Notes:</span> {booking.notes}
-                      </p>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            ))}
+            {confirmedBookings.length > 0 
+                ? confirmedBookings.map(renderBookingCard)
+                : renderEmptyState("No Confirmed Bookings", <CheckCircle2 className="h-12 w-12 mx-auto mb-4 opacity-50" />)
+            }
           </div>
         </TabsContent>
       </Tabs>
