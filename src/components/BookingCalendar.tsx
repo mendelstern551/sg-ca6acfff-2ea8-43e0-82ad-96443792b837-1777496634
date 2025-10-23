@@ -198,16 +198,43 @@ export function BookingCalendar({ bookings, onDateClick, onBookingClick, onAddBo
               const hasHoliday = holidays.length > 0;
               const hasBookings = dayBookings.length > 0;
 
+              // Determine background color based on booking status
+              let dateBackgroundColor = "";
+              if (hasBookings) {
+                const hasPending = dayBookings.some(b => !b.confirmed);
+                const hasConfirmed = dayBookings.some(b => b.confirmed);
+                
+                if (hasPending && !hasConfirmed) {
+                  // Only pending bookings - orange tint
+                  dateBackgroundColor = "bg-orange-100 dark:bg-orange-950/40";
+                } else if (hasConfirmed && !hasPending) {
+                  // Only confirmed bookings - use booking type color
+                  const confirmedBooking = dayBookings.find(b => b.confirmed);
+                  if (confirmedBooking) {
+                    if (confirmedBooking.type === "yom_tov") {
+                      dateBackgroundColor = "bg-blue-100 dark:bg-blue-950/40";
+                    } else if (confirmedBooking.type === "shabaton") {
+                      dateBackgroundColor = "bg-green-100 dark:bg-green-950/40";
+                    } else if (confirmedBooking.type === "night_event") {
+                      dateBackgroundColor = "bg-purple-100 dark:bg-purple-950/40";
+                    }
+                  }
+                } else {
+                  // Mix of pending and confirmed - use orange to indicate pending items
+                  dateBackgroundColor = "bg-orange-100 dark:bg-orange-950/40";
+                }
+              }
+
               return (
                 <button
                   key={day.toString()}
                   onClick={() => handleDateClick(day)}
                   className={`
                     relative min-h-[120px] p-2 rounded-lg border transition-all flex flex-col
-                    ${isCurrentMonth ? "bg-white dark:bg-slate-900" : "bg-slate-50 dark:bg-slate-800/50"}
+                    ${isCurrentMonth ? dateBackgroundColor || "bg-white dark:bg-slate-900" : "bg-slate-50 dark:bg-slate-800/50"}
                     ${isSelected ? "ring-2 ring-blue-500 border-blue-500" : "border-slate-200 dark:border-slate-700"}
                     ${isToday ? "border-blue-400 bg-blue-50 dark:bg-blue-950" : ""}
-                    ${hasHoliday ? "bg-yellow-50 dark:bg-yellow-950/20 border-yellow-300 dark:border-yellow-700" : ""}
+                    ${hasHoliday && !hasBookings ? "bg-yellow-50 dark:bg-yellow-950/20 border-yellow-300 dark:border-yellow-700" : ""}
                     ${hasBookings || hasHoliday ? "hover:shadow-md" : ""}
                     ${!isCurrentMonth ? "opacity-40" : ""}
                     hover:border-slate-300 dark:hover:border-slate-600 cursor-pointer
