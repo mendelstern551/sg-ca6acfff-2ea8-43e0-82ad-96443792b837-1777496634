@@ -30,7 +30,7 @@ function EnhancedCalendar({
   const getHebrewDate = (date: Date): string => {
     try {
       const hDate = new HDate(date);
-      return `${hDate.getDate()} ${hDate.getMonthName()}`;
+      return `${hDate.getDate()}`;
     } catch (error) {
       return "";
     }
@@ -89,15 +89,12 @@ function EnhancedCalendar({
           return (
             <div className="flex flex-col items-center justify-center w-full h-full relative">
               {hasHoliday && (
-                <Star className="absolute top-0 right-0 h-3 w-3 text-yellow-500 fill-yellow-500" />
+                <Star className="absolute -top-1 -right-1 h-3 w-3 text-yellow-500 fill-yellow-500" />
               )}
-              <div className="text-sm font-semibold">{date.getDate()}</div>
-              <div className="text-[9px] text-slate-600 dark:text-slate-400 leading-tight">
-                {hebrewDate}
-              </div>
-              {hasHoliday && (
-                <div className="absolute bottom-0 w-full">
-                  <div className="h-1 w-full bg-yellow-400 rounded-full" />
+              <div className="text-base font-semibold">{date.getDate()}</div>
+              {hebrewDate && (
+                <div className="text-[10px] text-slate-500 dark:text-slate-500 font-medium">
+                  {hebrewDate}
                 </div>
               )}
             </div>

@@ -81,7 +81,7 @@ export function BookingCalendar({ bookings, onDateClick, onBookingClick, onAddBo
   const getHebrewDate = (date: Date): string => {
     try {
       const hDate = new HDate(date);
-      return `${hDate.getDate()} ${hDate.getMonthName()}`;
+      return `${hDate.getDate()}`;
     } catch (error) {
       return "";
     }
