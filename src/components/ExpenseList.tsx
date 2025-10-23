@@ -18,6 +18,9 @@ interface ExpenseListProps {
 export function ExpenseList({ expenses, bookings, onEdit, onDelete }: ExpenseListProps) {
   const [deleteId, setDeleteId] = useState<string | null>(null);
 
+  console.log("ExpenseList received expenses:", expenses);
+  console.log("Manager Salary expenses:", expenses.filter(e => e.category === "Manager Salary"));
+
   const getCategoryLabel = (category: string) => {
     const labels: Record<string, string> = {
       food: "Food & Catering",
