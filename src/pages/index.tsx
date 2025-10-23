@@ -75,25 +75,25 @@ export default function HomePage() {
     console.log("Amount Paid:", booking.amountPaid);
     console.log("Balance Due:", booking.balanceDue);
     
-    // Create a completely new array with new object references to force React re-render
+    // Create completely new array and objects to force React re-render
     const updatedBookings = bookings.map((b) => 
-      b.id === booking.id 
-        ? { ...booking, payments: [...(booking.payments || [])] } 
-        : { ...b }
+      b.id === booking.id ? booking : b
     );
     
-    console.log("Updated bookings array:", updatedBookings);
-    setBookings(updatedBookings);
+    console.log("Saving to state and localStorage");
     localStorage.setItem("trout-lake-bookings", JSON.stringify(updatedBookings));
+    setBookings(updatedBookings);
     
-    // Verify the save
-    const savedData = localStorage.getItem("trout-lake-bookings");
-    if (savedData) {
-      const parsed = JSON.parse(savedData);
-      const savedBooking = parsed.find((b: Booking) => b.id === booking.id);
-      console.log("Verified saved booking payments:", savedBooking?.payments);
-      console.log("Payments count:", savedBooking?.payments?.length);
-    }
+    // Force verification after state update
+    setTimeout(() => {
+      const savedData = localStorage.getItem("trout-lake-bookings");
+      if (savedData) {
+        const parsed = JSON.parse(savedData);
+        const savedBooking = parsed.find((b: Booking) => b.id === booking.id);
+        console.log("✓ Verified saved booking payments:", savedBooking?.payments);
+        console.log("✓ Payments count:", savedBooking?.payments?.length);
+      }
+    }, 100);
   };
 
   const handleEditBooking = (booking: Booking) => {
@@ -267,6 +267,7 @@ export default function HomePage() {
                   </div>
                 ) : (
                   <BookingList
+                    key={`bookings-${bookings.length}-${bookings.reduce((acc, b) => acc + (b.payments?.length || 0), 0)}`}
                     bookings={bookings}
                     onEdit={handleEditBooking}
                     onDelete={handleDeleteBooking}
