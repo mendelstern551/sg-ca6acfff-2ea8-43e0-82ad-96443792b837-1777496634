@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { EnhancedCalendar } from "@/components/ui/enhanced-calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { CalendarIcon, Calculator } from "lucide-react";
-import { format } from "date-fns";
+import { format, differenceInDays } from "date-fns";
 import { Booking, BookingType } from "@/types/booking";
 import { calculateBookingCost, formatCurrency } from "@/lib/bookingCalculations";
 import { Card, CardContent } from "@/components/ui/card";
@@ -267,49 +267,37 @@ export function BookingDialog({ open, onOpenChange, onSave, booking }: BookingDi
 
             <div className="space-y-4">
               <div className="space-y-2">
-                <Label>Start Date</Label>
-                <Popover modal={false}>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      className="w-full justify-start text-left font-normal"
-                    >
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {formData.startDate ? format(formData.startDate, "PPP") : "Pick a date"}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="start">
-                    <EnhancedCalendar
-                      mode="single"
-                      selected={formData.startDate}
-                      onSelect={(date) => setFormData({ ...formData, startDate: date })}
-                      initialFocus
-                    />
-                  </PopoverContent>
-                </Popover>
-              </div>
-
-              <div className="space-y-2">
-                <Label>End Date</Label>
-                <Popover modal={false}>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      className="w-full justify-start text-left font-normal"
-                    >
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {formData.endDate ? format(formData.endDate, "PPP") : "Pick a date"}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="start">
-                    <EnhancedCalendar
-                      mode="single"
-                      selected={formData.endDate}
-                      onSelect={(date) => setFormData({ ...formData, endDate: date })}
-                      initialFocus
-                    />
-                  </PopoverContent>
-                </Popover>
+                <Label>Select Dates *</Label>
+                <p className="text-xs text-slate-500 mb-2">
+                  Click a start date, then click or drag to an end date to select your booking period
+                </p>
+                <div className="border rounded-lg p-4 bg-white dark:bg-slate-900">
+                  <EnhancedCalendar
+                    mode="range"
+                    selected={formData}
+                    onSelect={(range) => {
+                      if (range) {
+                        setFormData({
+                          ...formData,
+                          startDate: range.from,
+                          endDate: range.to,
+                        });
+                      }
+                    }}
+                    numberOfMonths={2}
+                    className="rounded-md"
+                  />
+                </div>
+                {formData.startDate && formData.endDate && (
+                  <div className="p-3 bg-blue-50 dark:bg-blue-950 rounded-lg">
+                    <p className="text-sm font-medium text-blue-900 dark:text-blue-100">
+                      Selected: {format(formData.startDate, "MMM d, yyyy")} - {format(formData.endDate, "MMM d, yyyy")}
+                      <span className="ml-2 text-blue-600 dark:text-blue-400">
+                        ({differenceInDays(formData.endDate, formData.startDate) + 1} nights)
+                      </span>
+                    </p>
+                  </div>
+                )}
               </div>
 
               <div className="space-y-2">
