@@ -100,6 +100,8 @@ export default function HomePage() {
     const updatedExpenses = [...expenses, expense];
     setExpenses(updatedExpenses);
     localStorage.setItem("trout-lake-expenses", JSON.stringify(updatedExpenses));
+    console.log("Expense added:", expense);
+    console.log("Total expenses now:", updatedExpenses.length);
   };
 
   const totalGuests = bookings.reduce((sum, b) => sum + b.numberOfGuests, 0);
