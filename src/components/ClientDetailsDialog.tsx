@@ -221,6 +221,39 @@ export function ClientDetailsDialog({ open, onOpenChange, booking, allExpenses }
               </div>
             </CardContent>
           </Card>
+
+          {/* Total Profit Summary Bar */}
+          <Card className={`border-2 ${netProfit >= 0 ? "border-green-600 bg-green-50 dark:bg-green-950/20" : "border-red-600 bg-red-50 dark:bg-red-950/20"}`}>
+            <CardContent className="pt-6">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  {netProfit >= 0 ? (
+                    <div className="h-12 w-12 rounded-full bg-green-600 flex items-center justify-center">
+                      <TrendingUp className="h-6 w-6 text-white" />
+                    </div>
+                  ) : (
+                    <div className="h-12 w-12 rounded-full bg-red-600 flex items-center justify-center">
+                      <TrendingDown className="h-6 w-6 text-white" />
+                    </div>
+                  )}
+                  <div>
+                    <p className="text-sm font-medium text-slate-600 dark:text-slate-400">Total Profit for This Client</p>
+                    <p className="text-xs text-slate-500 dark:text-slate-500">
+                      Revenue ({formatCurrency(booking.totalCost)}) - Expenses ({formatCurrency(totalExpenses)})
+                    </p>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <p className={`text-4xl font-bold ${netProfit >= 0 ? "text-green-600" : "text-red-600"}`}>
+                    {formatCurrency(Math.abs(netProfit))}
+                  </p>
+                  <p className={`text-sm font-medium ${netProfit >= 0 ? "text-green-600" : "text-red-600"}`}>
+                    {netProfit >= 0 ? "Profit" : "Loss"} • {profitMargin}% margin
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         </div>
       </DialogContent>
     </Dialog>
