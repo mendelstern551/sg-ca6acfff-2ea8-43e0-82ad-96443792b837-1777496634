@@ -75,7 +75,14 @@ export default function HomePage() {
     console.log("Amount Paid:", booking.amountPaid);
     console.log("Balance Due:", booking.balanceDue);
     
-    const updatedBookings = bookings.map((b) => (b.id === booking.id ? booking : b));
+    // Create a completely new array with new object references to force React re-render
+    const updatedBookings = bookings.map((b) => 
+      b.id === booking.id 
+        ? { ...booking, payments: [...(booking.payments || [])] } 
+        : { ...b }
+    );
+    
+    console.log("Updated bookings array:", updatedBookings);
     setBookings(updatedBookings);
     localStorage.setItem("trout-lake-bookings", JSON.stringify(updatedBookings));
     
@@ -85,6 +92,7 @@ export default function HomePage() {
       const parsed = JSON.parse(savedData);
       const savedBooking = parsed.find((b: Booking) => b.id === booking.id);
       console.log("Verified saved booking payments:", savedBooking?.payments);
+      console.log("Payments count:", savedBooking?.payments?.length);
     }
   };
 
