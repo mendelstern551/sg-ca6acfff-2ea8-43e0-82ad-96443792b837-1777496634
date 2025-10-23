@@ -86,6 +86,9 @@ export function PaymentDialog({ open, onOpenChange, payment, bookingId, onSave }
       createdAt: payment?.createdAt || new Date().toISOString(),
     };
 
+    console.log("🔵 PaymentDialog - Submitting payment:", newPayment);
+    console.log("🔵 PaymentDialog - For booking ID:", bookingId);
+    
     onSave(newPayment);
     onOpenChange(false);
     resetForm();

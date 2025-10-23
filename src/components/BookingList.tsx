@@ -61,25 +61,44 @@ export function BookingList({ bookings, onEdit, onDelete, onUpdateBooking, expen
   };
 
   const handleSavePayment = (payment: Payment) => {
-    if (!selectedBooking) return;
+    console.log("🟢 BookingList.handleSavePayment - START");
+    console.log("🟢 Received payment:", payment);
+    console.log("🟢 Selected booking:", selectedBooking);
+    
+    if (!selectedBooking) {
+      console.error("❌ No selected booking!");
+      return;
+    }
 
     const updatedBooking = { ...selectedBooking };
+    console.log("🟢 Created updatedBooking copy");
     
     if (!updatedBooking.payments) {
+      console.log("🟢 Initializing payments array (was undefined/null)");
       updatedBooking.payments = [];
     }
 
     const existingIndex = updatedBooking.payments.findIndex(p => p.id === payment.id);
+    console.log("🟢 Existing payment index:", existingIndex);
     
     if (existingIndex >= 0) {
+      console.log("🟢 Updating existing payment at index:", existingIndex);
       updatedBooking.payments[existingIndex] = payment;
     } else {
+      console.log("🟢 Adding new payment to array");
       updatedBooking.payments.push(payment);
     }
+
+    console.log("🟢 Updated payments array:", updatedBooking.payments);
+    console.log("🟢 Payments array length:", updatedBooking.payments.length);
 
     const totalPaid = updatedBooking.payments.reduce((sum, p) => sum + p.amount, 0);
     updatedBooking.amountPaid = totalPaid;
     updatedBooking.balanceDue = updatedBooking.totalCost - totalPaid;
+
+    console.log("🟢 Total paid:", totalPaid);
+    console.log("🟢 Balance due:", updatedBooking.balanceDue);
+    console.log("🟢 Calling onUpdateBooking with:", updatedBooking);
 
     if (totalPaid === 0) {
       updatedBooking.paymentStatus = "pending";
@@ -92,6 +111,10 @@ export function BookingList({ bookings, onEdit, onDelete, onUpdateBooking, expen
     }
 
     onUpdateBooking(updatedBooking);
+    
+    console.log("🟢 BookingList.handleSavePayment - COMPLETE");
+    console.log("🟢 Dialog closing...");
+    
     setPaymentDialogOpen(false);
     setSelectedBooking(null);
   };
@@ -101,7 +124,14 @@ export function BookingList({ bookings, onEdit, onDelete, onUpdateBooking, expen
     setDetailsDialogOpen(true);
   };
 
-  const renderBookingCard = (booking: Booking) => (
+  const renderBookingCard = (booking: Booking) => {
+    const hasPayments = booking.payments && booking.payments.length > 0;
+    console.log("🔴 RENDER - Booking:", booking.contactName);
+    console.log("🔴 RENDER - booking.payments:", booking.payments);
+    console.log("🔴 RENDER - hasPayments:", hasPayments);
+    console.log("🔴 RENDER - payments length:", booking.payments?.length);
+    
+    return (
     <Card key={booking.id} className="overflow-hidden hover:shadow-lg transition-shadow">
       <CardContent className="pt-4">
         <div className="flex justify-between items-start">

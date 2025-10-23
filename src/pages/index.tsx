@@ -68,9 +68,33 @@ export default function HomePage() {
   };
 
   const handleUpdateBooking = (booking: Booking) => {
+    console.log("🟡 index.handleUpdateBooking - START");
+    console.log("🟡 Incoming booking:", booking);
+    console.log("🟡 Incoming booking payments:", booking.payments);
+    console.log("🟡 Payment count:", booking.payments?.length);
+    
     const updatedBookings = bookings.map((b) => (b.id === booking.id ? booking : b));
+    
+    console.log("🟡 Updated bookings array created");
+    const updatedBookingInArray = updatedBookings.find(b => b.id === booking.id);
+    console.log("🟡 Found updated booking in array:", updatedBookingInArray);
+    console.log("🟡 Payments in array:", updatedBookingInArray?.payments);
+    
     setBookings(updatedBookings);
+    console.log("🟡 React state updated with setBookings");
+    
     localStorage.setItem("trout-lake-bookings", JSON.stringify(updatedBookings));
+    console.log("🟡 Saved to localStorage");
+    
+    // Verify localStorage
+    const verification = localStorage.getItem("trout-lake-bookings");
+    const parsed = JSON.parse(verification || "[]");
+    const savedBooking = parsed.find((b: Booking) => b.id === booking.id);
+    console.log("🟡 VERIFICATION - Saved booking in localStorage:", savedBooking);
+    console.log("🟡 VERIFICATION - Payments in localStorage:", savedBooking?.payments);
+    console.log("🟡 VERIFICATION - Payment count in localStorage:", savedBooking?.payments?.length);
+    
+    console.log("🟡 index.handleUpdateBooking - COMPLETE");
   };
 
   const handleEditBooking = (booking: Booking) => {
