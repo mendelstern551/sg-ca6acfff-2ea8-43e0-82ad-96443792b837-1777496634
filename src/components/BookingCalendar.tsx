@@ -200,28 +200,34 @@ export function BookingCalendar({ bookings, onDateClick, onBookingClick, onAddBo
 
               // Determine background color based on booking status
               let dateBackgroundColor = "";
+              let borderColor = "";
               if (hasBookings) {
                 const hasPending = dayBookings.some(b => !b.confirmed);
                 const hasConfirmed = dayBookings.some(b => b.confirmed);
                 
                 if (hasPending && !hasConfirmed) {
-                  // Only pending bookings - orange tint
-                  dateBackgroundColor = "bg-orange-100 dark:bg-orange-950/40";
+                  // Only pending bookings - strong orange marking
+                  dateBackgroundColor = "bg-orange-200 dark:bg-orange-900/60";
+                  borderColor = "border-orange-400 dark:border-orange-600";
                 } else if (hasConfirmed && !hasPending) {
-                  // Only confirmed bookings - use booking type color
+                  // Only confirmed bookings - use booking type color with stronger tint
                   const confirmedBooking = dayBookings.find(b => b.confirmed);
                   if (confirmedBooking) {
                     if (confirmedBooking.bookingType === "yom_tov") {
-                      dateBackgroundColor = "bg-blue-100 dark:bg-blue-950/40";
+                      dateBackgroundColor = "bg-blue-200 dark:bg-blue-900/60";
+                      borderColor = "border-blue-400 dark:border-blue-600";
                     } else if (confirmedBooking.bookingType === "shabaton") {
-                      dateBackgroundColor = "bg-green-100 dark:bg-green-950/40";
+                      dateBackgroundColor = "bg-green-200 dark:bg-green-900/60";
+                      borderColor = "border-green-400 dark:border-green-600";
                     } else if (confirmedBooking.bookingType === "night_event") {
-                      dateBackgroundColor = "bg-purple-100 dark:bg-purple-950/40";
+                      dateBackgroundColor = "bg-purple-200 dark:bg-purple-900/60";
+                      borderColor = "border-purple-400 dark:border-purple-600";
                     }
                   }
                 } else {
                   // Mix of pending and confirmed - use orange to indicate pending items
-                  dateBackgroundColor = "bg-orange-100 dark:bg-orange-950/40";
+                  dateBackgroundColor = "bg-orange-200 dark:bg-orange-900/60";
+                  borderColor = "border-orange-400 dark:border-orange-600";
                 }
               }
 
@@ -230,9 +236,9 @@ export function BookingCalendar({ bookings, onDateClick, onBookingClick, onAddBo
                   key={day.toString()}
                   onClick={() => handleDateClick(day)}
                   className={`
-                    relative min-h-[120px] p-2 rounded-lg border transition-all flex flex-col
+                    relative min-h-[120px] p-2 rounded-lg border-2 transition-all flex flex-col
                     ${isCurrentMonth ? dateBackgroundColor || "bg-white dark:bg-slate-900" : "bg-slate-50 dark:bg-slate-800/50"}
-                    ${isSelected ? "ring-2 ring-blue-500 border-blue-500" : "border-slate-200 dark:border-slate-700"}
+                    ${isSelected ? "ring-2 ring-blue-500 border-blue-500" : hasBookings ? borderColor : "border-slate-200 dark:border-slate-700"}
                     ${isToday ? "border-blue-400 bg-blue-50 dark:bg-blue-950" : ""}
                     ${hasHoliday && !hasBookings ? "bg-yellow-50 dark:bg-yellow-950/20 border-yellow-300 dark:border-yellow-700" : ""}
                     ${hasBookings || hasHoliday ? "hover:shadow-md" : ""}
