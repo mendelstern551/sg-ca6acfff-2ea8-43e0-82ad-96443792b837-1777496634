@@ -36,22 +36,31 @@ export default function HomePage() {
         const migratedBookings = bookingsData.map(b => {
           // Validate and provide defaults for all critical fields
           const validatedBooking: Booking = {
-            ...b,
             id: b.id || Date.now().toString(),
             name: b.name || "Unnamed Event",
             bookingType: b.bookingType || "yom_tov",
+            contactName: b.contactName || "",
+            contactEmail: b.contactEmail || "",
+            contactPhone: b.contactPhone || "",
             startDate: b.startDate || new Date().toISOString(),
             endDate: b.endDate || new Date().toISOString(),
             numberOfGuests: b.numberOfGuests || 0,
+            baseRate: b.baseRate || 0,
+            perPersonRate: b.perPersonRate || 0,
+            cleaningFee: b.cleaningFee || 0,
+            additionalCleaningFee: b.additionalCleaningFee || 0,
             totalCost: b.totalCost || 0,
+            depositAmount: b.depositAmount || 0,
+            amountPaid: b.amountPaid || 0,
+            balanceDue: b.balanceDue ?? (b.totalCost || 0),
+            paymentStatus: b.paymentStatus || "pending",
             confirmed: b.confirmed ?? false,
             payments: Array.isArray(b.payments) ? b.payments : [],
-            amountPaid: b.amountPaid ?? 0,
-            balanceDue: b.balanceDue ?? (b.totalCost || 0),
-            email: b.email || "",
-            phone: b.phone || "",
             notes: b.notes || "",
-            createdAt: b.createdAt || new Date().toISOString()
+            createdAt: b.createdAt || new Date().toISOString(),
+            updatedAt: b.updatedAt || new Date().toISOString(),
+            customPrice: b.customPrice,
+            discountPercent: b.discountPercent,
           };
           return validatedBooking;
         }).filter(b => b.id && b.name); // Filter out any invalid bookings
