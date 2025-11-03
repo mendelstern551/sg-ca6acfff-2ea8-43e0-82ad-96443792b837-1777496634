@@ -1,4 +1,3 @@
-
 import * as React from "react";
 import { DayPicker } from "react-day-picker";
 import { cn } from "@/lib/utils";
@@ -16,6 +15,10 @@ function EnhancedCalendar({
 }: EnhancedCalendarProps) {
   const getJewishHolidays = (date: Date) => {
     try {
+      // Validate date before processing
+      if (!date || !(date instanceof Date) || isNaN(date.getTime())) {
+        return [];
+      }
       const hDate = new HDate(date);
       const events = HebrewCalendar.getHolidaysOnDate(hDate, false) || [];
       return events.filter((event: any) => {
@@ -23,15 +26,21 @@ function EnhancedCalendar({
         return (mask & flags.MODERN_HOLIDAY) || (mask & flags.CHAG) || (mask & flags.MINOR_HOLIDAY);
       });
     } catch (error) {
+      console.error("Error getting Jewish holidays:", error);
       return [];
     }
   };
 
   const getHebrewDate = (date: Date): string => {
     try {
+      // Validate date before processing
+      if (!date || !(date instanceof Date) || isNaN(date.getTime())) {
+        return "";
+      }
       const hDate = new HDate(date);
       return `${hDate.getDate()}`;
     } catch (error) {
+      console.error("Error getting Hebrew date:", error);
       return "";
     }
   };
@@ -82,6 +91,15 @@ function EnhancedCalendar({
         IconLeft: ({ ...props }) => <ChevronLeft className="h-4 w-4" />,
         IconRight: ({ ...props }) => <ChevronRight className="h-4 w-4" />,
         DayContent: ({ date, ...props }) => {
+          // Add comprehensive date validation
+          if (!date || !(date instanceof Date) || isNaN(date.getTime())) {
+            return (
+              <div className="flex flex-col items-center justify-center w-full h-full">
+                <div className="text-base font-semibold">-</div>
+              </div>
+            );
+          }
+
           const holidays = getJewishHolidays(date);
           const hebrewDate = getHebrewDate(date);
           const hasHoliday = holidays.length > 0;
