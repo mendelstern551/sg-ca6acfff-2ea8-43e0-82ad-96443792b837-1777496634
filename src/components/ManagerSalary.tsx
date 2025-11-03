@@ -231,6 +231,22 @@ export function ManagerSalary({ bookings, onAddExpense }: ManagerSalaryProps) {
     setPaymentDialogOpen(false);
   };
 
+  // Reset form when dialog opens to ensure fresh valid date
+  const handleOpenDialog = (open: boolean) => {
+    if (open) {
+      setPaymentForm({
+        date: new Date(),
+        amount: 0,
+        paymentMethod: "check",
+        referenceNumber: "",
+        type: "maintenance",
+        relatedBookingId: "",
+        notes: ""
+      });
+    }
+    setPaymentDialogOpen(open);
+  };
+
   return (
     <div className="space-y-6">
       <div className="grid gap-6 md:grid-cols-4">
@@ -338,7 +354,7 @@ export function ManagerSalary({ bookings, onAddExpense }: ManagerSalaryProps) {
                 <CardTitle>Payment History</CardTitle>
                 <CardDescription>Track all payments made to manager</CardDescription>
               </div>
-              <Dialog open={paymentDialogOpen} onOpenChange={setPaymentDialogOpen}>
+              <Dialog open={paymentDialogOpen} onOpenChange={handleOpenDialog}>
                 <DialogTrigger asChild>
                   <Button className="bg-blue-600 hover:bg-blue-700">
                     <Plus className="h-4 w-4 mr-2" />
@@ -363,14 +379,18 @@ export function ManagerSalary({ bookings, onAddExpense }: ManagerSalaryProps) {
                             className="w-full justify-start text-left font-normal"
                           >
                             <CalendarIcon className="mr-2 h-4 w-4" />
-                            {format(paymentForm.date, "PPP")}
+                            {paymentForm.date ? format(paymentForm.date, "PPP") : "Pick a date"}
                           </Button>
                         </PopoverTrigger>
                         <PopoverContent className="w-auto p-0" align="start">
                           <EnhancedCalendar
                             mode="single"
-                            selected={paymentForm.date}
-                            onSelect={(date) => date && setPaymentForm({ ...paymentForm, date })}
+                            selected={paymentForm.date || new Date()}
+                            onSelect={(date) => {
+                              if (date && date instanceof Date && !isNaN(date.getTime())) {
+                                setPaymentForm({ ...paymentForm, date });
+                              }
+                            }}
                             initialFocus
                           />
                         </PopoverContent>
