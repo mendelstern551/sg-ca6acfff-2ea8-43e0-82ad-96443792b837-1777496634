@@ -11,8 +11,28 @@ function EnhancedCalendar({
   className,
   classNames,
   showOutsideDays = true,
+  selected,
+  defaultMonth,
   ...props
 }: EnhancedCalendarProps) {
+  // Ensure we always have a valid date
+  const validSelectedDate = React.useMemo(() => {
+    if (selected && selected instanceof Date && !isNaN(selected.getTime())) {
+      return selected;
+    }
+    return undefined;
+  }, [selected]);
+
+  const validDefaultMonth = React.useMemo(() => {
+    if (defaultMonth && defaultMonth instanceof Date && !isNaN(defaultMonth.getTime())) {
+      return defaultMonth;
+    }
+    if (validSelectedDate) {
+      return validSelectedDate;
+    }
+    return new Date();
+  }, [defaultMonth, validSelectedDate]);
+
   const getJewishHolidays = (date: Date) => {
     try {
       // Validate date before processing
@@ -48,6 +68,8 @@ function EnhancedCalendar({
   return (
     <DayPicker
       showOutsideDays={showOutsideDays}
+      selected={validSelectedDate}
+      defaultMonth={validDefaultMonth}
       className={cn("p-3", className)}
       classNames={{
         months: "flex flex-col sm:flex-row space-y-4 sm:space-x-4 sm:space-y-0",
@@ -90,7 +112,7 @@ function EnhancedCalendar({
       components={{
         IconLeft: ({ ...props }) => <ChevronLeft className="h-4 w-4" />,
         IconRight: ({ ...props }) => <ChevronRight className="h-4 w-4" />,
-        DayContent: ({ date, ...props }) => {
+        DayContent: ({ date, ...dayProps }) => {
           // Add comprehensive date validation
           if (!date || !(date instanceof Date) || isNaN(date.getTime())) {
             return (
