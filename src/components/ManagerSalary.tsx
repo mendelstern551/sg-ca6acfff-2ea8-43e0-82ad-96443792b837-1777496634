@@ -43,7 +43,11 @@ export function ManagerSalary({ bookings, onAddExpense }: ManagerSalaryProps) {
   useEffect(() => {
     const saved = localStorage.getItem("trout-lake-manager-salary");
     if (saved) {
-      setSalaryData(JSON.parse(saved));
+      try {
+        setSalaryData(JSON.parse(saved));
+      } catch (error) {
+        console.error("Error loading manager salary data:", error);
+      }
     }
   }, []);
 
@@ -102,6 +106,10 @@ export function ManagerSalary({ bookings, onAddExpense }: ManagerSalaryProps) {
     const existingExpenses = JSON.parse(localStorage.getItem("trout-lake-expenses") || "[]");
     
     bookings.forEach((booking) => {
+      if (!booking || !booking.id || !booking.totalCost) {
+        return;
+      }
+
       const commission = Math.max(
         booking.totalCost * (salaryData.commissionPercentage / 100),
         salaryData.minimumCommissionPerEvent
@@ -112,21 +120,25 @@ export function ManagerSalary({ bookings, onAddExpense }: ManagerSalaryProps) {
         exp.id === expenseId || (
           exp.category === "Manager Salary" && 
           exp.bookingId === booking.id &&
-          exp.description.includes("Manager Commission")
+          exp.description?.includes("Manager Commission")
         )
       );
 
       if (!expenseExists) {
+        const bookingTypeName = booking.bookingType ? 
+          booking.bookingType.toString().replace(/_/g, " ") : 
+          "event";
+
         const expense: Expense = {
           id: expenseId,
           bookingId: booking.id,
-          date: booking.startDate,
+          date: booking.startDate || new Date().toISOString(),
           amount: commission,
           category: "Manager Salary",
-          description: `Manager Commission - ${booking.name}`,
+          description: `Manager Commission - ${booking.name || "Event"}`,
           paymentMethod: "pending",
           vendor: "Manager",
-          notes: `15% commission (min $1,000) for ${booking.bookingType.replace("_", " ")} booking`,
+          notes: `15% commission (min $1,000) for ${bookingTypeName} booking`,
           createdAt: new Date().toISOString()
         };
         onAddExpense(expense);
@@ -184,6 +196,10 @@ export function ManagerSalary({ bookings, onAddExpense }: ManagerSalaryProps) {
   const balanceDue = totalOwed - totalPaid;
 
   const handleAddPayment = () => {
+    if (!paymentForm.date || paymentForm.amount <= 0) {
+      return;
+    }
+
     const newPayment: ManagerPayment = {
       id: Date.now().toString(),
       date: paymentForm.date.toISOString(),
@@ -198,7 +214,7 @@ export function ManagerSalary({ bookings, onAddExpense }: ManagerSalaryProps) {
 
     const updatedData = {
       ...salaryData,
-      payments: [...salaryData.payments, newPayment]
+      payments: [...(salaryData.payments || []), newPayment]
     };
 
     setSalaryData(updatedData);
