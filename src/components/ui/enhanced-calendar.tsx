@@ -1,41 +1,21 @@
 import * as React from "react";
-import { DayPicker } from "react-day-picker";
+import { DayPicker, DayPickerProps } from "react-day-picker";
 import { cn } from "@/lib/utils";
 import { buttonVariants } from "@/components/ui/button";
 import { ChevronLeft, ChevronRight, Star } from "lucide-react";
 import { HDate, HebrewCalendar, flags } from "@hebcal/core";
 
-export type EnhancedCalendarProps = React.ComponentProps<typeof DayPicker>;
+export type EnhancedCalendarProps = DayPickerProps;
 
 function EnhancedCalendar({
   className,
   classNames,
   showOutsideDays = true,
-  selected,
-  defaultMonth,
   ...props
 }: EnhancedCalendarProps) {
-  // Ensure we always have a valid date
-  const validSelectedDate = React.useMemo(() => {
-    if (selected && selected instanceof Date && !isNaN(selected.getTime())) {
-      return selected;
-    }
-    return undefined;
-  }, [selected]);
-
-  const validDefaultMonth = React.useMemo(() => {
-    if (defaultMonth && defaultMonth instanceof Date && !isNaN(defaultMonth.getTime())) {
-      return defaultMonth;
-    }
-    if (validSelectedDate) {
-      return validSelectedDate;
-    }
-    return new Date();
-  }, [defaultMonth, validSelectedDate]);
 
   const getJewishHolidays = (date: Date) => {
     try {
-      // Validate date before processing
       if (!date || !(date instanceof Date) || isNaN(date.getTime())) {
         return [];
       }
@@ -43,24 +23,27 @@ function EnhancedCalendar({
       const events = HebrewCalendar.getHolidaysOnDate(hDate, false) || [];
       return events.filter((event: any) => {
         const mask = event.getFlags();
-        return (mask & flags.MODERN_HOLIDAY) || (mask & flags.CHAG) || (mask & flags.MINOR_HOLIDAY);
+        return (mask &amp; flags.MODERN_HOLIDAY) || (mask &amp; flags.CHAG) || (mask &amp; flags.MINOR_HOLIDAY);
       });
     } catch (error) {
-      console.error("Error getting Jewish holidays:", error);
+      if (!(error instanceof Error &amp;&amp; error.message.includes("outside of range"))) {
+        console.error("Error getting Jewish holidays:", error);
+      }
       return [];
     }
   };
 
   const getHebrewDate = (date: Date): string => {
     try {
-      // Validate date before processing
       if (!date || !(date instanceof Date) || isNaN(date.getTime())) {
         return "";
       }
       const hDate = new HDate(date);
       return `${hDate.getDate()}`;
     } catch (error) {
-      console.error("Error getting Hebrew date:", error);
+      if (!(error instanceof Error &amp;&amp; error.message.includes("outside of range"))) {
+        console.error("Error getting Hebrew date:", error);
+      }
       return "";
     }
   };
@@ -68,8 +51,6 @@ function EnhancedCalendar({
   return (
     <DayPicker
       showOutsideDays={showOutsideDays}
-      selected={validSelectedDate}
-      defaultMonth={validDefaultMonth}
       className={cn("p-3", className)}
       classNames={{
         months: "flex flex-col sm:flex-row space-y-4 sm:space-x-4 sm:space-y-0",
@@ -88,10 +69,10 @@ function EnhancedCalendar({
         head_cell: "text-slate-500 rounded-md w-9 font-normal text-[0.8rem] dark:text-slate-400",
         row: "flex w-full mt-2",
         cell: cn(
-          "relative p-0 text-center text-sm focus-within:relative focus-within:z-20 [&:has([aria-selected])]:bg-slate-100 [&:has([aria-selected].day-outside)]:bg-slate-100/50 [&:has([aria-selected].day-range-end)]:rounded-r-md dark:[&:has([aria-selected])]:bg-slate-800 dark:[&:has([aria-selected].day-outside)]:bg-slate-800/50",
+          "relative p-0 text-center text-sm focus-within:relative focus-within:z-20 [&amp;:has([aria-selected])]:bg-slate-100 [&amp;:has([aria-selected].day-outside)]:bg-slate-100/50 [&amp;:has([aria-selected].day-range-end)]:rounded-r-md dark:[&amp;:has([aria-selected])]:bg-slate-800 dark:[&amp;:has([aria-selected].day-outside)]:bg-slate-800/50",
           props.mode === "range"
-            ? "[&:has(>.day-range-end)]:rounded-r-md [&:has(>.day-range-start)]:rounded-l-md first:[&:has([aria-selected])]:rounded-l-md last:[&:has([aria-selected])]:rounded-r-md"
-            : "[&:has([aria-selected])]:rounded-md"
+            ? "[&amp;:has(&gt;.day-range-end)]:rounded-r-md [&amp;:has(&gt;.day-range-start)]:rounded-l-md first:[&amp;:has([aria-selected])]:rounded-l-md last:[&amp;:has([aria-selected])]:rounded-r-md"
+            : "[&amp;:has([aria-selected])]:rounded-md"
         ),
         day: cn(
           buttonVariants({ variant: "ghost" }),
@@ -110,10 +91,9 @@ function EnhancedCalendar({
         ...classNames,
       }}
       components={{
-        IconLeft: ({ ...props }) => <ChevronLeft className="h-4 w-4" />,
-        IconRight: ({ ...props }) => <ChevronRight className="h-4 w-4" />,
-        DayContent: ({ date, ...dayProps }) => {
-          // Add comprehensive date validation
+        IconLeft: ({ ...props }) => &lt;ChevronLeft className="h-4 w-4" /&gt;,
+        IconRight: ({ ...props }) => &lt;ChevronRight className="h-4 w-4" /&gt;,
+        DayContent: ({ date }) => {
           if (!date || !(date instanceof Date) || isNaN(date.getTime())) {
             return (
               <div className="flex flex-col items-center justify-center w-full h-full">
@@ -128,11 +108,11 @@ function EnhancedCalendar({
 
           return (
             <div className="flex flex-col items-center justify-center w-full h-full relative">
-              {hasHoliday && (
+              {hasHoliday &amp;&amp; (
                 <Star className="absolute -top-1 -right-1 h-3 w-3 text-yellow-500 fill-yellow-500" />
               )}
               <div className="text-base font-semibold">{date.getDate()}</div>
-              {hebrewDate && (
+              {hebrewDate &amp;&amp; (
                 <div className="text-[10px] text-slate-500 dark:text-slate-500 font-medium">
                   {hebrewDate}
                 </div>
