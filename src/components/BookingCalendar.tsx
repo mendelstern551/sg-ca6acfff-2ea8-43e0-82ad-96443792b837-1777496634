@@ -297,32 +297,40 @@ export function BookingCalendar({ bookings, onDateClick, onBookingClick, onAddBo
               let dateBackgroundColor = "";
               let borderColor = "";
               let textColor = "";
+              let inlineStyle: React.CSSProperties = {};
               
               if (hasBookings) {
                 const hasPending = dayBookings.some(b => !b.confirmed);
                 const hasConfirmed = dayBookings.some(b => b.confirmed);
+                
+                console.log(`Date ${dayKey}: ${dayBookings.length} bookings, hasPending=${hasPending}, hasConfirmed=${hasConfirmed}`);
                 
                 if (hasPending && !hasConfirmed) {
                   // Only pending bookings - STRONG orange marking
                   dateBackgroundColor = "bg-orange-300 dark:bg-orange-800/80";
                   borderColor = "border-orange-500 dark:border-orange-600 border-4";
                   textColor = "text-orange-900 dark:text-orange-100";
+                  inlineStyle = { backgroundColor: "rgb(253 186 116)" }; // orange-300
                 } else if (hasConfirmed && !hasPending) {
                   // Only confirmed bookings - use booking type color with STRONGER tint
                   const confirmedBooking = dayBookings.find(b => b.confirmed);
                   if (confirmedBooking) {
+                    console.log(`Date ${dayKey}: Confirmed booking type = ${confirmedBooking.bookingType}`);
                     if (confirmedBooking.bookingType === "yom_tov") {
                       dateBackgroundColor = "bg-blue-300 dark:bg-blue-800/80";
                       borderColor = "border-blue-500 dark:border-blue-600 border-4";
                       textColor = "text-blue-900 dark:text-blue-100";
+                      inlineStyle = { backgroundColor: "rgb(147 197 253)" }; // blue-300
                     } else if (confirmedBooking.bookingType === "shabaton") {
                       dateBackgroundColor = "bg-green-300 dark:bg-green-800/80";
                       borderColor = "border-green-500 dark:border-green-600 border-4";
                       textColor = "text-green-900 dark:text-green-100";
+                      inlineStyle = { backgroundColor: "rgb(134 239 172)" }; // green-300
                     } else if (confirmedBooking.bookingType === "night_event") {
                       dateBackgroundColor = "bg-purple-300 dark:bg-purple-800/80";
                       borderColor = "border-purple-500 dark:border-purple-600 border-4";
                       textColor = "text-purple-900 dark:text-purple-100";
+                      inlineStyle = { backgroundColor: "rgb(216 180 254)" }; // purple-300
                     }
                   }
                 } else {
@@ -330,6 +338,7 @@ export function BookingCalendar({ bookings, onDateClick, onBookingClick, onAddBo
                   dateBackgroundColor = "bg-orange-300 dark:bg-orange-800/80";
                   borderColor = "border-orange-500 dark:border-orange-600 border-4";
                   textColor = "text-orange-900 dark:text-orange-100";
+                  inlineStyle = { backgroundColor: "rgb(253 186 116)" }; // orange-300
                 }
               }
 
@@ -337,6 +346,7 @@ export function BookingCalendar({ bookings, onDateClick, onBookingClick, onAddBo
                 <button
                   key={day.toString()}
                   onClick={() => handleDateClick(day)}
+                  style={isCurrentMonth && hasBookings ? inlineStyle : undefined}
                   className={`
                     relative min-h-[120px] p-2 rounded-lg border-2 transition-all flex flex-col
                     ${!isCurrentMonth ? "bg-slate-50 dark:bg-slate-800/50 opacity-40" : ""}
