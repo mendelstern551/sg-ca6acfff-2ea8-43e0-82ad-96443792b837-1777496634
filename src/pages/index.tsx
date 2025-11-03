@@ -33,24 +33,47 @@ export default function HomePage() {
       try {
         const bookingsData: Booking[] = JSON.parse(savedBookings);
         // Ensure all bookings have proper structure including payments array
-        const migratedBookings = bookingsData.map(b => ({
-          ...b,
-          confirmed: b.confirmed ?? false,
-          payments: Array.isArray(b.payments) ? b.payments : [],
-          amountPaid: b.amountPaid ?? 0,
-          balanceDue: b.balanceDue ?? b.totalCost
-        }));
+        const migratedBookings = bookingsData.map(b => {
+          // Validate and provide defaults for all critical fields
+          const validatedBooking: Booking = {
+            ...b,
+            id: b.id || Date.now().toString(),
+            name: b.name || "Unnamed Event",
+            bookingType: b.bookingType || "yom_tov",
+            startDate: b.startDate || new Date().toISOString(),
+            endDate: b.endDate || new Date().toISOString(),
+            numberOfGuests: b.numberOfGuests || 0,
+            totalCost: b.totalCost || 0,
+            confirmed: b.confirmed ?? false,
+            payments: Array.isArray(b.payments) ? b.payments : [],
+            amountPaid: b.amountPaid ?? 0,
+            balanceDue: b.balanceDue ?? (b.totalCost || 0),
+            email: b.email || "",
+            phone: b.phone || "",
+            notes: b.notes || "",
+            createdAt: b.createdAt || new Date().toISOString()
+          };
+          return validatedBooking;
+        }).filter(b => b.id && b.name); // Filter out any invalid bookings
+        
         setBookings(migratedBookings);
         console.log("Loaded bookings with payments:", migratedBookings);
       } catch (error) {
         console.error("Error loading bookings:", error);
+        setBookings([]);
       }
     }
     if (savedExpenses) {
       try {
-        setExpenses(JSON.parse(savedExpenses));
+        const expensesData: Expense[] = JSON.parse(savedExpenses);
+        // Validate expenses
+        const validatedExpenses = expensesData.filter(e => 
+          e && e.id && e.amount !== undefined && e.date
+        );
+        setExpenses(validatedExpenses);
       } catch (error) {
         console.error("Error loading expenses:", error);
+        setExpenses([]);
       }
     }
   }, []);
