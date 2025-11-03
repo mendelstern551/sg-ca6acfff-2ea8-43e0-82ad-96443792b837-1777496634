@@ -202,35 +202,7 @@ export function BookingCalendar({ bookings, onDateClick, onBookingClick, onAddBo
                 English & Hebrew dates with Jewish holidays • Click dates to add or view bookings
               </CardDescription>
               
-              {/* DEBUG PANEL - Remove after testing */}
-              {bookings.length > 0 && (
-                <div className="mt-4 p-4 bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-lg">
-                  <div className="text-xs space-y-2">
-                    <div><strong>Debug Info:</strong></div>
-                    <div>Total bookings loaded: {bookings.length}</div>
-                    <div>Dates with bookings: {Object.keys(bookingsByDate).length}</div>
-                    {bookings.length > 0 && (
-                      <div className="space-y-1">
-                        <div className="font-semibold">Sample booking:</div>
-                        <div>ID: {bookings[0].id}</div>
-                        <div>Name: {bookings[0].name}</div>
-                        <div>Start: {formatDebugDate(bookings[0].startDate)}</div>
-                        <div>End: {formatDebugDate(bookings[0].endDate)}</div>
-                        <div>Confirmed: {bookings[0].confirmed ? 'Yes' : 'No'}</div>
-                        <div>Type: {bookings[0].bookingType}</div>
-                      </div>
-                    )}
-                    {Object.keys(bookingsByDate).length > 0 && (
-                      <div className="mt-2">
-                        <div className="font-semibold">Booked dates:</div>
-                        <div className="max-h-20 overflow-y-auto">
-                          {Object.keys(bookingsByDate).slice(0, 10).join(', ')}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
+              {/* DEBUG PANEL REMOVED - Calendar working correctly */}
             </div>
             <div className="flex flex-col items-end gap-2">
               <div className="flex items-center gap-2">
@@ -303,8 +275,6 @@ export function BookingCalendar({ bookings, onDateClick, onBookingClick, onAddBo
                 const hasPending = dayBookings.some(b => !b.confirmed);
                 const hasConfirmed = dayBookings.some(b => b.confirmed);
                 
-                console.log(`Date ${dayKey}: ${dayBookings.length} bookings, hasPending=${hasPending}, hasConfirmed=${hasConfirmed}`);
-                
                 if (hasPending && !hasConfirmed) {
                   // Only pending bookings - STRONG orange marking
                   dateBackgroundColor = "bg-orange-300 dark:bg-orange-800/80";
@@ -315,7 +285,6 @@ export function BookingCalendar({ bookings, onDateClick, onBookingClick, onAddBo
                   // Only confirmed bookings - use booking type color with STRONGER tint
                   const confirmedBooking = dayBookings.find(b => b.confirmed);
                   if (confirmedBooking) {
-                    console.log(`Date ${dayKey}: Confirmed booking type = ${confirmedBooking.bookingType}`);
                     if (confirmedBooking.bookingType === "yom_tov") {
                       dateBackgroundColor = "bg-blue-300 dark:bg-blue-800/80";
                       borderColor = "border-blue-500 dark:border-blue-600 border-4";
