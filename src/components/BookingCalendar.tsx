@@ -154,7 +154,10 @@ export function BookingCalendar({ bookings, onDateClick, onBookingClick, onAddBo
   const getHebrewMonthYear = (date: Date): string => {
     try {
       const hDate = new HDate(date);
-      return `${hDate.getMonthName()} ${hDate.getFullYear()}`;
+      // Get Hebrew month name and year
+      const monthName = hDate.getMonthName("h"); // 'h' for Hebrew
+      const year = hDate.getFullYear();
+      return `${monthName} ${year}`;
     } catch (error) {
       return "";
     }
@@ -257,7 +260,7 @@ export function BookingCalendar({ bookings, onDateClick, onBookingClick, onAddBo
                 </Button>
                 <div className="text-sm font-medium min-w-[180px] text-center">
                   <div>{format(currentMonth, "MMMM yyyy")}</div>
-                  <div className="text-xs text-slate-600 dark:text-slate-400">
+                  <div className="text-xs text-slate-600 dark:text-slate-400 font-hebrew">
                     {getHebrewMonthYear(currentMonth)}
                   </div>
                 </div>
