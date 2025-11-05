@@ -51,7 +51,7 @@ export function BookingDialog({ open, onOpenChange, onSave, booking: editingBook
 
   useEffect(() => {
     if (editingBooking) {
-      setBookingType(editingBooking.booking_type);
+      setBookingType(editingBooking.booking_type as BookingType);
       setName(editingBooking.name);
       setContactName(editingBooking.contact_name);
       setContactEmail(editingBooking.contact_email || "");
