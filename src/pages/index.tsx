@@ -169,8 +169,28 @@ export default function HomePage() {
 
   const handleDeleteBooking = async (bookingId: string) => {
     try {
+      // First, delete any manager commission expenses associated with this booking
+      const commissionExpenses = expenses.filter(
+        exp => exp.booking_id === bookingId && 
+        exp.category === "Manager Salary" && 
+        exp.description?.includes("Manager Commission")
+      );
+
+      // Delete all commission expenses for this booking
+      await Promise.all(
+        commissionExpenses.map(expense => expenseService.deleteExpense(expense.id))
+      );
+
+      // Then delete the booking itself
       await bookingService.deleteBooking(bookingId);
-      toast({ title: "Booking Deleted", description: "The booking has been deleted successfully." });
+      
+      toast({ 
+        title: "Booking Deleted", 
+        description: commissionExpenses.length > 0 
+          ? `Booking and ${commissionExpenses.length} associated commission expense(s) deleted.`
+          : "The booking has been deleted successfully." 
+      });
+      
       await loadAllData();
     } catch (error) {
       console.error("Error deleting booking:", error);
