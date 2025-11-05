@@ -127,6 +127,15 @@ export function BookingCalendar({ bookings, onDateClick, onBookingClick, onAddBo
       return events.filter((event: any) => {
         const mask = event.getFlags();
         return (mask & flags.MODERN_HOLIDAY) || (mask & flags.CHAG) || (mask & flags.MINOR_HOLIDAY);
+      }).map((event: any) => {
+        // Get Hebrew rendering and remove nikud
+        let hebrewText = event.render("he");
+        hebrewText = hebrewText.replace(/[\u0591-\u05C7]/g, "");
+        return {
+          ...event,
+          hebrewName: hebrewText,
+          render: () => hebrewText
+        };
       });
     } catch (error) {
       return [];
@@ -410,8 +419,8 @@ export function BookingCalendar({ bookings, onDateClick, onBookingClick, onAddBo
                   )}
 
                   {hasHoliday && (
-                    <div className="text-[9px] text-yellow-700 dark:text-yellow-400 font-medium mb-1 line-clamp-1">
-                      {holidays[0].render()}
+                    <div className="text-[9px] text-yellow-700 dark:text-yellow-400 font-medium mb-1 line-clamp-1 font-hebrew">
+                      {holidays[0].hebrewName}
                     </div>
                   )}
 
@@ -479,8 +488,8 @@ export function BookingCalendar({ bookings, onDateClick, onBookingClick, onAddBo
                 </div>
                 <div className="space-y-1">
                   {selectedDateHolidays.map((holiday: any, index: number) => (
-                    <p key={index} className="text-sm text-yellow-800 dark:text-yellow-200">
-                      {holiday.render()}
+                    <p key={index} className="text-sm text-yellow-800 dark:text-yellow-200 font-hebrew">
+                      {holiday.hebrewName}
                     </p>
                   ))}
                 </div>
