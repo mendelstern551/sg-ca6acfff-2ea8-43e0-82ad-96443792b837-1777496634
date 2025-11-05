@@ -476,7 +476,7 @@ export function BookingCalendar({ bookings, onDateClick, onBookingClick, onAddBo
               {selectedDate && format(selectedDate, "MMMM d, yyyy")}
             </DialogTitle>
             <DialogDescription>
-              {selectedDate && `Hebrew: ${getHebrewDate(selectedDate)}`}
+              {selectedDate && `Hebrew: ${new HDate(selectedDate).renderGematriya()}`}
             </DialogDescription>
           </DialogHeader>
 
