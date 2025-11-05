@@ -20,9 +20,10 @@ interface BookingDialogProps {
   onOpenChange: (open: boolean) => void;
   onSave: (booking: Booking) => void;
   booking?: Booking;
+  bookings: Booking[];
 }
 
-export function BookingDialog({ open, onOpenChange, onSave, booking }: BookingDialogProps) {
+export function BookingDialog({ open, onOpenChange, onSave, booking, bookings }: BookingDialogProps) {
   const [step, setStep] = useState(1);
   const [bookingType, setBookingType] = useState<BookingType>("yom_tov");
   const [name, setName] = useState("");
@@ -86,10 +87,9 @@ export function BookingDialog({ open, onOpenChange, onSave, booking }: BookingDi
     }
 
     // Check for overlapping bookings (double-booking prevention)
-    const existingBookings = JSON.parse(localStorage.getItem("trout-lake-bookings") || "[]") as Booking[];
     const currentBookingId = booking?.id;
     
-    const hasConflict = existingBookings.some((existingBooking) => {
+    const hasConflict = bookings.some((existingBooking) => {
       // Skip checking against the current booking being edited
       if (currentBookingId && existingBooking.id === currentBookingId) {
         return false;
