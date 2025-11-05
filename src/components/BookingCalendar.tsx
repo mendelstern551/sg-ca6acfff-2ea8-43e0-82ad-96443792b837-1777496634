@@ -7,6 +7,7 @@ import { Booking } from "@/types/booking";
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths, startOfWeek, endOfWeek } from "date-fns";
 import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, Star, Plus, Users, Clock } from "lucide-react";
 import { HDate, HebrewCalendar, flags } from "@hebcal/core";
+import { stripNikud } from "@hebcal/core";
 
 interface BookingCalendarProps {
   bookings: Booking[];
@@ -173,9 +174,12 @@ export function BookingCalendar({ bookings, onDateClick, onBookingClick, onAddBo
       
       if (parshaEvent) {
         // Get Hebrew rendering with 'he' locale
-        const hebrewText = parshaEvent.render("he");
+        let hebrewText = parshaEvent.render("he");
         // Remove "פרשת " prefix if present to get just the parsha name
-        return hebrewText.replace("פרשת ", "");
+        hebrewText = hebrewText.replace("פרשת ", "");
+        // Remove nikud (vowel points) using regex
+        hebrewText = hebrewText.replace(/[\u0591-\u05C7]/g, "");
+        return hebrewText;
       }
       
       return "";
