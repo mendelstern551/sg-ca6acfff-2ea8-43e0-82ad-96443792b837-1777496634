@@ -7,7 +7,6 @@ import { Booking } from "@/types/booking";
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths, startOfWeek, endOfWeek } from "date-fns";
 import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, Star, Plus, Users, Clock } from "lucide-react";
 import { HDate, HebrewCalendar, flags } from "@hebcal/core";
-import { stripNikud } from "@hebcal/core";
 
 interface BookingCalendarProps {
   bookings: Booking[];
