@@ -157,9 +157,19 @@ export default function HomePage() {
 
   const handleSaveBooking = async (booking: Omit<Booking, "id" | "createdAt" | "updatedAt">) => {
     try {
-      // Ensure balanceDue is correctly calculated based on totalCost and existing amountPaid
-      const amountPaid = editingBooking?.amountPaid || 0;
+      // CRITICAL FIX: Calculate amountPaid from actual payment records, not from stored field
+      // This ensures that when custom pricing is applied, the balance is recalculated correctly
+      const existingPayments = editingBooking?.payments || [];
+      const amountPaid = existingPayments.reduce((sum, p) => sum + p.amount, 0);
       const balanceDue = booking.totalCost - amountPaid;
+
+      // Determine payment status based on balance
+      let paymentStatus: "pending" | "partial" | "paid" = "pending";
+      if (balanceDue <= 0) {
+        paymentStatus = "paid";
+      } else if (amountPaid > 0) {
+        paymentStatus = "partial";
+      }
 
       const bookingData = {
         name: booking.name,
@@ -176,9 +186,9 @@ export default function HomePage() {
         additional_cleaning_fee: booking.additionalCleaningFee,
         total_cost: booking.totalCost,
         deposit_amount: booking.depositAmount,
-        amount_paid: amountPaid,
+        amount_paid: amountPaid, // Use calculated value from payments
         balance_due: balanceDue, // Use recalculated balance
-        payment_status: booking.paymentStatus,
+        payment_status: paymentStatus, // Auto-update payment status
         confirmed: booking.confirmed,
         custom_price: booking.customPrice,
         discount_percent: booking.discountPercent,
@@ -189,7 +199,7 @@ export default function HomePage() {
         await bookingService.updateBooking(editingBooking.id, bookingData);
         toast({
           title: "Booking Updated",
-          description: "The booking has been updated successfully."
+          description: `Balance due recalculated: ${formatCurrency(balanceDue)}`
         });
       } else {
         await bookingService.createBooking(bookingData);
