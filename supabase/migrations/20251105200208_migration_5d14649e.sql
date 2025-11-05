@@ -1,0 +1,1 @@
+ALTER TABLE "public"."bookings" ADD COLUMN IF NOT EXISTS "number_of_rooms" integer NOT NULL DEFAULT 1;

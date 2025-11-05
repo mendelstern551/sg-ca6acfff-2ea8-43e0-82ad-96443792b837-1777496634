@@ -36,6 +36,7 @@ export type Database = {
           name: string
           notes: string | null
           number_of_guests: number
+          number_of_rooms: number
           payment_status: string
           per_person_rate: number
           start_date: string
@@ -62,6 +63,7 @@ export type Database = {
           name: string
           notes?: string | null
           number_of_guests?: number
+          number_of_rooms?: number
           payment_status?: string
           per_person_rate?: number
           start_date: string
@@ -88,6 +90,7 @@ export type Database = {
           name?: string
           notes?: string | null
           number_of_guests?: number
+          number_of_rooms?: number
           payment_status?: string
           per_person_rate?: number
           start_date?: string

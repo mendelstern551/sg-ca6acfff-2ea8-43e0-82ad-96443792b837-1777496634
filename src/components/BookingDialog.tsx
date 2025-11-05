@@ -32,6 +32,7 @@ export function BookingDialog({ open, onOpenChange, onSave, booking, bookings }:
   const [contactPhone, setContactPhone] = useState("");
   const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
   const [numberOfGuests, setNumberOfGuests] = useState(50);
+  const [numberOfRooms, setNumberOfRooms] = useState(1);
   const [notes, setNotes] = useState("");
   const [customPrice, setCustomPrice] = useState<number | undefined>();
   const [discountPercent, setDiscountPercent] = useState(0);
@@ -53,6 +54,7 @@ export function BookingDialog({ open, onOpenChange, onSave, booking, bookings }:
         to: new Date(booking.endDate),
       });
       setNumberOfGuests(booking.numberOfGuests);
+      setNumberOfRooms(booking.numberOfRooms || 1);
       setNotes(booking.notes);
       setCustomPrice(booking.customPrice);
       setDiscountPercent(booking.discountPercent || 0);
@@ -123,6 +125,7 @@ export function BookingDialog({ open, onOpenChange, onSave, booking, bookings }:
       startDate: dateRange.from.toISOString(),
       endDate: dateRange.to.toISOString(),
       numberOfGuests,
+      numberOfRooms,
       totalCost: finalPrice,
       depositAmount: finalPrice * 0.25, // Assuming 25% deposit
       amountPaid: booking?.amountPaid || 0,
@@ -152,6 +155,7 @@ export function BookingDialog({ open, onOpenChange, onSave, booking, bookings }:
     setContactPhone("");
     setDateRange(undefined);
     setNumberOfGuests(50);
+    setNumberOfRooms(1);
     setNotes("");
     setCustomPrice(undefined);
     setDiscountPercent(0);
@@ -290,6 +294,19 @@ export function BookingDialog({ open, onOpenChange, onSave, booking, bookings }:
                   value={numberOfGuests}
                   onChange={(e) => setNumberOfGuests(parseInt(e.target.value) || 0)}
                   placeholder="0"
+                  required
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="numberOfRooms">Number of Rooms</Label>
+                <Input
+                  id="numberOfRooms"
+                  type="number"
+                  min="1"
+                  value={numberOfRooms}
+                  onChange={(e) => setNumberOfRooms(parseInt(e.target.value) || 1)}
+                  placeholder="1"
                   required
                 />
               </div>
