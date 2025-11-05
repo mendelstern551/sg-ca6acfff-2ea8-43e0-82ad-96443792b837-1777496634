@@ -35,18 +35,18 @@ export function InvoiceDialog({ open, onOpenChange, booking }: InvoiceDialogProp
       if (!existingInvoice) {
         setGenerating(true);
         existingInvoice = await invoiceService.createInvoice(booking.id, {
-          clientName: booking.clientName,
-          clientEmail: booking.clientEmail,
-          clientPhone: booking.clientPhone,
+          clientName: booking.contactName,
+          clientEmail: booking.contactEmail || undefined,
+          clientPhone: booking.contactPhone || undefined,
           eventDateStart: booking.startDate,
           eventDateEnd: booking.endDate,
           numberOfGuests: booking.numberOfGuests,
           numberOfRooms: booking.numberOfRooms,
           basePrice: booking.totalCost,
-          depositAmount: booking.depositPaid || 0,
-          balanceDue: booking.totalCost - (booking.depositPaid || 0),
+          depositAmount: booking.depositAmount || 0,
+          balanceDue: booking.balanceDue,
           totalAmount: booking.totalCost,
-          notes: booking.notes
+          notes: booking.notes || undefined
         });
       }
 

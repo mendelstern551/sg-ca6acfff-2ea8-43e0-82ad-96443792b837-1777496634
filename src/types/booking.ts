@@ -46,6 +46,7 @@ export interface Booking {
   startDate: string;
   endDate: string;
   numberOfGuests: number;
+  numberOfRooms: number;
   baseRate: number;
   perPersonRate: number;
   cleaningFee: number;
