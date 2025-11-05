@@ -77,10 +77,13 @@ export function ManagerSalary({ bookings, onAddExpense }: ManagerSalaryProps) {
       const monthKey = format(startOfMonth(monthDate), "yyyy-MM");
       const expenseId = `maintenance-${monthKey}`;
       
+      // Check for duplicates more thoroughly
       const expenseExists = existingExpenses.some((exp: Expense) => 
         exp.id === expenseId || (
           exp.category === "Manager Salary" && 
-          exp.description === `Monthly Maintenance Fee - ${format(monthDate, "MMMM yyyy")}`
+          exp.description === `Monthly Maintenance Fee - ${format(monthDate, "MMMM yyyy")}` &&
+          exp.vendor === "Manager" &&
+          exp.amount === salaryData.maintenanceFeePerMonth
         )
       );
 
@@ -108,6 +111,42 @@ export function ManagerSalary({ bookings, onAddExpense }: ManagerSalaryProps) {
   const createBookingCommissionExpenses = () => {
     const existingExpenses = JSON.parse(localStorage.getItem("trout-lake-expenses") || "[]");
     
+    // Remove any duplicate commission entries first
+    const commissionExpenses = existingExpenses.filter((exp: Expense) => 
+      exp.category === "Manager Salary" && 
+      exp.description?.includes("Manager Commission")
+    );
+    
+    // Group by booking_id to find duplicates
+    const commissionsByBooking = new Map<string, Expense[]>();
+    commissionExpenses.forEach((exp: Expense) => {
+      if (exp.bookingId) {
+        if (!commissionsByBooking.has(exp.bookingId)) {
+          commissionsByBooking.set(exp.bookingId, []);
+        }
+        commissionsByBooking.get(exp.bookingId)!.push(exp);
+      }
+    });
+    
+    // Keep only the first commission for each booking, remove duplicates
+    const expensesToKeep = existingExpenses.filter((exp: Expense) => {
+      if (exp.category !== "Manager Salary" || !exp.description?.includes("Manager Commission")) {
+        return true; // Keep non-commission expenses
+      }
+      
+      if (!exp.bookingId) {
+        return true; // Keep if no booking ID
+      }
+      
+      const bookingCommissions = commissionsByBooking.get(exp.bookingId) || [];
+      // Keep only if this is the first commission for this booking
+      return bookingCommissions.indexOf(exp) === 0;
+    });
+    
+    // Save cleaned up expenses
+    localStorage.setItem("trout-lake-expenses", JSON.stringify(expensesToKeep));
+    
+    // Now create missing commissions
     bookings.forEach((booking) => {
       if (!booking || !booking.id || !booking.totalCost) {
         return;
@@ -119,12 +158,13 @@ export function ManagerSalary({ bookings, onAddExpense }: ManagerSalaryProps) {
       );
 
       const expenseId = `commission-${booking.id}`;
-      const expenseExists = existingExpenses.some((exp: Expense) => 
-        exp.id === expenseId || (
-          exp.category === "Manager Salary" && 
-          exp.bookingId === booking.id &&
-          exp.description?.includes("Manager Commission")
-        )
+      
+      // Check if commission already exists for this booking (more strict check)
+      const expenseExists = expensesToKeep.some((exp: Expense) => 
+        (exp.id === expenseId || exp.bookingId === booking.id) &&
+        exp.category === "Manager Salary" &&
+        exp.description?.includes("Manager Commission") &&
+        exp.vendor === "Manager"
       );
 
       if (!expenseExists) {
@@ -147,7 +187,6 @@ export function ManagerSalary({ bookings, onAddExpense }: ManagerSalaryProps) {
           createdAt: new Date().toISOString()
         };
         onAddExpense(expense as Expense);
-        existingExpenses.push(expense);
       }
     });
   };
