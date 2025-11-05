@@ -229,7 +229,7 @@ export default function HomePage() {
               numberOfGuests: booking.numberOfGuests,
               numberOfRooms: booking.numberOfRooms,
               basePrice: booking.totalCost,
-              depositAmount: booking.depositAmount,
+              depositAmount: amountPaid,
               balanceDue: balanceDue,
               totalAmount: booking.totalCost,
               notes: booking.notes || undefined

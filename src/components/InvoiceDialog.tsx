@@ -33,6 +33,11 @@ export function InvoiceDialog({ open, onOpenChange, booking }: InvoiceDialogProp
 
       if (!existingInvoice) {
         setGenerating(true);
+        
+        // Calculate actual amount paid from payments
+        const amountPaid = booking.payments?.reduce((sum, p) => sum + p.amount, 0) || 0;
+        const balanceDue = booking.totalCost - amountPaid;
+        
         existingInvoice = await invoiceService.createInvoice(booking.id, {
           clientName: booking.contactName,
           clientEmail: booking.contactEmail || undefined,
@@ -42,8 +47,8 @@ export function InvoiceDialog({ open, onOpenChange, booking }: InvoiceDialogProp
           numberOfGuests: booking.numberOfGuests,
           numberOfRooms: booking.numberOfRooms,
           basePrice: booking.totalCost,
-          depositAmount: booking.depositAmount || 0,
-          balanceDue: booking.balanceDue,
+          depositAmount: amountPaid,
+          balanceDue: balanceDue,
           totalAmount: booking.totalCost,
           notes: booking.notes || undefined
         });
