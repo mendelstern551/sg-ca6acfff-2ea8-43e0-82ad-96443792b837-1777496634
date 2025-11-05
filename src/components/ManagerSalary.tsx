@@ -119,7 +119,7 @@ export function ManagerSalary({ bookings, onAddExpense, allExpenses, onExpensesU
           description: `Monthly Maintenance Fee - ${format(monthDate, "MMMM yyyy")}`,
           payment_method: "pending",
           vendor: "Manager",
-          notes: `Monthly maintenance fee of $${salaryData.maintenanceFeePerMonth.toLocaleString()} for ${format(monthDate, "MMMM yyyy")}`,
+          notes: `Maintenance fee of $${salaryData.maintenanceFeePerMonth.toLocaleString()} - Automatically charged on 1st of every month`,
           receipt_urls: [],
           proof_urls: []
         };
@@ -128,7 +128,7 @@ export function ManagerSalary({ bookings, onAddExpense, allExpenses, onExpensesU
       });
 
       await Promise.all(createPromises);
-      console.log(`${createPromises.length} monthly maintenance fees created.`);
+      console.log(`${createPromises.length} monthly maintenance fee expenses created.`);
     }
   };
 
