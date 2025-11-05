@@ -151,6 +151,31 @@ export function BookingCalendar({ bookings, onDateClick, onBookingClick, onAddBo
     }
   };
 
+  const getParshaName = (date: Date): string => {
+    try {
+      // Only get parsha for Saturdays
+      if (date.getDay() !== 6) return "";
+      
+      const hDate = new HDate(date);
+      const events = HebrewCalendar.getHolidaysOnDate(hDate, false) || [];
+      
+      // Look for Parashat event
+      const parshaEvent = events.find((event: any) => {
+        const desc = event.getDesc();
+        return desc.startsWith("Parashat");
+      });
+      
+      if (parshaEvent) {
+        // Remove "Parashat " prefix to get just the parsha name
+        return parshaEvent.render().replace("Parashat ", "");
+      }
+      
+      return "";
+    } catch (error) {
+      return "";
+    }
+  };
+
   const handlePreviousMonth = () => {
     setCurrentMonth(subMonths(currentMonth, 1));
   };
@@ -277,6 +302,8 @@ export function BookingCalendar({ bookings, onDateClick, onBookingClick, onAddBo
               const hebrewDate = getHebrewDate(day);
               const hasHoliday = holidays.length > 0;
               const hasBookings = dayBookings.length > 0;
+              const parshaName = getParshaName(day);
+              const isShabbat = day.getDay() === 6;
 
               // Determine background color based on booking status - STRONGER COLORS
               let dateBackgroundColor = "";
@@ -363,6 +390,12 @@ export function BookingCalendar({ bookings, onDateClick, onBookingClick, onAddBo
                       )}
                     </div>
                   </div>
+
+                  {isShabbat && parshaName && (
+                    <div className="text-[9px] text-blue-700 dark:text-blue-400 font-semibold mb-1 line-clamp-1 bg-blue-100/50 dark:bg-blue-950/30 px-1 py-0.5 rounded">
+                      {parshaName}
+                    </div>
+                  )}
 
                   {hasHoliday && (
                     <div className="text-[9px] text-yellow-700 dark:text-yellow-400 font-medium mb-1 line-clamp-1">
