@@ -2,15 +2,13 @@ import { Booking, Expense } from "@/types/booking";
 import { formatCurrency } from "@/lib/bookingCalculations";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import { TrendingUp, TrendingDown, DollarSign, Percent, Filter, Calendar as CalendarIcon } from "lucide-react";
+import { TrendingUp, TrendingDown, DollarSign, Filter, Calendar as CalendarIcon } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { EnhancedCalendar } from "@/components/ui/enhanced-calendar";
 import { format } from "date-fns";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { PieChart } from "lucide-react";
 
 interface BudgetDashboardProps {
@@ -24,39 +22,30 @@ export function BudgetDashboard({ bookings, expenses }: BudgetDashboardProps) {
   const [startDate, setStartDate] = useState<Date | undefined>();
   const [endDate, setEndDate] = useState<Date | undefined>();
 
-  // Filter bookings based on selected filters
   const filteredBookings = bookings.filter(booking => {
     const bookingMatch = selectedBooking === "all" || booking.id === selectedBooking;
-    
-    const bookingDate = new Date(booking.startDate);
+    const bookingDate = new Date(booking.start_date);
     const dateMatch = (!startDate || bookingDate >= startDate) && 
                      (!endDate || bookingDate <= endDate);
-    
     return bookingMatch && dateMatch;
   });
 
-  // Filter expenses based on selected filters
   const filteredExpenses = expenses.filter(expense => {
-    const bookingMatch = selectedBooking === "all" || expense.bookingId === selectedBooking;
+    const bookingMatch = selectedBooking === "all" || expense.booking_id === selectedBooking;
     const categoryMatch = selectedCategory === "all" || expense.category === selectedCategory;
-    
-    const expenseDate = new Date(expense.date);
+    const expenseDate = new Date(expense.expense_date);
     const dateMatch = (!startDate || expenseDate >= startDate) && 
                      (!endDate || expenseDate <= endDate);
-    
     return bookingMatch && categoryMatch && dateMatch;
   });
 
-  const totalRevenue = filteredBookings.reduce((sum, booking) => sum + booking.totalCost, 0);
+  const totalRevenue = filteredBookings.reduce((sum, booking) => sum + booking.total_cost, 0);
   const totalExpenses = filteredExpenses.reduce((sum, expense) => sum + expense.amount, 0);
   const netProfit = totalRevenue - totalExpenses;
-  const profitMargin = totalRevenue > 0 ? ((netProfit / totalRevenue) * 100).toFixed(1) : "0";
 
-  // Payment collection calculations
-  const totalPaid = filteredBookings.reduce((sum, booking) => sum + (booking.amountPaid || 0), 0);
-  const totalBalance = filteredBookings.reduce((sum, booking) => sum + booking.balanceDue, 0);
+  const totalPaid = filteredBookings.reduce((sum, booking) => sum + (booking.amount_paid || 0), 0);
+  const totalBalance = filteredBookings.reduce((sum, booking) => sum + booking.balance_due, 0);
 
-  // Category analysis
   const categoryExpenses = filteredExpenses.reduce((acc, expense) => {
     acc[expense.category] = (acc[expense.category] || 0) + expense.amount;
     return acc;
@@ -93,7 +82,6 @@ export function BudgetDashboard({ bookings, expenses }: BudgetDashboardProps) {
 
   return (
     <div className="space-y-6">
-      {/* Filter Section */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -313,9 +301,9 @@ export function BudgetDashboard({ bookings, expenses }: BudgetDashboardProps) {
             <div className="space-y-4">
               {bookings.map((booking) => {
                 const bookingExpenses = expenses
-                  .filter((e) => e.bookingId === booking.id)
+                  .filter((e) => e.booking_id === booking.id)
                   .reduce((sum, e) => sum + e.amount, 0);
-                const bookingProfit = booking.totalCost - bookingExpenses;
+                const bookingProfit = booking.total_cost - bookingExpenses;
                 
                 return (
                   <div key={booking.id} className="p-4 border rounded-lg">
@@ -323,7 +311,7 @@ export function BudgetDashboard({ bookings, expenses }: BudgetDashboardProps) {
                       <div>
                         <h4 className="font-semibold">{booking.name}</h4>
                         <p className="text-sm text-slate-600 dark:text-slate-400">
-                          {booking.numberOfGuests} guests
+                          {booking.number_of_guests} guests
                         </p>
                       </div>
                       <div className="text-right">
@@ -338,7 +326,7 @@ export function BudgetDashboard({ bookings, expenses }: BudgetDashboardProps) {
                     <div className="grid grid-cols-3 gap-4 text-sm mt-3">
                       <div>
                         <p className="text-slate-600 dark:text-slate-400">Revenue</p>
-                        <p className="font-medium">{formatCurrency(booking.totalCost)}</p>
+                        <p className="font-medium">{formatCurrency(booking.total_cost)}</p>
                       </div>
                       <div>
                         <p className="text-slate-600 dark:text-slate-400">Expenses</p>
@@ -346,7 +334,7 @@ export function BudgetDashboard({ bookings, expenses }: BudgetDashboardProps) {
                       </div>
                       <div>
                         <p className="text-slate-600 dark:text-slate-400">Balance Due</p>
-                        <p className="font-medium">{formatCurrency(booking.balanceDue)}</p>
+                        <p className="font-medium">{formatCurrency(booking.balance_due)}</p>
                       </div>
                     </div>
                   </div>

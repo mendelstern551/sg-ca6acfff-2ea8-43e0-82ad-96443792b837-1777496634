@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Plus, DollarSign, TrendingUp } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -20,7 +19,7 @@ import type { Database } from "@/integrations/supabase/types";
 type ExpenseInsert = Database["public"]["Tables"]["expenses"]["Insert"];
 
 interface ManagerSalaryProps {
-  bookings: MappedBooking[];
+  bookings: Booking[];
   onAddExpense: (expense: ExpenseInsert) => Promise<void>;
   allExpenses: Expense[];
   onExpensesUpdate: () => void;
@@ -82,7 +81,6 @@ export function ManagerSalary({ bookings, onAddExpense, allExpenses, onExpensesU
         exp.description?.includes("Manager Commission")
     );
 
-    // 1. Clean up duplicates from the database
     const commissionsByBooking = new Map<string, Expense[]>();
     commissionExpenses.forEach(exp => {
       if (exp.booking_id) {
@@ -107,11 +105,10 @@ export function ManagerSalary({ bookings, onAddExpense, allExpenses, onExpensesU
     if (deletePromises.length > 0) {
       await Promise.all(deletePromises);
       console.log(`${deletePromises.length} duplicate commissions deleted.`);
-      onExpensesUpdate(); // This will refetch expenses and trigger a re-run
-      return; // Stop here, the re-run will handle creation
+      onExpensesUpdate();
+      return;
     }
 
-    // 2. Create missing commissions
     const createPromises: Promise<any>[] = [];
     for (const booking of bookings) {
       if (!booking || !booking.id || !booking.total_cost) {

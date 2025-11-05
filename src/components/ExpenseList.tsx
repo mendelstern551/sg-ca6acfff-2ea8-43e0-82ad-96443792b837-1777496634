@@ -1,18 +1,18 @@
 import { useState, useEffect } from "react";
-import { Expense, MappedBooking } from "@/types/booking";
+import { Expense, Booking } from "@/types/booking";
 import { formatCurrency } from "@/lib/bookingCalculations";
 import { format } from "date-fns";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Edit, Trash2, FileText, Image, ExternalLink, Search, Calendar, ChevronDown } from "lucide-react";
+import { Edit, Trash2, FileText, Image, Search, Calendar } from "lucide-react";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 interface ExpenseListProps {
   expenses: Expense[];
-  bookings: MappedBooking[];
+  bookings: Booking[];
   onEdit: (expense: Expense) => void;
   onDelete: (expenseId: string) => void;
   filterBookingId?: string;
@@ -26,15 +26,11 @@ export function ExpenseList({ expenses, bookings, onEdit, onDelete, filterBookin
   const [maxAmount, setMaxAmount] = useState<string>("");
   const [deleteId, setDeleteId] = useState<string | null>(null);
 
-  // Update selected booking when filter changes
   useEffect(() => {
     if (filterBookingId) {
       setSelectedBooking(filterBookingId);
     }
   }, [filterBookingId]);
-
-  console.log("ExpenseList received expenses:", expenses);
-  console.log("Manager Salary expenses:", expenses.filter(e => e.category === "Manager Salary"));
 
   const getCategoryLabel = (category: string) => {
     const labels: Record<string, string> = {
@@ -64,30 +60,25 @@ export function ExpenseList({ expenses, bookings, onEdit, onDelete, filterBookin
     return colors[category] || colors.other;
   };
 
-  const getBookingName = (bookingId?: string) => {
+  const getBookingName = (bookingId?: string | null) => {
     if (!bookingId) return "General Expense";
     const booking = bookings.find((b) => b.id === bookingId);
     return booking ? booking.name : "Unknown Booking";
   };
 
   const sortedExpenses = [...expenses].sort((a, b) => 
-    new Date(b.date).getTime() - new Date(a.date).getTime()
+    new Date(b.expense_date).getTime() - new Date(a.expense_date).getTime()
   );
 
   const filteredExpenses = sortedExpenses.filter(expense => {
-    // Search query filter
     const matchesSearch = searchQuery === "" || 
       expense.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      expense.vendor.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      expense.notes.toLowerCase().includes(searchQuery.toLowerCase());
+      (expense.vendor || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (expense.notes || "").toLowerCase().includes(searchQuery.toLowerCase());
 
-    // Category filter
     const matchesCategory = selectedCategory === "all" || expense.category === selectedCategory;
+    const matchesBooking = selectedBooking === "all" || expense.booking_id === selectedBooking;
 
-    // Booking filter
-    const matchesBooking = selectedBooking === "all" || expense.bookingId === selectedBooking;
-
-    // Amount range filter
     const min = minAmount ? parseFloat(minAmount) : 0;
     const max = maxAmount ? parseFloat(maxAmount) : Infinity;
     const matchesAmount = expense.amount >= min && expense.amount <= max;
@@ -115,9 +106,7 @@ export function ExpenseList({ expenses, bookings, onEdit, onDelete, filterBookin
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => {
-                setSelectedBooking("all");
-              }}
+              onClick={() => setSelectedBooking("all")}
               className="text-blue-600 hover:text-blue-700"
             >
               Clear Filter
@@ -224,10 +213,10 @@ export function ExpenseList({ expenses, bookings, onEdit, onDelete, filterBookin
                       <Badge className={getCategoryColor(expense.category)}>
                         {getCategoryLabel(expense.category)}
                       </Badge>
-                      <Badge variant="outline">{getBookingName(expense.bookingId)}</Badge>
+                      <Badge variant="outline">{getBookingName(expense.booking_id)}</Badge>
                     </div>
                     <p className="text-sm text-slate-600 dark:text-slate-400">
-                      Vendor: {expense.vendor} • {expense.paymentMethod.replace("_", " ")}
+                      Vendor: {expense.vendor} • {expense.payment_method?.replace("_", " ")}
                     </p>
                   </div>
                   <div className="flex gap-2">
@@ -252,7 +241,7 @@ export function ExpenseList({ expenses, bookings, onEdit, onDelete, filterBookin
                   <div>
                     <p className="text-xs text-slate-600 dark:text-slate-400">Date</p>
                     <p className="text-sm font-medium">
-                      {format(new Date(expense.date), "MMM d, yyyy")}
+                      {format(new Date(expense.expense_date), "MMM d, yyyy")}
                     </p>
                   </div>
 
@@ -264,7 +253,7 @@ export function ExpenseList({ expenses, bookings, onEdit, onDelete, filterBookin
                   </div>
 
                   <div className="flex flex-wrap items-center gap-2">
-                    {expense.receiptUrls && expense.receiptUrls.length > 0 && expense.receiptUrls.map((url, index) => (
+                    {expense.receipt_urls && expense.receipt_urls.length > 0 && expense.receipt_urls.map((url, index) => (
                       <Button
                         key={`receipt-${index}`}
                         variant="outline"
@@ -272,10 +261,10 @@ export function ExpenseList({ expenses, bookings, onEdit, onDelete, filterBookin
                         onClick={() => window.open(url, "_blank")}
                       >
                         <Image className="h-4 w-4 mr-1" />
-                        Receipt {expense.receiptUrls.length > 1 ? index + 1 : ""}
+                        Receipt {expense.receipt_urls.length > 1 ? index + 1 : ""}
                       </Button>
                     ))}
-                    {expense.proofUrls && expense.proofUrls.length > 0 && expense.proofUrls.map((url, index) => (
+                    {expense.proof_urls && expense.proof_urls.length > 0 && expense.proof_urls.map((url, index) => (
                       <Button
                         key={`proof-${index}`}
                         variant="outline"
@@ -283,7 +272,7 @@ export function ExpenseList({ expenses, bookings, onEdit, onDelete, filterBookin
                         onClick={() => window.open(url, "_blank")}
                       >
                         <FileText className="h-4 w-4 mr-1" />
-                        Proof {expense.proofUrls.length > 1 ? index + 1 : ""}
+                        Proof {expense.proof_urls.length > 1 ? index + 1 : ""}
                       </Button>
                     ))}
                   </div>

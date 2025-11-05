@@ -10,7 +10,7 @@ import { formatCurrency } from "@/lib/bookingCalculations";
 
 interface ReceiptLibraryProps {
   expenses: Expense[];
-  bookings: MappedBooking[];
+  bookings: Booking[];
 }
 
 export function ReceiptLibrary({ expenses, bookings }: ReceiptLibraryProps) {
@@ -53,8 +53,8 @@ export function ReceiptLibrary({ expenses, bookings }: ReceiptLibraryProps) {
     }> = [];
 
     expenses.forEach((expense) => {
-      if (expense.receiptUrls && expense.receiptUrls.length > 0) {
-        expense.receiptUrls.forEach((url, index) => {
+      if (expense.receipt_urls && expense.receipt_urls.length > 0) {
+        expense.receipt_urls.forEach((url, index) => {
           receipts.push({
             id: `${expense.id}-receipt-${index}`,
             expenseId: expense.id,
@@ -62,18 +62,18 @@ export function ReceiptLibrary({ expenses, bookings }: ReceiptLibraryProps) {
             vendor: expense.vendor || 'N/A',
             category: expense.category,
             amount: expense.amount,
-            date: expense.date,
-            bookingName: getBookingName(expense.bookingId),
+            date: expense.expense_date,
+            bookingName: getBookingName(expense.booking_id),
             url: url,
             name: `Receipt ${index + 1}`,
-            uploadedAt: expense.createdAt,
+            uploadedAt: expense.created_at,
             type: "receipt",
           });
         });
       }
 
-      if (expense.proofUrls && expense.proofUrls.length > 0) {
-        expense.proofUrls.forEach((url, index) => {
+      if (expense.proof_urls && expense.proof_urls.length > 0) {
+        expense.proof_urls.forEach((url, index) => {
           receipts.push({
             id: `${expense.id}-proof-${index}`,
             expenseId: expense.id,
@@ -81,11 +81,11 @@ export function ReceiptLibrary({ expenses, bookings }: ReceiptLibraryProps) {
             vendor: expense.vendor || 'N/A',
             category: expense.category,
             amount: expense.amount,
-            date: expense.date,
-            bookingName: getBookingName(expense.bookingId),
+            date: expense.expense_date,
+            bookingName: getBookingName(expense.booking_id),
             url: url,
             name: `Proof of Payment ${index + 1}`,
-            uploadedAt: expense.createdAt,
+            uploadedAt: expense.created_at,
             type: "proof",
           });
         });
