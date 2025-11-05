@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
@@ -6,23 +5,23 @@ import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { MoreHorizontal, Calendar, Trash2, Edit, FileText, ChevronDown, ChevronUp, Eye } from "lucide-react";
 import { format } from "date-fns";
-import { Expense, BookingType, PaymentStatus, MappedBooking } from "@/types/booking";
+import { Expense, Booking, PaymentStatus } from "@/types/booking";
 import { formatCurrency } from "@/lib/bookingCalculations";
 import { ClientDetailsDialog } from "./ClientDetailsDialog";
 
 interface BookingListProps {
-  bookings: MappedBooking[];
+  bookings: Booking[];
   expenses: Expense[];
-  onEdit: (booking: MappedBooking) => void;
+  onEdit: (booking: Booking) => void;
   onDelete: (bookingId: string) => void;
-  onUpdateBooking: (booking: MappedBooking) => void;
+  onUpdateBooking: (booking: Booking) => void;
   onNavigateToExpenses: (bookingId: string) => void;
 }
 
 export function BookingList({ bookings, expenses, onEdit, onDelete, onUpdateBooking, onNavigateToExpenses }: BookingListProps) {
   const [expandedBookingId, setExpandedBookingId] = useState<string | null>(null);
   const [clientDetailsOpen, setClientDetailsOpen] = useState(false);
-  const [selectedBookingForDetails, setSelectedBookingForDetails] = useState<MappedBooking | null>(null);
+  const [selectedBookingForDetails, setSelectedBookingForDetails] = useState<Booking | null>(null);
 
   const toggleExpand = (bookingId: string) => {
     setExpandedBookingId(expandedBookingId === bookingId ? null : bookingId);
@@ -37,12 +36,12 @@ export function BookingList({ bookings, expenses, onEdit, onDelete, onUpdateBook
     }
   };
 
-  const handleToggleConfirm = async (booking: MappedBooking) => {
+  const handleToggleConfirm = async (booking: Booking) => {
     const updatedBooking = { ...booking, confirmed: !booking.confirmed };
     await onUpdateBooking(updatedBooking);
   };
   
-  const handleOpenClientDetails = (booking: MappedBooking) => {
+  const handleOpenClientDetails = (booking: Booking) => {
     setSelectedBookingForDetails(booking);
     setClientDetailsOpen(true);
   };
@@ -65,7 +64,7 @@ export function BookingList({ bookings, expenses, onEdit, onDelete, onUpdateBook
           </TableHeader>
           <TableBody>
             {bookings
-              .sort((a, b) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime())
+              .sort((a, b) => new Date(b.start_date).getTime() - new Date(a.start_date).getTime())
               .map((booking) => (
                 <>
                   <TableRow key={booking.id} className="hover:bg-stone-50 dark:hover:bg-stone-800/50">
@@ -76,20 +75,20 @@ export function BookingList({ bookings, expenses, onEdit, onDelete, onUpdateBook
                     </TableCell>
                     <TableCell>
                       <div className="font-medium">{booking.name}</div>
-                      <div className="text-sm text-stone-600 dark:text-stone-400">{booking.contactName}</div>
+                      <div className="text-sm text-stone-600 dark:text-stone-400">{booking.contact_name}</div>
                     </TableCell>
                     <TableCell>
-                      {format(new Date(booking.startDate), "MMM d, yyyy")} - {format(new Date(booking.endDate), "MMM d, yyyy")}
+                      {format(new Date(booking.start_date), "MMM d, yyyy")} - {format(new Date(booking.end_date), "MMM d, yyyy")}
                     </TableCell>
-                    <TableCell>{booking.numberOfGuests}</TableCell>
-                    <TableCell>{formatCurrency(booking.totalCost)}</TableCell>
-                    <TableCell className={booking.balanceDue > 0 ? "text-orange-600 dark:text-orange-400 font-medium" : "text-green-600 dark:text-green-400"}>
-                      {formatCurrency(booking.balanceDue)}
+                    <TableCell>{booking.number_of_guests}</TableCell>
+                    <TableCell>{formatCurrency(booking.total_cost)}</TableCell>
+                    <TableCell className={booking.balance_due > 0 ? "text-orange-600 dark:text-orange-400 font-medium" : "text-green-600 dark:text-green-400"}>
+                      {formatCurrency(booking.balance_due)}
                     </TableCell>
                     <TableCell>
                       <div className="flex flex-col gap-2 items-start">
-                        <Badge className={getStatusColor(booking.paymentStatus)}>
-                          {booking.paymentStatus.charAt(0).toUpperCase() + booking.paymentStatus.slice(1)}
+                        <Badge className={getStatusColor(booking.payment_status as PaymentStatus)}>
+                          {booking.payment_status.charAt(0).toUpperCase() + booking.payment_status.slice(1)}
                         </Badge>
                         <Badge variant={booking.confirmed ? "default" : "secondary"}>
                           {booking.confirmed ? "Confirmed" : "Tentative"}

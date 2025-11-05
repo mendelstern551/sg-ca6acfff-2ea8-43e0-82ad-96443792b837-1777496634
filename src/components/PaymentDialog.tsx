@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -11,7 +10,7 @@ import { EnhancedCalendar } from "@/components/ui/enhanced-calendar";
 import { CalendarIcon } from "lucide-react";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
-import { MappedBooking, PaymentMethod } from "@/types/booking";
+import { Booking, PaymentMethod } from "@/types/booking";
 import { paymentService } from "@/services/paymentService";
 
 const paymentMethodLabels: Record<PaymentMethod, string> = {
@@ -22,13 +21,13 @@ const paymentMethodLabels: Record<PaymentMethod, string> = {
   venmo: "Venmo",
   zelle: "Zelle",
   other: "Other",
-  pending: "Pending" // Should not be user-selectable
+  pending: "Pending"
 };
 
 interface PaymentDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  booking: MappedBooking | undefined;
+  booking: Booking | undefined;
   onPaymentAdded: () => void;
 }
 

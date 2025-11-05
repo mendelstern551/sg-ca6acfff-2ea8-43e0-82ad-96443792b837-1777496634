@@ -1,10 +1,10 @@
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { MappedBooking } from "@/types/booking";
+import { Booking } from "@/types/booking";
 import { invoiceService } from "@/services/invoiceService";
 import { format } from "date-fns";
-import { Download, Loader2, FileText, Building2, Mail, Phone } from "lucide-react";
+import { Download, Loader2, FileText, Mail, Phone } from "lucide-react";
 import type { Database } from "@/integrations/supabase/types";
 
 type Invoice = Database["public"]["Tables"]["invoices"]["Row"];
@@ -12,7 +12,7 @@ type Invoice = Database["public"]["Tables"]["invoices"]["Row"];
 interface InvoiceDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  booking: MappedBooking;
+  booking: Booking;
 }
 
 export function InvoiceDialog({ open, onOpenChange, booking }: InvoiceDialogProps) {
@@ -34,25 +34,24 @@ export function InvoiceDialog({ open, onOpenChange, booking }: InvoiceDialogProp
       if (!existingInvoice) {
         setGenerating(true);
         
-        // Calculate actual amount paid from payments - only if valid payments exist
         const validPayments = (booking.payments || []).filter(p => p && p.amount && p.amount > 0);
         const amountPaid = validPayments.length > 0 
           ? validPayments.reduce((sum, p) => sum + p.amount, 0) 
           : 0;
-        const balanceDue = booking.totalCost - amountPaid;
+        const balanceDue = booking.total_cost - amountPaid;
         
         existingInvoice = await invoiceService.createInvoice(booking.id, {
-          clientName: booking.contactName,
-          clientEmail: booking.contactEmail || undefined,
-          clientPhone: booking.contactPhone || undefined,
-          eventDateStart: booking.startDate,
-          eventDateEnd: booking.endDate,
-          numberOfGuests: booking.numberOfGuests,
-          numberOfRooms: booking.numberOfRooms,
-          basePrice: booking.totalCost,
+          clientName: booking.contact_name,
+          clientEmail: booking.contact_email || undefined,
+          clientPhone: booking.contact_phone || undefined,
+          eventDateStart: booking.start_date,
+          eventDateEnd: booking.end_date,
+          numberOfGuests: booking.number_of_guests,
+          numberOfRooms: booking.number_of_rooms || 1,
+          basePrice: booking.total_cost,
           depositAmount: amountPaid,
           balanceDue: balanceDue,
-          totalAmount: booking.totalCost,
+          totalAmount: booking.total_cost,
           notes: booking.notes || undefined
         });
       }
@@ -69,7 +68,6 @@ export function InvoiceDialog({ open, onOpenChange, booking }: InvoiceDialogProp
   const handleDownloadPDF = () => {
     if (!invoice) return;
 
-    // Calculate actual payments from booking - only valid non-zero payments
     const validPayments = (booking.payments || []).filter(p => p && p.amount && p.amount > 0);
     const actualAmountPaid = validPayments.length > 0
       ? validPayments.reduce((sum, p) => sum + p.amount, 0) 
@@ -282,7 +280,6 @@ export function InvoiceDialog({ open, onOpenChange, booking }: InvoiceDialogProp
 
   if (!invoice) return null;
 
-  // Calculate actual payments from booking for display - only valid non-zero payments
   const validPayments = (booking.payments || []).filter(p => p && p.amount && p.amount > 0);
   const actualAmountPaid = validPayments.length > 0
     ? validPayments.reduce((sum, p) => sum + p.amount, 0) 

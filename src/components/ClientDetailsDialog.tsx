@@ -1,8 +1,8 @@
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Expense, MappedBooking } from "@/types/booking";
+import { Expense, Booking } from "@/types/booking";
 import { formatCurrency } from "@/lib/bookingCalculations";
 import { format } from "date-fns";
 import { DollarSign, TrendingUp, TrendingDown, Receipt, Calendar, Users, FileText } from "lucide-react";
@@ -12,7 +12,7 @@ import { useState } from "react";
 interface ClientDetailsDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  booking: MappedBooking;
+  booking: Booking;
   allExpenses: Expense[];
   onNavigateToExpenses?: (bookingId: string) => void;
 }
@@ -27,8 +27,8 @@ export function ClientDetailsDialog({
   const [invoiceOpen, setInvoiceOpen] = useState(false);
   const clientExpenses = allExpenses.filter(e => e.booking_id === booking.id);
   const totalExpenses = clientExpenses.reduce((sum, e) => sum + e.amount, 0);
-  const netProfit = booking.totalCost - totalExpenses;
-  const profitMargin = booking.totalCost > 0 ? ((netProfit / booking.totalCost) * 100).toFixed(1) : "0";
+  const netProfit = booking.total_cost - totalExpenses;
+  const profitMargin = booking.total_cost > 0 ? ((netProfit / booking.total_cost) * 100).toFixed(1) : "0";
 
   const getCategoryColor = (category: string) => {
     const colors: Record<string, string> = {
@@ -52,7 +52,7 @@ export function ClientDetailsDialog({
             <div className="flex items-center justify-between">
               <DialogTitle className="flex items-center gap-2 text-xl">
                 <Users className="h-5 w-5 text-blue-600" />
-                Client Details - {booking.contactName}
+                Client Details - {booking.contact_name}
               </DialogTitle>
               <Button 
                 onClick={() => setInvoiceOpen(true)}
@@ -69,7 +69,7 @@ export function ClientDetailsDialog({
             <div className="grid grid-cols-3 gap-4">
               <div className="text-center p-4 bg-blue-50 dark:bg-blue-950 rounded-lg">
                 <p className="text-sm text-slate-600 dark:text-slate-400 mb-1">Revenue</p>
-                <p className="text-2xl font-bold text-blue-600">{formatCurrency(booking.totalCost)}</p>
+                <p className="text-2xl font-bold text-blue-600">{formatCurrency(booking.total_cost)}</p>
               </div>
               <div 
                 className="text-center p-4 bg-red-50 dark:bg-red-950 rounded-lg cursor-pointer hover:bg-red-100 dark:hover:bg-red-900 transition-colors"
@@ -104,25 +104,25 @@ export function ClientDetailsDialog({
                 <CardContent className="space-y-2 text-sm">
                   <div className="flex justify-between">
                     <span className="text-slate-600 dark:text-slate-400">Contact:</span>
-                    <span className="font-medium">{booking.contactName}</span>
+                    <span className="font-medium">{booking.contact_name}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-slate-600 dark:text-slate-400">Email:</span>
-                    <span className="font-medium">{booking.contactEmail}</span>
+                    <span className="font-medium">{booking.contact_email}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-slate-600 dark:text-slate-400">Phone:</span>
-                    <span className="font-medium">{booking.contactPhone}</span>
+                    <span className="font-medium">{booking.contact_phone}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-slate-600 dark:text-slate-400">Dates:</span>
                     <span className="font-medium">
-                      {format(new Date(booking.startDate), "MMM d")} - {format(new Date(booking.endDate), "MMM d, yyyy")}
+                      {format(new Date(booking.start_date), "MMM d")} - {format(new Date(booking.end_date), "MMM d, yyyy")}
                     </span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-slate-600 dark:text-slate-400">Guests:</span>
-                    <span className="font-medium">{booking.numberOfGuests} people</span>
+                    <span className="font-medium">{booking.number_of_guests} people</span>
                   </div>
                 </CardContent>
               </Card>
@@ -137,7 +137,7 @@ export function ClientDetailsDialog({
                 <CardContent className="space-y-2 text-sm">
                   <div className="flex justify-between">
                     <span className="text-slate-600 dark:text-slate-400">Total Revenue:</span>
-                    <span className="font-bold text-green-600">{formatCurrency(booking.totalCost)}</span>
+                    <span className="font-bold text-green-600">{formatCurrency(booking.total_cost)}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-slate-600 dark:text-slate-400">Total Expenses:</span>
@@ -172,27 +172,27 @@ export function ClientDetailsDialog({
                     <p className="font-medium">Base Rate</p>
                     <p className="text-xs text-slate-600 dark:text-slate-400">Resort rental fee</p>
                   </div>
-                  <p className="font-bold text-green-600">{formatCurrency(booking.baseRate)}</p>
+                  <p className="font-bold text-green-600">{formatCurrency(booking.base_rate)}</p>
                 </div>
                 <div className="flex justify-between items-center p-3 bg-green-50 dark:bg-green-900/20 rounded-lg">
                   <div>
                     <p className="font-medium">Per Person Charges</p>
-                    <p className="text-xs text-slate-600 dark:text-slate-400">{booking.numberOfGuests} guests × ${booking.perPersonRate}</p>
+                    <p className="text-xs text-slate-600 dark:text-slate-400">{booking.number_of_guests} guests × ${booking.per_person_rate}</p>
                   </div>
-                  <p className="font-bold text-green-600">{formatCurrency(booking.numberOfGuests * booking.perPersonRate)}</p>
+                  <p className="font-bold text-green-600">{formatCurrency(booking.number_of_guests * booking.per_person_rate)}</p>
                 </div>
                 <div className="flex justify-between items-center p-3 bg-green-50 dark:bg-green-900/20 rounded-lg">
                   <div>
                     <p className="font-medium">Cleaning Fees</p>
                     <p className="text-xs text-slate-600 dark:text-slate-400">
-                      Base: ${booking.cleaningFee} {booking.additionalCleaningFee > 0 && `+ Additional: $${booking.additionalCleaningFee}`}
+                      Base: ${booking.cleaning_fee} {booking.additional_cleaning_fee > 0 && `+ Additional: $${booking.additional_cleaning_fee}`}
                     </p>
                   </div>
-                  <p className="font-bold text-green-600">{formatCurrency(booking.cleaningFee + booking.additionalCleaningFee)}</p>
+                  <p className="font-bold text-green-600">{formatCurrency(booking.cleaning_fee + booking.additional_cleaning_fee)}</p>
                 </div>
                 <div className="flex justify-between items-center p-4 bg-green-100 dark:bg-green-900/30 rounded-lg border-2 border-green-600">
                   <p className="font-bold text-lg">Total Revenue</p>
-                  <p className="font-bold text-2xl text-green-600">{formatCurrency(booking.totalCost)}</p>
+                  <p className="font-bold text-2xl text-green-600">{formatCurrency(booking.total_cost)}</p>
                 </div>
               </CardContent>
             </Card>
@@ -225,7 +225,7 @@ export function ClientDetailsDialog({
                               <span>•</span>
                               <span>{expense.vendor}</span>
                               <span>•</span>
-                              <span>{expense.paymentMethod.replace("_", " ")}</span>
+                              <span>{(expense.payment_method || '').replace("_", " ")}</span>
                             </div>
                             {expense.notes && (
                               <p className="text-xs text-slate-500 mt-1">{expense.notes}</p>
@@ -253,18 +253,18 @@ export function ClientDetailsDialog({
               <CardContent className="space-y-3">
                 <div className="flex justify-between items-center p-3 bg-slate-50 dark:bg-slate-800 rounded-lg">
                   <span className="text-slate-600 dark:text-slate-400">Amount Paid:</span>
-                  <span className="font-bold text-green-600">{formatCurrency(booking.amountPaid)}</span>
+                  <span className="font-bold text-green-600">{formatCurrency(booking.amount_paid)}</span>
                 </div>
                 <div className="flex justify-between items-center p-3 bg-slate-50 dark:bg-slate-800 rounded-lg">
                   <span className="text-slate-600 dark:text-slate-400">Balance Due:</span>
-                  <span className={`font-bold ${booking.balanceDue > 0 ? "text-orange-600" : "text-green-600"}`}>
-                    {formatCurrency(booking.balanceDue)}
+                  <span className={`font-bold ${booking.balance_due > 0 ? "text-orange-600" : "text-green-600"}`}>
+                    {formatCurrency(booking.balance_due)}
                   </span>
                 </div>
                 <div className="flex justify-between items-center p-3 bg-slate-50 dark:bg-slate-800 rounded-lg">
                   <span className="text-slate-600 dark:text-slate-400">Payment Status:</span>
-                  <Badge variant={booking.paymentStatus === "paid" ? "default" : "secondary"}>
-                    {booking.paymentStatus.replace("_", " ")}
+                  <Badge variant={booking.payment_status === "paid" ? "default" : "secondary"}>
+                    {(booking.payment_status || '').replace("_", " ")}
                   </Badge>
                 </div>
               </CardContent>
@@ -287,7 +287,7 @@ export function ClientDetailsDialog({
                     <div>
                       <p className="text-sm font-medium text-slate-600 dark:text-slate-400">Total Profit for This Client</p>
                       <p className="text-xs text-slate-500 dark:text-slate-500">
-                        Revenue ({formatCurrency(booking.totalCost)}) - Expenses ({formatCurrency(totalExpenses)})
+                        Revenue ({formatCurrency(booking.total_cost)}) - Expenses ({formatCurrency(totalExpenses)})
                       </p>
                     </div>
                   </div>
