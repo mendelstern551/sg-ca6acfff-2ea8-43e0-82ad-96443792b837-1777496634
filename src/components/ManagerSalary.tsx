@@ -67,11 +67,68 @@ export function ManagerSalary({ bookings, onAddExpense, allExpenses, onExpensesU
   const createAllManagerExpenses = async () => {
     setIsProcessing(true);
     try {
+      await createMonthlyMaintenanceExpenses();
       await createBookingCommissionExpenses();
     } catch (error) {
       console.error("Error creating manager expenses:", error);
     } finally {
       setIsProcessing(false);
+    }
+  };
+
+  const createMonthlyMaintenanceExpenses = async () => {
+    const seasonStart = new Date(salaryData.seasonStart);
+    const seasonEnd = new Date(salaryData.seasonEnd);
+    const today = new Date();
+    const currentMonthStart = startOfMonth(today);
+
+    // Get all existing maintenance expenses
+    const maintenanceExpenses = allExpenses.filter(exp => 
+      exp.category === "Manager Salary" && 
+      exp.description?.includes("Monthly Maintenance Fee")
+    );
+
+    // Calculate which months need expenses
+    const monthsToCreate: Date[] = [];
+    let monthDate = startOfMonth(seasonStart);
+    
+    while (!isAfter(monthDate, currentMonthStart) && !isAfter(monthDate, seasonEnd)) {
+      // Check if expense already exists for this month
+      const monthStart = startOfMonth(monthDate);
+      const monthExists = maintenanceExpenses.some(exp => {
+        const expenseMonth = startOfMonth(new Date(exp.expense_date));
+        return expenseMonth.getTime() === monthStart.getTime();
+      });
+
+      if (!monthExists) {
+        monthsToCreate.push(new Date(monthDate));
+      }
+
+      // Move to next month
+      monthDate = new Date(monthDate.getFullYear(), monthDate.getMonth() + 1, 1);
+    }
+
+    // Create missing monthly maintenance expenses
+    if (monthsToCreate.length > 0) {
+      const createPromises = monthsToCreate.map(monthDate => {
+        const expense: ExpenseInsert = {
+          booking_id: null,
+          expense_date: monthDate.toISOString(),
+          amount: salaryData.maintenanceFeePerMonth,
+          category: "Manager Salary",
+          description: `Monthly Maintenance Fee - ${format(monthDate, "MMMM yyyy")}`,
+          payment_method: "pending",
+          vendor: "Manager",
+          notes: `Monthly maintenance fee of $${salaryData.maintenanceFeePerMonth.toLocaleString()} for ${format(monthDate, "MMMM yyyy")}`,
+          receipt_urls: [],
+          proof_urls: []
+        };
+        console.log(`Creating maintenance fee for ${format(monthDate, "MMMM yyyy")}`);
+        return onAddExpense(expense);
+      });
+
+      await Promise.all(createPromises);
+      console.log(`${createPromises.length} monthly maintenance fees created.`);
     }
   };
 
