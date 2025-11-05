@@ -1,4 +1,3 @@
-
 import { useState, useMemo } from "react";
 import { Expense, Booking } from "@/types/booking";
 import { format } from "date-fns";
@@ -11,7 +10,7 @@ import { formatCurrency } from "@/lib/bookingCalculations";
 
 interface ReceiptLibraryProps {
   expenses: Expense[];
-  bookings: Booking[];
+  bookings: MappedBooking[];
 }
 
 export function ReceiptLibrary({ expenses, bookings }: ReceiptLibraryProps) {
@@ -31,10 +30,10 @@ export function ReceiptLibrary({ expenses, bookings }: ReceiptLibraryProps) {
     return colors[category] || colors.other;
   };
 
-  const getBookingName = (bookingId?: string) => {
-    if (!bookingId) return null;
-    const booking = bookings.find((b) => b.id === bookingId);
-    return booking ? booking.name : null;
+  const getBookingName = (bookingId: string | null) => {
+    if (!bookingId) return "General Expense";
+    const booking = bookings.find(b => b.id === bookingId);
+    return booking ? booking.name : "Unknown Booking";
   };
 
   const allReceipts = useMemo(() => {

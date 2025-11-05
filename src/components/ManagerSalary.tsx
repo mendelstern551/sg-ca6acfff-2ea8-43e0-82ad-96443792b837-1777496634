@@ -20,8 +20,8 @@ import type { Database } from "@/integrations/supabase/types";
 type ExpenseInsert = Database["public"]["Tables"]["expenses"]["Insert"];
 
 interface ManagerSalaryProps {
-  bookings: Booking[];
-  onAddExpense: (expense: ExpenseInsert) => void;
+  bookings: MappedBooking[];
+  onAddExpense: (expense: ExpenseInsert) => Promise<void>;
   allExpenses: Expense[];
   onExpensesUpdate: () => void;
 }

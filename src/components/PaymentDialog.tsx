@@ -1,23 +1,18 @@
+
 import { useState, useEffect } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { EnhancedCalendar } from "@/components/ui/enhanced-calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Payment, PaymentMethod } from "@/types/booking";
-import { CalendarIcon, DollarSign } from "lucide-react";
+import { EnhancedCalendar } from "@/components/ui/enhanced-calendar";
+import { CalendarIcon } from "lucide-react";
 import { format } from "date-fns";
-
-interface PaymentDialogProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  payment?: Payment;
-  bookingId: string;
-  onSave: (payment: Payment) => void;
-}
+import { useToast } from "@/hooks/use-toast";
+import { MappedBooking, PaymentMethod } from "@/types/booking";
+import { paymentService } from "@/services/paymentService";
 
 const paymentMethodLabels: Record<PaymentMethod, string> = {
   cash: "Cash",
@@ -27,156 +22,146 @@ const paymentMethodLabels: Record<PaymentMethod, string> = {
   venmo: "Venmo",
   zelle: "Zelle",
   other: "Other",
+  pending: "Pending" // Should not be user-selectable
 };
 
-export function PaymentDialog({ open, onOpenChange, payment, bookingId, onSave }: PaymentDialogProps) {
-  const [formData, setFormData] = useState({
-    amount: 0,
-    payment_date: undefined as Date | undefined,
-    payment_method: "cash" as PaymentMethod,
-    notes: "",
-  });
+interface PaymentDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  booking: MappedBooking | undefined;
+  onPaymentAdded: () => void;
+}
+
+export function PaymentDialog({ open, onOpenChange, booking, onPaymentAdded }: PaymentDialogProps) {
+  const [amount, setAmount] = useState<number | "">("");
+  const [paymentDate, setPaymentDate] = useState<Date | undefined>(new Date());
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("credit_card");
+  const [notes, setNotes] = useState("");
+  const { toast } = useToast();
 
   useEffect(() => {
-    if (payment) {
-      setFormData({
-        amount: payment.amount,
-        payment_date: new Date(payment.payment_date),
-        payment_method: payment.payment_method,
-        notes: payment.notes || "",
-      });
-    } else {
+    if (open) {
       resetForm();
     }
-  }, [payment, open]);
-
+  }, [open, booking]);
+  
   const resetForm = () => {
-    setFormData({
-      amount: 0,
-      payment_date: new Date(),
-      payment_method: "cash",
-      notes: "",
-    });
+    setAmount("");
+    setPaymentDate(new Date());
+    setPaymentMethod("credit_card");
+    setNotes("");
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-
-    if (!formData.payment_date) {
-      alert("Please select a payment date");
+  const handleSavePayment = async () => {
+    if (!booking || !paymentDate || amount === "" || Number(amount) <= 0) {
+      toast({
+        title: "Invalid Payment",
+        description: "Please enter a valid amount and date.",
+        variant: "destructive",
+      });
       return;
     }
 
-    if (formData.amount <= 0) {
-      alert("Please enter a valid payment amount");
-      return;
-    }
+    try {
+      await paymentService.createPayment({
+        booking_id: booking.id,
+        amount: Number(amount),
+        payment_date: paymentDate.toISOString(),
+        payment_method: paymentMethod,
+        notes,
+      });
 
-    const newPayment: Payment = {
-      id: payment?.id || `payment-${Date.now()}`,
-      bookingId,
-      amount: formData.amount,
-      payment_date: formData.payment_date.toISOString(),
-      payment_method: formData.payment_method,
-      notes: formData.notes,
-      created_at: payment?.created_at || new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    };
-    
-    onSave(newPayment);
-    onOpenChange(false);
-    resetForm();
+      toast({
+        title: "Payment Recorded",
+        description: "The payment has been successfully added.",
+      });
+
+      onPaymentAdded();
+      onOpenChange(false);
+    } catch (error) {
+      console.error("Error saving payment:", error);
+      toast({
+        title: "Error",
+        description: "Failed to save payment. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[500px]">
+      <DialogContent>
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <DollarSign className="h-5 w-5 text-green-600" />
-            {payment ? "Edit Payment" : "Add Payment"}
-          </DialogTitle>
+          <DialogTitle>Add Payment for {booking?.name}</DialogTitle>
+          <DialogDescription>Record a new payment for this booking.</DialogDescription>
         </DialogHeader>
-
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="amount">Amount *</Label>
-              <Input
-                id="amount"
-                type="number"
-                min="0"
-                step="0.01"
-                value={formData.amount || ""}
-                onChange={(e) => setFormData({ ...formData, amount: parseFloat(e.target.value) || 0 })}
-                placeholder="0.00"
-                required
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label>Payment Date *</Label>
-              <Popover modal={false}>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className="w-full justify-start text-left font-normal"
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {formData.payment_date ? format(formData.payment_date, "PPP") : <span>Pick a date</span>}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
-                  <EnhancedCalendar
-                    mode="single"
-                    selected={formData.payment_date}
-                    onSelect={(date) => setFormData({ ...formData, payment_date: date })}
-                    initialFocus
-                  />
-                </PopoverContent>
-              </Popover>
-            </div>
+        <div className="space-y-4 py-4">
+          <div className="space-y-2">
+            <Label htmlFor="amount">Amount ($)</Label>
+            <Input
+              id="amount"
+              type="number"
+              value={amount}
+              onChange={(e) => setAmount(parseFloat(e.target.value) || "")}
+              placeholder="0.00"
+            />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="paymentMethod">Payment Method *</Label>
+            <Label>Payment Date</Label>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" className="w-full justify-start text-left font-normal">
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {paymentDate ? format(paymentDate, "PPP") : <span>Pick a date</span>}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0">
+                <EnhancedCalendar
+                  mode="single"
+                  selected={paymentDate}
+                  onSelect={setPaymentDate}
+                  initialFocus
+                />
+              </PopoverContent>
+            </Popover>
+          </div>
+
+          <div className="space-y-2">
+            <Label>Payment Method</Label>
             <Select
-              value={formData.payment_method}
-              onValueChange={(value) => setFormData({ ...formData, payment_method: value as PaymentMethod })}
+              value={paymentMethod}
+              onValueChange={(value) => setPaymentMethod(value as PaymentMethod)}
             >
-              <SelectTrigger id="paymentMethod">
-                <SelectValue />
+              <SelectTrigger>
+                <SelectValue placeholder="Select a payment method" />
               </SelectTrigger>
               <SelectContent>
-                {Object.entries(paymentMethodLabels).map(([value, label]) => (
-                  <SelectItem key={value} value={value}>
-                    {label}
-                  </SelectItem>
-                ))}
+                {Object.entries(paymentMethodLabels)
+                  .filter(([key]) => key !== 'pending')
+                  .map(([value, label]) => (
+                    <SelectItem key={value} value={value}>
+                      {label}
+                    </SelectItem>
+                  ))}
               </SelectContent>
             </Select>
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="notes">Notes</Label>
+            <Label htmlFor="notes">Notes (Optional)</Label>
             <Textarea
               id="notes"
-              value={formData.notes}
-              onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-              placeholder="Add any additional notes about this payment..."
-              rows={3}
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              placeholder="e.g., Deposit, final payment, etc."
             />
           </div>
 
-          <div className="flex justify-end gap-2 pt-4">
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-              Cancel
-            </Button>
-            <Button type="submit" className="bg-green-600 hover:bg-green-700">
-              {payment ? "Update Payment" : "Add Payment"}
-            </Button>
-          </div>
-        </form>
+          <Button onClick={handleSavePayment} className="w-full">
+            Save Payment
+          </Button>
+        </div>
       </DialogContent>
     </Dialog>
   );

@@ -1,18 +1,18 @@
 import { useState, useEffect } from "react";
-import { Expense, Booking } from "@/types/booking";
+import { Expense, MappedBooking } from "@/types/booking";
 import { formatCurrency } from "@/lib/bookingCalculations";
 import { format } from "date-fns";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Edit, Trash2, FileText, Image, ExternalLink, Search, Calendar } from "lucide-react";
+import { Edit, Trash2, FileText, Image, ExternalLink, Search, Calendar, ChevronDown } from "lucide-react";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 interface ExpenseListProps {
   expenses: Expense[];
-  bookings: Booking[];
+  bookings: MappedBooking[];
   onEdit: (expense: Expense) => void;
   onDelete: (expenseId: string) => void;
   filterBookingId?: string;

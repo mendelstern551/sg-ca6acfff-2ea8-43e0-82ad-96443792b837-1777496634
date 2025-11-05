@@ -5,7 +5,9 @@ export type Expense = Database["public"]["Tables"]["expenses"]["Row"];
 export type Booking = Database["public"]["Tables"]["bookings"]["Row"] & {
   payments: Payment[];
 };
-export type Payment = Database["public"]["Tables"]["payments"]["Row"];
+export type Payment = Omit<Database["public"]["Tables"]["payments"]["Row"], "notes"> & {
+  notes?: string | null;
+};
 
 // Application-level enums/types
 export type BookingType = "yom_tov" | "shabaton" | "night_event";

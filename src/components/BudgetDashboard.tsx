@@ -10,6 +10,8 @@ import { EnhancedCalendar } from "@/components/ui/enhanced-calendar";
 import { format } from "date-fns";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { PieChart } from "lucide-react";
 
 interface BudgetDashboardProps {
   bookings: Booking[];
@@ -206,64 +208,44 @@ export function BudgetDashboard({ bookings, expenses }: BudgetDashboardProps) {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
-            <DollarSign className="h-4 w-4 text-emerald-600" />
+            <DollarSign className="h-4 w-4 text-green-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-emerald-600">
-              {formatCurrency(totalRevenue)}
-            </div>
-            <p className="text-xs text-slate-600 dark:text-slate-400 mt-1">
-              From {bookings.length} bookings
-            </p>
+            <div className="text-2xl font-bold text-green-600">{formatCurrency(totalRevenue)}</div>
+            <p className="text-xs text-slate-500 dark:text-slate-400">From {filteredBookings.length} bookings</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Expenses</CardTitle>
-            <DollarSign className="h-4 w-4 text-red-600" />
+            <TrendingDown className="h-4 w-4 text-red-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-red-600">
-              {formatCurrency(totalExpenses)}
-            </div>
-            <p className="text-xs text-slate-600 dark:text-slate-400 mt-1">
-              {expenses.length} expense records
-            </p>
+            <div className="text-2xl font-bold text-red-600">{formatCurrency(totalExpenses)}</div>
+            <p className="text-xs text-slate-500 dark:text-slate-400">{filteredExpenses.length} recorded expenses</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Net Profit</CardTitle>
-            {netProfit >= 0 ? (
-              <TrendingUp className="h-4 w-4 text-green-600" />
-            ) : (
-              <TrendingDown className="h-4 w-4 text-red-600" />
-            )}
+            <PieChart className={`h-4 w-4 ${netProfit >= 0 ? 'text-blue-500' : 'text-orange-500'}`} />
           </CardHeader>
           <CardContent>
-            <div className={`text-2xl font-bold ${netProfit >= 0 ? "text-green-600" : "text-red-600"}`}>
-              {formatCurrency(netProfit)}
-            </div>
-            <p className="text-xs text-slate-600 dark:text-slate-400 mt-1">
-              Revenue - Expenses
-            </p>
+            <div className={`text-2xl font-bold ${netProfit >= 0 ? 'text-blue-600' : 'text-orange-600'}`}>{formatCurrency(netProfit)}</div>
+            <p className="text-xs text-slate-500 dark:text-slate-400">Revenue minus expenses</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Profit Margin</CardTitle>
-            <Percent className="h-4 w-4 text-blue-600" />
+            <TrendingUp className="h-4 w-4 text-purple-500" />
           </CardHeader>
           <CardContent>
-            <div className={`text-2xl font-bold ${parseFloat(profitMargin) >= 0 ? "text-blue-600" : "text-red-600"}`}>
-              {profitMargin}%
-            </div>
-            <p className="text-xs text-slate-600 dark:text-slate-400 mt-1">
-              Net profit margin
-            </p>
+            <div className="text-2xl font-bold text-purple-600">{totalRevenue > 0 ? ((netProfit / totalRevenue) * 100).toFixed(1) : 0}%</div>
+            <p className="text-xs text-slate-500 dark:text-slate-400">Net Profit / Revenue</p>
           </CardContent>
         </Card>
       </div>
@@ -271,33 +253,21 @@ export function BudgetDashboard({ bookings, expenses }: BudgetDashboardProps) {
       <div className="grid gap-6 md:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardTitle>Payment Collection Status</CardTitle>
+            <CardTitle>Cash Flow</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div>
-              <div className="flex justify-between text-sm mb-2">
-                <span className="text-slate-600 dark:text-slate-400">Collected</span>
-                <span className="font-medium">{formatCurrency(totalPaid)}</span>
+          <CardContent>
+            <div className="space-y-4">
+              <div className="flex justify-between items-center">
+                <span className="font-medium">Total Collected</span>
+                <span className="text-lg font-bold text-green-600">{formatCurrency(totalPaid)}</span>
               </div>
-              <Progress 
-                value={totalRevenue > 0 ? (totalPaid / totalRevenue) * 100 : 0} 
-                className="h-2"
-              />
-            </div>
-            <div>
-              <div className="flex justify-between text-sm mb-2">
-                <span className="text-slate-600 dark:text-slate-400">Outstanding</span>
-                <span className="font-medium">{formatCurrency(totalBalance)}</span>
+              <div className="flex justify-between items-center">
+                <span className="font-medium">Total Outstanding</span>
+                <span className="text-lg font-bold text-orange-600">{formatCurrency(totalBalance)}</span>
               </div>
-              <Progress 
-                value={totalRevenue > 0 ? (totalBalance / totalRevenue) * 100 : 0} 
-                className="h-2"
-              />
-            </div>
-            <div className="pt-4 border-t">
-              <div className="flex justify-between">
-                <span className="font-medium">Total Expected</span>
-                <span className="font-bold text-lg">{formatCurrency(totalRevenue)}</span>
+              <div className="flex justify-between items-center pt-4 border-t">
+                <span className="font-medium text-lg">Total Revenue</span>
+                <span className="text-2xl font-bold">{formatCurrency(totalRevenue)}</span>
               </div>
             </div>
           </CardContent>

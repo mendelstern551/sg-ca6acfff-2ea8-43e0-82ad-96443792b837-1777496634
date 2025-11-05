@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Calendar, Users, DollarSign, FileText, Plus } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -40,7 +39,7 @@ export default function HomePage() {
   const [refreshKey, setRefreshKey] = useState(0);
   const [filteredBookingId, setFilteredBookingId] = useState<string | undefined>();
   const [loading, setLoading] = useState(true);
-instancemixin
+
   const [invoices, setInvoices] = useState<InvoiceRow[]>([]);
   const [selectedInvoiceBooking, setSelectedInvoiceBooking] = useState<MappedBooking | undefined>();
   const [invoiceDialogOpen, setInvoiceDialogOpen] = useState(false);
@@ -70,7 +69,12 @@ instancemixin
         invoiceService.getAllInvoices()
       ]);
 
-      setBookings(bookingsData);
+      const bookingsWithPayments = bookingsData.map(b => ({
+        ...b,
+        payments: b.payments || [],
+      }));
+
+      setBookings(bookingsWithPayments);
       setExpenses(expensesData);
       setInvoices(invoicesData);
 
@@ -348,23 +352,23 @@ instancemixin
           <TabsContent value="expenses" className="space-y-4">
             <Card className="bg-white dark:bg-stone-900 border-stone-200 dark:border-stone-800">
               <CardHeader><div className="flex items-center justify-between"><div><CardTitle className="text-stone-900 dark:text-stone-100">Expense Tracking</CardTitle><CardDescription className="text-stone-600 dark:text-stone-400">Record expenses with receipts and payment proof</CardDescription></div><Button className="bg-orange-600 hover:bg-orange-700 text-white shadow-md hover:shadow-lg transition-all" onClick={() => { setEditingExpense(undefined); setExpenseDialogOpen(true); }}><Plus className="h-4 w-4 mr-2" />Add Expense</Button></div></CardHeader>
-              <CardContent>{expenses.length === 0 ? <div className="text-center py-12 text-stone-500 dark:text-stone-400"><FileText className="h-12 w-12 mx-auto mb-4 opacity-50" /><p className="text-lg font-medium mb-2">No expenses recorded</p><p className="text-sm">Start tracking your expenses with receipts</p></div> : <ExpenseList expenses={expenses} bookings={bookings} onEdit={handleEditExpense} onDelete={handleDeleteExpense} filterBookingId={filteredBookingId} />}</CardContent>
+              <CardContent>{expenses.length === 0 ? <div className="text-center py-12 text-stone-500 dark:text-stone-400"><FileText className="h-12 w-12 mx-auto mb-4 opacity-50" /><p className="text-lg font-medium mb-2">No expenses recorded</p><p className="text-sm">Start tracking your expenses with receipts</p></div> : <ExpenseList expenses={expenses} bookings={mappedBookings} onEdit={handleEditExpense} onDelete={handleDeleteExpense} filterBookingId={filteredBookingId} />}</CardContent>
             </Card>
           </TabsContent>
 
-          <TabsContent value="receipts" className="space-y-4"><ReceiptLibrary expenses={expenses} bookings={bookings} /></TabsContent>
+          <TabsContent value="receipts" className="space-y-4"><ReceiptLibrary expenses={expenses} bookings={mappedBookings} /></TabsContent>
 
           <TabsContent value="manager" className="space-y-4">
             <Card className="bg-white dark:bg-stone-900 border-stone-200 dark:border-stone-800">
               <CardHeader><CardTitle className="text-stone-900 dark:text-stone-100">Manager Compensation</CardTitle><CardDescription className="text-stone-600 dark:text-stone-400">Track maintenance fees, commissions, and payments to manager</CardDescription></CardHeader>
-              <CardContent><ManagerSalary bookings={bookings} onAddExpense={handleAddExpense} allExpenses={expenses} onExpensesUpdate={loadAllData} /></CardContent>
+              <CardContent><ManagerSalary bookings={mappedBookings} onAddExpense={handleAddExpense} allExpenses={expenses} onExpensesUpdate={loadAllData} /></CardContent>
             </Card>
           </TabsContent>
         </Tabs>
       </main>
 
       <BookingDialog open={bookingDialogOpen} onOpenChange={setBookingDialogOpen} onSave={handleSaveBooking} booking={editingBooking} bookings={mappedBookings} />
-      <ExpenseDialog open={expenseDialogOpen} onOpenChange={setExpenseDialogOpen} onSave={handleSaveExpense} expense={editingExpense} bookings={bookings} />
+      <ExpenseDialog open={expenseDialogOpen} onOpenChange={setExpenseDialogOpen} onSave={handleSaveExpense} expense={editingExpense} bookings={mappedBookings} />
       {selectedInvoiceBooking && <InvoiceDialog open={invoiceDialogOpen} onOpenChange={setInvoiceDialogOpen} booking={selectedInvoiceBooking} />}
     </div>
   );

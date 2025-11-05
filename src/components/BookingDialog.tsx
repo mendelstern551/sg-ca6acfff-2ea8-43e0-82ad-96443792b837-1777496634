@@ -10,169 +10,169 @@ import { EnhancedCalendar } from "@/components/ui/enhanced-calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { CalendarIcon, Calculator } from "lucide-react";
 import { format, differenceInDays } from "date-fns";
-import { Booking, BookingType } from "@/types/booking";
-import { calculateBookingCost, formatCurrency } from "@/lib/bookingCalculations";
+import { Booking, BookingType, Payment, PaymentStatus, DEFAULT_PRICING, MappedBooking } from "@/types/booking";
+import { calculateRates, formatCurrency } from "@/lib/bookingCalculations";
 import { Card, CardContent } from "@/components/ui/card";
 import { DateRange } from "react-day-picker";
 
 interface BookingDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSave: (booking: Booking) => void;
-  booking?: Booking;
-  bookings: Booking[];
+  onSave: (booking: Omit<MappedBooking, "id" | "createdAt" | "updatedAt">) => void;
+  booking?: MappedBooking;
+  bookings: MappedBooking[];
 }
 
-export function BookingDialog({ open, onOpenChange, onSave, booking, bookings }: BookingDialogProps) {
-  const [step, setStep] = useState(1);
-  const [bookingType, setBookingType] = useState<BookingType>("yom_tov");
+export function BookingDialog({ open, onOpenChange, onSave, booking: editingBooking, bookings }: BookingDialogProps) {
+  const [bookingType, setBookingType] = useState<BookingType>("shabaton");
   const [name, setName] = useState("");
   const [contactName, setContactName] = useState("");
   const [contactEmail, setContactEmail] = useState("");
   const [contactPhone, setContactPhone] = useState("");
-  const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
-  const [numberOfGuests, setNumberOfGuests] = useState(50);
-  const [numberOfRooms, setNumberOfRooms] = useState(1);
-  const [notes, setNotes] = useState("");
-  const [customPrice, setCustomPrice] = useState<number | undefined>();
-  const [discountPercent, setDiscountPercent] = useState(0);
+  const [dateRange, setDateRange] = useState<DateRange | undefined>();
+  const [numberOfGuests, setNumberOfGuests] = useState<number | "">("");
+  const [numberOfRooms, setNumberOfRooms] = useState<number | "">("");
+  const [baseRate, setBaseRate] = useState<number | "">("");
+  const [perPersonRate, setPerPersonRate] = useState<number | "">("");
+  const [cleaningFee, setCleaningFee] = useState<number | "">("");
+  const [additionalCleaningFee, setAdditionalCleaningFee] = useState<number | "">("");
+  const [totalCost, setTotalCost] = useState(0);
+  const [depositAmount, setDepositAmount] = useState(0);
   const [confirmed, setConfirmed] = useState(false);
+  const [customPrice, setCustomPrice] = useState<number | null>(null);
+  const [discountPercent, setDiscountPercent] = useState<number | null>(null);
+  const [notes, setNotes] = useState("");
+  const [payments, setPayments] = useState<Payment[]>([]);
 
-  const [calculations, setCalculations] = useState(calculateBookingCost("yom_tov", 0));
-  const [finalPrice, setFinalPrice] = useState(0);
+  const [pricingConfig] = useState(DEFAULT_PRICING);
 
   useEffect(() => {
-    if (booking) {
-      setStep(1);
-      setBookingType(booking.bookingType);
-      setName(booking.name);
-      setContactName(booking.contactName);
-      setContactEmail(booking.contactEmail);
-      setContactPhone(booking.contactPhone);
-      setDateRange({
-        from: new Date(booking.startDate),
-        to: new Date(booking.endDate),
-      });
-      setNumberOfGuests(booking.numberOfGuests);
-      setNumberOfRooms(booking.numberOfRooms || 1);
-      setNotes(booking.notes);
-      setCustomPrice(booking.customPrice);
-      setDiscountPercent(booking.discountPercent || 0);
-      setConfirmed(booking.confirmed);
+    if (editingBooking) {
+      setBookingType(editingBooking.bookingType);
+      setName(editingBooking.name);
+      setContactName(editingBooking.contactName);
+      setContactEmail(editingBooking.contactEmail || "");
+      setContactPhone(editingBooking.contactPhone || "");
+      setDateRange({ from: new Date(editingBooking.startDate), to: new Date(editingBooking.endDate) });
+      setNumberOfGuests(editingBooking.numberOfGuests);
+      setNumberOfRooms(editingBooking.numberOfRooms);
+      setBaseRate(editingBooking.baseRate);
+      setPerPersonRate(editingBooking.perPersonRate);
+      setCleaningFee(editingBooking.cleaningFee);
+      setAdditionalCleaningFee(editingBooking.additionalCleaningFee);
+      setTotalCost(editingBooking.totalCost);
+      setDepositAmount(editingBooking.depositAmount);
+      setConfirmed(editingBooking.confirmed);
+      setCustomPrice(editingBooking.customPrice);
+      setDiscountPercent(editingBooking.discountPercent);
+      setNotes(editingBooking.notes || "");
+      setPayments(editingBooking.payments || []);
     } else {
       resetForm();
     }
-  }, [booking, open]);
+  }, [editingBooking, open]);
 
   useEffect(() => {
-    const calc = calculateBookingCost(bookingType, numberOfGuests);
-    setCalculations(calc);
-
-    let calculatedPrice = calc.totalCost;
-
-    if (customPrice !== undefined && customPrice > 0) {
-      calculatedPrice = customPrice;
-    } else if (discountPercent > 0) {
-      const discountAmount = (calc.totalCost * discountPercent) / 100;
-      calculatedPrice = Math.max(0, calc.totalCost - discountAmount);
+    if (!open) {
+      setTimeout(() => {
+        resetForm();
+      }, 300);
+    } else {
+      recalculateRates();
     }
-
-    setFinalPrice(calculatedPrice);
-  }, [bookingType, numberOfGuests, customPrice, discountPercent]);
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!dateRange?.from || !dateRange?.to) {
-      alert("Please select start and end dates");
-      return;
-    }
-
-    // Check for overlapping bookings (double-booking prevention)
-    const currentBookingId = booking?.id;
-    
-    const hasConflict = bookings.some((existingBooking) => {
-      // Skip checking against the current booking being edited
-      if (currentBookingId && existingBooking.id === currentBookingId) {
-        return false;
-      }
-
-      const existingStart = new Date(existingBooking.startDate);
-      const existingEnd = new Date(existingBooking.endDate);
-      const newStart = dateRange.from!;
-      const newEnd = dateRange.to!;
-
-      // Check if dates overlap
-      return (
-        (newStart >= existingStart && newStart <= existingEnd) ||
-        (newEnd >= existingStart && newEnd <= existingEnd) ||
-        (newStart <= existingStart && newEnd >= existingEnd)
-      );
-    });
-
-    if (hasConflict) {
-      alert("⚠️ Double Booking Conflict!\n\nThese dates overlap with an existing booking. Please choose different dates or check the calendar for availability.");
-      return;
-    }
-
-    const newBooking: Booking = {
-      id: booking?.id || `booking-${Date.now()}`,
-      bookingType,
-      name,
-      contactName,
-      contactEmail,
-      contactPhone,
-      startDate: dateRange.from.toISOString(),
-      endDate: dateRange.to.toISOString(),
-      numberOfGuests,
-      numberOfRooms,
-      totalCost: finalPrice,
-      depositAmount: finalPrice * 0.25, // Assuming 25% deposit
-      amountPaid: booking?.amountPaid || 0,
-      balanceDue: finalPrice - (booking?.amountPaid || 0),
-      paymentStatus: "pending", // Default status
-      confirmed,
-      notes,
-      createdAt: booking?.createdAt || new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      payments: booking?.payments || [],
-      customPrice,
-      discountPercent,
-      ...calculations,
-    };
-
-    onSave(newBooking);
-    onOpenChange(false);
-    resetForm();
-  };
+  }, [open]);
 
   const resetForm = () => {
-    setStep(1);
-    setBookingType("yom_tov");
+    setBookingType("shabaton");
     setName("");
     setContactName("");
     setContactEmail("");
     setContactPhone("");
     setDateRange(undefined);
-    setNumberOfGuests(50);
+    setNumberOfGuests("");
     setNumberOfRooms(1);
-    setNotes("");
-    setCustomPrice(undefined);
-    setDiscountPercent(0);
+    setBaseRate("");
+    setPerPersonRate("");
+    setCleaningFee("");
+    setAdditionalCleaningFee("");
+    setTotalCost(0);
+    setDepositAmount(0);
     setConfirmed(false);
+    setCustomPrice(null);
+    setDiscountPercent(null);
+    setNotes("");
+    setPayments([]);
+  };
+
+  const recalculateRates = () => {
+    const guests = typeof numberOfGuests === 'number' ? numberOfGuests : 0;
+    const rates = calculateRates(bookingType, guests, pricingConfig);
+
+    if (customPrice === null) {
+      setBaseRate(rates.baseRate);
+      setPerPersonRate(rates.perPersonRate);
+      setCleaningFee(rates.cleaningFee);
+      setAdditionalCleaningFee(rates.additionalCleaningFee);
+      let calculatedTotal = rates.totalCost;
+      if (discountPercent !== null && discountPercent > 0) {
+        calculatedTotal *= (1 - discountPercent / 100);
+      }
+      setTotalCost(calculatedTotal);
+      setDepositAmount(calculatedTotal * (pricingConfig.depositPercentageFirst / 100));
+    } else {
+      setTotalCost(customPrice);
+      setDepositAmount(customPrice * (pricingConfig.depositPercentageFirst / 100));
+    }
+  };
+
+  useEffect(recalculateRates, [bookingType, numberOfGuests, customPrice, discountPercent]);
+
+  const handleSave = () => {
+    if (!contactName || !dateRange?.from || !dateRange?.to || numberOfGuests === "") return;
+
+    const amountPaid = payments.reduce((sum, p) => sum + Number(p.amount), 0);
+    const balanceDue = totalCost - amountPaid;
+
+    const bookingData: Omit<MappedBooking, "id" | "createdAt" | "updatedAt"> = {
+      name: name || `${contactName}'s ${bookingType.replace("_", " ")}`,
+      bookingType: bookingType,
+      contactName: contactName,
+      contactEmail: contactEmail,
+      contactPhone: contactPhone,
+      startDate: dateRange.from.toISOString(),
+      endDate: dateRange.to.toISOString(),
+      numberOfGuests: Number(numberOfGuests),
+      numberOfRooms: Number(numberOfRooms || 1),
+      baseRate: Number(baseRate),
+      perPersonRate: Number(perPersonRate),
+      cleaningFee: Number(cleaningFee),
+      additionalCleaningFee: Number(additionalCleaningFee),
+      totalCost: totalCost,
+      depositAmount: depositAmount,
+      amountPaid: amountPaid,
+      balanceDue: balanceDue,
+      paymentStatus: balanceDue <= 0 ? "paid" : amountPaid > 0 ? "partial" : "pending",
+      confirmed: confirmed,
+      customPrice: customPrice,
+      discountPercent: discountPercent,
+      notes: notes,
+      payments: payments,
+    };
+    onSave(bookingData);
+    onOpenChange(false);
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>{booking ? "Edit Booking" : "Create New Booking"}</DialogTitle>
+          <DialogTitle>{editingBooking ? "Edit Booking" : "Create New Booking"}</DialogTitle>
           <DialogDescription>
             Fill in the booking details below. Pricing will be calculated automatically.
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
+        <form onSubmit={handleSave} className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-4">
               <div className="space-y-2">
@@ -385,34 +385,34 @@ export function BookingDialog({ open, onOpenChange, onSave, booking, bookings }:
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <p className="text-sm text-slate-600 dark:text-slate-400">Base Rate</p>
-                  <p className="text-lg font-semibold">{formatCurrency(calculations.baseRate)}</p>
+                  <p className="text-lg font-semibold">{formatCurrency(baseRate)}</p>
                 </div>
                 {bookingType !== "night_event" && (
                   <>
                     <div>
                       <p className="text-sm text-slate-600 dark:text-slate-400">Per Person ({numberOfGuests} guests)</p>
-                      <p className="text-lg font-semibold">{formatCurrency(calculations.perPersonTotal)}</p>
+                      <p className="text-lg font-semibold">{formatCurrency(perPersonRate)}</p>
                     </div>
                   </>
                 )}
                 <div>
                   <p className="text-sm text-slate-600 dark:text-slate-400">Cleaning Fee</p>
-                  <p className="text-lg font-semibold">{formatCurrency(calculations.cleaningFee)}</p>
+                  <p className="text-lg font-semibold">{formatCurrency(cleaningFee)}</p>
                 </div>
-                {calculations.additionalCleaningFee > 0 && (
+                {additionalCleaningFee > 0 && (
                   <div>
                     <p className="text-sm text-slate-600 dark:text-slate-400">Additional Cleaning</p>
-                    <p className="text-lg font-semibold">{formatCurrency(calculations.additionalCleaningFee)}</p>
+                    <p className="text-lg font-semibold">{formatCurrency(additionalCleaningFee)}</p>
                   </div>
                 )}
                 <div className="col-span-2 pt-4 border-t">
                   <p className="text-sm text-slate-600 dark:text-slate-400">Subtotal</p>
-                  <p className="text-xl font-bold">{formatCurrency(calculations.totalCost)}</p>
+                  <p className="text-xl font-bold">{formatCurrency(totalCost)}</p>
                 </div>
 
-                {(customPrice !== undefined && customPrice > 0 || discountPercent > 0) && (
+                {(customPrice !== null && customPrice > 0 || discountPercent > 0) && (
                   <>
-                    {customPrice !== undefined && customPrice > 0 ? (
+                    {customPrice !== null && customPrice > 0 ? (
                       <div className="col-span-2 bg-green-50 dark:bg-green-950/30 p-3 rounded-lg">
                         <p className="text-sm text-green-700 dark:text-green-300 font-semibold">Custom Price Applied</p>
                         <p className="text-lg font-bold text-green-600">{formatCurrency(customPrice)}</p>
@@ -424,7 +424,7 @@ export function BookingDialog({ open, onOpenChange, onSave, booking, bookings }:
                             Discount: {discountPercent}%
                           </p>
                           <p className="text-lg font-semibold text-orange-600">
-                            -{formatCurrency(calculations.totalCost - finalPrice)}
+                            -{formatCurrency(totalCost - (totalCost * (1 - discountPercent / 100))}
                           </p>
                         </div>
                       </>
@@ -432,7 +432,7 @@ export function BookingDialog({ open, onOpenChange, onSave, booking, bookings }:
 
                     <div className="col-span-2 pt-2 border-t-2 border-blue-200 dark:border-blue-800">
                       <p className="text-sm text-slate-600 dark:text-slate-400">Final Total</p>
-                      <p className="text-2xl font-bold text-blue-600">{formatCurrency(finalPrice)}</p>
+                      <p className="text-2xl font-bold text-blue-600">{formatCurrency(totalCost)}</p>
                     </div>
                   </>
                 )}
@@ -440,21 +440,21 @@ export function BookingDialog({ open, onOpenChange, onSave, booking, bookings }:
                 {!customPrice && discountPercent === 0 && (
                   <div className="col-span-2 pt-4 border-t">
                     <p className="text-sm text-slate-600 dark:text-slate-400">Total Cost</p>
-                    <p className="text-2xl font-bold text-blue-600">{formatCurrency(calculations.totalCost)}</p>
+                    <p className="text-2xl font-bold text-blue-600">{formatCurrency(totalCost)}</p>
                   </div>
                 )}
 
                 <div>
                   <p className="text-sm text-slate-600 dark:text-slate-400">1st Deposit (25%)</p>
-                  <p className="font-semibold">{formatCurrency(finalPrice * 0.25)}</p>
+                  <p className="font-semibold">{formatCurrency(depositAmount)}</p>
                 </div>
                 <div>
                   <p className="text-sm text-slate-600 dark:text-slate-400">2nd Deposit (25%)</p>
-                  <p className="font-semibold">{formatCurrency(finalPrice * 0.25)}</p>
+                  <p className="font-semibold">{formatCurrency(depositAmount)}</p>
                 </div>
                 <div className="col-span-2">
                   <p className="text-sm text-slate-600 dark:text-slate-400">Balance Due (50%)</p>
-                  <p className="font-semibold">{formatCurrency(finalPrice * 0.5)}</p>
+                  <p className="font-semibold">{formatCurrency(totalCost - depositAmount)}</p>
                 </div>
               </div>
             </CardContent>
@@ -465,7 +465,7 @@ export function BookingDialog({ open, onOpenChange, onSave, booking, bookings }:
               Cancel
             </Button>
             <Button type="submit" className="bg-blue-600 hover:bg-blue-700">
-              {booking ? "Update Booking" : "Create Booking"}
+              {editingBooking ? "Update Booking" : "Create Booking"}
             </Button>
           </DialogFooter>
         </form>
