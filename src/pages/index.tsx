@@ -225,28 +225,8 @@ export default function HomePage() {
     setActiveTab("expenses");
   };
 
-  // Convert manager compensation to expense format for display
-  const managerExpenses: Expense[] = managerCompensations.map(comp => {
-    const booking = bookings.find(b => b.id === comp.booking_id);
-    return {
-      id: comp.id,
-      booking_id: comp.booking_id,
-      description: `Manager Commission - ${booking?.name || 'General'}`,
-      amount: comp.amount,
-      category: "Manager Salary",
-      payment_method: "other",
-      vendor: "Manager",
-      expense_date: comp.due_date,
-      receipt_urls: [],
-      proof_urls: [],
-      notes: comp.notes || `15% commission (min $1,000) for ${booking?.booking_type || 'booking'}`,
-      created_at: comp.created_at,
-      updated_at: comp.updated_at,
-    };
-  });
-
   // Combine regular expenses with manager expenses
-  const allExpenses = [...expenses, ...managerExpenses];
+  const allExpenses = [...expenses];
 
   const totalGuests = bookings.reduce((sum, b) => sum + b.number_of_guests, 0);
   const totalRevenue = bookings.reduce((sum, b) => sum + b.total_cost, 0);
