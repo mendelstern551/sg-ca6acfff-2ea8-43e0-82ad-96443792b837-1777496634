@@ -161,7 +161,9 @@ export function BookingDialog({ open, onOpenChange, onSave, booking: editingBook
   };
   
   const handleBookingTypeChange = (value: string) => {
-    setBookingType(value as BookingType);
+    if (value === "yom_tov" || value === "shabaton" || value === "night_event") {
+      setBookingType(value as BookingType);
+    }
   };
 
   const handleConfirmedChange = (checked: boolean | string) => {
