@@ -34,8 +34,10 @@ export function InvoiceDialog({ open, onOpenChange, booking }: InvoiceDialogProp
       if (!existingInvoice) {
         setGenerating(true);
         
-        // Calculate actual amount paid from payments
-        const amountPaid = booking.payments?.reduce((sum, p) => sum + p.amount, 0) || 0;
+        // Calculate actual amount paid from payments - only if payments exist
+        const amountPaid = (booking.payments && booking.payments.length > 0) 
+          ? booking.payments.reduce((sum, p) => sum + p.amount, 0) 
+          : 0;
         const balanceDue = booking.totalCost - amountPaid;
         
         existingInvoice = await invoiceService.createInvoice(booking.id, {
@@ -65,6 +67,12 @@ export function InvoiceDialog({ open, onOpenChange, booking }: InvoiceDialogProp
 
   const handleDownloadPDF = () => {
     if (!invoice) return;
+
+    // Calculate actual payments from booking
+    const actualAmountPaid = (booking.payments && booking.payments.length > 0) 
+      ? booking.payments.reduce((sum, p) => sum + p.amount, 0) 
+      : 0;
+    const actualBalanceDue = invoice.total_amount - actualAmountPaid;
 
     const printWindow = window.open("", "_blank");
     if (!printWindow) return;
@@ -188,14 +196,16 @@ export function InvoiceDialog({ open, onOpenChange, booking }: InvoiceDialogProp
               <span>Subtotal</span>
               <span>$${Number(invoice.base_price).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
             </div>
+            ${actualAmountPaid > 0 ? `
             <div class="total-row payment">
               <span>Amount Paid</span>
-              <span>-$${Number(invoice.deposit_amount).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+              <span>-$${actualAmountPaid.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
             </div>
             <div class="total-row balance">
               <span>Balance Due</span>
-              <span>$${Number(invoice.balance_due).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+              <span>$${actualBalanceDue.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
             </div>
+            ` : ''}
             <div class="total-row grand-total">
               <span>Total Amount</span>
               <span>$${Number(invoice.total_amount).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
@@ -212,10 +222,10 @@ export function InvoiceDialog({ open, onOpenChange, booking }: InvoiceDialogProp
             </p>
           </div>
 
-          ${invoice.balance_due > 0 ? `
+          ${actualBalanceDue > 0 ? `
           <div class="payment-terms">
             <h4>⚠ Payment Required</h4>
-            <p>A balance of <strong>$${Number(invoice.balance_due).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong> remains outstanding. Please remit payment by the agreed due date to maintain your reservation.</p>
+            <p>A balance of <strong>$${actualBalanceDue.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong> remains outstanding. Please remit payment by the agreed due date to maintain your reservation.</p>
           </div>
           ` : `
           <div class="payment-terms" style="background: #d1fae5; border-left-color: #059669;">
@@ -263,6 +273,12 @@ export function InvoiceDialog({ open, onOpenChange, booking }: InvoiceDialogProp
   }
 
   if (!invoice) return null;
+
+  // Calculate actual payments from booking for display
+  const actualAmountPaid = (booking.payments && booking.payments.length > 0) 
+    ? booking.payments.reduce((sum, p) => sum + p.amount, 0) 
+    : 0;
+  const actualBalanceDue = invoice.total_amount - actualAmountPaid;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -360,14 +376,18 @@ export function InvoiceDialog({ open, onOpenChange, booking }: InvoiceDialogProp
                 <span>Subtotal:</span>
                 <span className="font-medium">${Number(invoice.base_price).toFixed(2)}</span>
               </div>
-              <div className="flex justify-between text-green-600 font-medium">
-                <span>Amount Paid:</span>
-                <span>-${Number(invoice.deposit_amount).toFixed(2)}</span>
-              </div>
-              <div className="flex justify-between text-orange-600 font-medium">
-                <span>Balance Due:</span>
-                <span>${Number(invoice.balance_due).toFixed(2)}</span>
-              </div>
+              {actualAmountPaid > 0 && (
+                <>
+                  <div className="flex justify-between text-green-600 font-medium">
+                    <span>Amount Paid:</span>
+                    <span>-${actualAmountPaid.toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between text-orange-600 font-medium">
+                    <span>Balance Due:</span>
+                    <span>${actualBalanceDue.toFixed(2)}</span>
+                  </div>
+                </>
+              )}
               <div className="flex justify-between text-2xl font-bold bg-blue-50 border-2 border-blue-600 p-4 rounded-lg mt-4">
                 <span className="text-blue-800">Total Amount:</span>
                 <span className="text-blue-600">${Number(invoice.total_amount).toFixed(2)}</span>
@@ -375,11 +395,11 @@ export function InvoiceDialog({ open, onOpenChange, booking }: InvoiceDialogProp
             </div>
           </div>
 
-          {invoice.balance_due > 0 ? (
+          {actualBalanceDue > 0 ? (
             <div className="bg-amber-50 border-l-4 border-amber-500 p-4 rounded">
               <h4 className="font-semibold text-amber-800 mb-1">⚠ Payment Required</h4>
               <p className="text-sm text-amber-700">
-                A balance of <strong>${Number(invoice.balance_due).toFixed(2)}</strong> remains outstanding. 
+                A balance of <strong>${actualBalanceDue.toFixed(2)}</strong> remains outstanding. 
                 Please remit payment by the agreed due date to maintain your reservation.
               </p>
             </div>
