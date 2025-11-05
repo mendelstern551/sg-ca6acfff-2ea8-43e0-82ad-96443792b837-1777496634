@@ -224,8 +224,14 @@ export function BookingDialog({ open, onOpenChange, onSave, booking: editingBook
             <div className="space-y-4">
               <div className="space-y-2">
                 <Label>Select Dates *</Label>
-                <div className="border rounded-lg p-4 bg-white dark:bg-slate-900">
-                  <EnhancedCalendar mode="range" selected={dateRange} onSelect={setDateRange} numberOfMonths={2} className="rounded-md" />
+                <div className="border rounded-lg p-2 bg-white dark:bg-slate-900">
+                  <EnhancedCalendar 
+                    mode="range" 
+                    selected={dateRange} 
+                    onSelect={setDateRange} 
+                    numberOfMonths={1}
+                    className="rounded-md scale-90"
+                  />
                 </div>
                 {dateRange?.from && dateRange?.to && (
                   <div className="p-3 bg-blue-50 dark:bg-blue-950 rounded-lg">
