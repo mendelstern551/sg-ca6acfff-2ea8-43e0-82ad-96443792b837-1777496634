@@ -2,7 +2,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Booking, Expense } from "@/types/booking";
+import { Expense, MappedBooking } from "@/types/booking";
 import { formatCurrency } from "@/lib/bookingCalculations";
 import { format } from "date-fns";
 import { DollarSign, TrendingUp, TrendingDown, Receipt, Calendar, Users, FileText } from "lucide-react";
@@ -12,7 +12,7 @@ import { useState } from "react";
 interface ClientDetailsDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  booking: Booking;
+  booking: MappedBooking;
   allExpenses: Expense[];
   onNavigateToExpenses?: (bookingId: string) => void;
 }
@@ -25,7 +25,7 @@ export function ClientDetailsDialog({
   onNavigateToExpenses 
 }: ClientDetailsDialogProps) {
   const [invoiceOpen, setInvoiceOpen] = useState(false);
-  const clientExpenses = allExpenses.filter(e => e.bookingId === booking.id);
+  const clientExpenses = allExpenses.filter(e => e.booking_id === booking.id);
   const totalExpenses = clientExpenses.reduce((sum, e) => sum + e.amount, 0);
   const netProfit = booking.totalCost - totalExpenses;
   const profitMargin = booking.totalCost > 0 ? ((netProfit / booking.totalCost) * 100).toFixed(1) : "0";
@@ -210,7 +210,7 @@ export function ClientDetailsDialog({
                 ) : (
                   <div className="space-y-3">
                     {clientExpenses
-                      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+                      .sort((a, b) => new Date(b.expense_date).getTime() - new Date(a.expense_date).getTime())
                       .map((expense) => (
                         <div key={expense.id} className="flex justify-between items-center p-3 bg-red-50 dark:bg-red-900/20 rounded-lg">
                           <div className="flex-1">
@@ -221,7 +221,7 @@ export function ClientDetailsDialog({
                               </Badge>
                             </div>
                             <div className="flex items-center gap-3 text-xs text-slate-600 dark:text-slate-400">
-                              <span>{format(new Date(expense.date), "MMM d, yyyy")}</span>
+                              <span>{format(new Date(expense.expense_date), "MMM d, yyyy")}</span>
                               <span>•</span>
                               <span>{expense.vendor}</span>
                               <span>•</span>

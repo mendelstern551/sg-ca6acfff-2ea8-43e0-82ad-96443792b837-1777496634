@@ -1,4 +1,3 @@
-
 import type { Database } from "@/integrations/supabase/types";
 
 // Raw Supabase types, using snake_case as the source of truth
@@ -12,6 +11,36 @@ export type Payment = Database["public"]["Tables"]["payments"]["Row"];
 export type BookingType = "yom_tov" | "shabaton" | "night_event";
 export type PaymentStatus = "pending" | "deposit_paid" | "partial" | "paid" | "refunded" | "cancelled";
 export type PaymentMethod = "cash" | "check" | "credit_card" | "bank_transfer" | "venmo" | "zelle" | "other" | "pending";
+
+// Application-level type with camelCase properties, used for UI components
+export interface MappedBooking {
+  id: string;
+  bookingType: BookingType;
+  name: string;
+  contactName: string;
+  contactEmail: string | null;
+  contactPhone: string | null;
+  startDate: string;
+  endDate: string;
+  numberOfGuests: number;
+  numberOfRooms: number;
+  baseRate: number;
+  perPersonRate: number;
+  cleaningFee: number;
+  additionalCleaningFee: number;
+  totalCost: number;
+  depositAmount: number;
+  amountPaid: number;
+  balanceDue: number;
+  paymentStatus: PaymentStatus;
+  confirmed: boolean;
+  payments: Payment[];
+  notes: string | null;
+  createdAt: string;
+  updatedAt: string;
+  customPrice: number | null;
+  discountPercent: number | null;
+}
 
 export interface ManagerPayment {
   id: string;

@@ -17,7 +17,7 @@ import { bookingService } from "@/services/bookingService";
 import { expenseService } from "@/services/expenseService";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import type { Booking, Expense, Payment, BookingType, PaymentStatus } from "@/types/booking";
+import type { Booking, Expense, Payment, BookingType, PaymentStatus, MappedBooking } from "@/types/booking";
 import { formatCurrency } from "@/lib/bookingCalculations";
 import { invoiceService } from "@/services/invoiceService";
 import type { Database } from "@/integrations/supabase/types";
@@ -27,36 +27,6 @@ import { format } from "date-fns";
 
 type InvoiceRow = Database["public"]["Tables"]["invoices"]["Row"];
 type ExpenseInsert = Database["public"]["Tables"]["expenses"]["Insert"];
-
-// Application-level type with camelCase properties
-interface MappedBooking {
-  id: string;
-  bookingType: BookingType;
-  name: string;
-  contactName: string;
-  contactEmail: string | null;
-  contactPhone: string | null;
-  startDate: string;
-  endDate: string;
-  numberOfGuests: number;
-  numberOfRooms: number;
-  baseRate: number;
-  perPersonRate: number;
-  cleaningFee: number;
-  additionalCleaningFee: number;
-  totalCost: number;
-  depositAmount: number;
-  amountPaid: number;
-  balanceDue: number;
-  paymentStatus: PaymentStatus;
-  confirmed: boolean;
-  payments: Payment[];
-  notes: string | null;
-  createdAt: string;
-  updatedAt: string;
-  customPrice: number | null;
-  discountPercent: number | null;
-}
 
 export default function HomePage() {
   const [activeTab, setActiveTab] = useState("bookings");

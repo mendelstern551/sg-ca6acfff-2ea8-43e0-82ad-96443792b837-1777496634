@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Booking } from "@/types/booking";
+import { MappedBooking } from "@/types/booking";
 import { invoiceService } from "@/services/invoiceService";
 import { format } from "date-fns";
 import { Download, Loader2, FileText, Building2, Mail, Phone } from "lucide-react";
@@ -12,7 +12,7 @@ type Invoice = Database["public"]["Tables"]["invoices"]["Row"];
 interface InvoiceDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  booking: Booking;
+  booking: MappedBooking;
 }
 
 export function InvoiceDialog({ open, onOpenChange, booking }: InvoiceDialogProps) {
