@@ -154,8 +154,8 @@ export function BookingCalendar({ bookings, onDateClick, onBookingClick, onAddBo
   const getHebrewMonthYear = (date: Date): string => {
     try {
       const hDate = new HDate(date);
-      // Get Hebrew month name and year
-      const monthName = hDate.getMonthName("h"); // 'h' for Hebrew
+      // Get Hebrew month name and year - use render() to get Hebrew text
+      const monthName = hDate.render("he").split(" ")[0]; // Get just the month part
       const year = hDate.getFullYear();
       return `${monthName} ${year}`;
     } catch (error) {
