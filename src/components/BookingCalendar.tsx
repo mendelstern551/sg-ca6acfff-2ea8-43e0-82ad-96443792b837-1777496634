@@ -172,9 +172,10 @@ export function BookingCalendar({ bookings, onDateClick, onBookingClick, onAddBo
       });
       
       if (parshaEvent) {
-        const fullText = parshaEvent.render();
-        // Remove "Parashat " prefix to get just the parsha name
-        return fullText.replace("Parashat ", "").replace("Torah: ", "");
+        // Get Hebrew rendering with 'he' locale
+        const hebrewText = parshaEvent.render("he");
+        // Remove "פרשת " prefix if present to get just the parsha name
+        return hebrewText.replace("פרשת ", "");
       }
       
       return "";
@@ -400,7 +401,7 @@ export function BookingCalendar({ bookings, onDateClick, onBookingClick, onAddBo
                   </div>
 
                   {isShabbat && parshaName && (
-                    <div className="mb-2 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-md px-2 py-1.5 text-[10px] font-bold text-center shadow-sm border border-blue-600">
+                    <div className="mb-2 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-md px-2 py-1.5 text-[11px] font-bold text-center shadow-sm border border-blue-600 font-hebrew">
                       📖 {parshaName}
                     </div>
                   )}
