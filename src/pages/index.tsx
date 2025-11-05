@@ -157,6 +157,10 @@ export default function HomePage() {
 
   const handleSaveBooking = async (booking: Omit<Booking, "id" | "createdAt" | "updatedAt">) => {
     try {
+      // Ensure balanceDue is correctly calculated based on totalCost and existing amountPaid
+      const amountPaid = editingBooking?.amountPaid || 0;
+      const balanceDue = booking.totalCost - amountPaid;
+
       const bookingData = {
         name: booking.name,
         booking_type: booking.bookingType,
@@ -172,8 +176,8 @@ export default function HomePage() {
         additional_cleaning_fee: booking.additionalCleaningFee,
         total_cost: booking.totalCost,
         deposit_amount: booking.depositAmount,
-        amount_paid: booking.amountPaid,
-        balance_due: booking.balanceDue,
+        amount_paid: amountPaid,
+        balance_due: balanceDue, // Use recalculated balance
         payment_status: booking.paymentStatus,
         confirmed: booking.confirmed,
         custom_price: booking.customPrice,
