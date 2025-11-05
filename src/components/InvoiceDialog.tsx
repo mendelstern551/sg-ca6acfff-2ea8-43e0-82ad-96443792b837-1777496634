@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -75,26 +74,24 @@ export function InvoiceDialog({ open, onOpenChange, booking }: InvoiceDialogProp
           body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 0; background: white; }
           .invoice { max-width: 850px; margin: 40px auto; background: white; padding: 60px; }
           
-          .logo-container { text-align: center; margin-bottom: 40px; padding-bottom: 30px; border-bottom: 3px solid #2563eb; }
-          .logo-placeholder { width: 200px; height: 80px; margin: 0 auto 20px; background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%); border-radius: 12px; display: flex; align-items: center; justify-content: center; color: white; font-size: 24px; font-weight: 700; letter-spacing: 2px; box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3); }
-          .logo-text { color: #1e40af; font-size: 28px; font-weight: 700; margin-bottom: 4px; }
-          .logo-subtitle { color: #64748b; font-size: 14px; }
+          .logo-container { text-align: center; margin-bottom: 40px; padding-bottom: 30px; border-bottom: 3px solid #0f766e; }
+          .logo-image { width: 280px; height: auto; margin: 0 auto 10px; display: block; }
           
           .header { display: flex; justify-content: space-between; align-items: start; margin-bottom: 50px; }
           
           .invoice-meta { text-align: right; }
           .invoice-meta h2 { font-size: 36px; color: #1e293b; margin-bottom: 8px; font-weight: 300; letter-spacing: -1px; }
-          .invoice-number { font-size: 18px; color: #2563eb; font-weight: 600; margin-bottom: 12px; }
+          .invoice-number { font-size: 18px; color: #0f766e; font-weight: 600; margin-bottom: 12px; }
           .invoice-date { font-size: 14px; color: #64748b; }
           
           .billing-section { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; margin: 40px 0; }
-          .billing-box { background: #f8fafc; padding: 25px; border-radius: 12px; border-left: 4px solid #2563eb; }
+          .billing-box { background: #f8fafc; padding: 25px; border-radius: 12px; border-left: 4px solid #0f766e; }
           .billing-box h3 { font-size: 12px; text-transform: uppercase; letter-spacing: 1px; color: #64748b; margin-bottom: 15px; font-weight: 600; }
           .billing-box p { font-size: 15px; color: #1e293b; line-height: 1.8; margin: 4px 0; }
-          .billing-box strong { display: block; font-size: 18px; color: #1e40af; margin-bottom: 8px; }
+          .billing-box strong { display: block; font-size: 18px; color: #0f766e; margin-bottom: 8px; }
           
-          .event-details { background: #eff6ff; padding: 25px; border-radius: 12px; margin: 30px 0; }
-          .event-details h3 { font-size: 14px; text-transform: uppercase; letter-spacing: 1px; color: #1e40af; margin-bottom: 15px; font-weight: 600; }
+          .event-details { background: #ecfdf5; padding: 25px; border-radius: 12px; margin: 30px 0; }
+          .event-details h3 { font-size: 14px; text-transform: uppercase; letter-spacing: 1px; color: #0f766e; margin-bottom: 15px; font-weight: 600; }
           .detail-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; }
           .detail-item { display: flex; justify-content: space-between; padding: 8px 0; }
           .detail-label { color: #64748b; font-size: 14px; }
@@ -112,7 +109,7 @@ export function InvoiceDialog({ open, onOpenChange, booking }: InvoiceDialogProp
           .total-row.subtotal { color: #64748b; }
           .total-row.payment { color: #059669; font-weight: 600; }
           .total-row.balance { color: #ea580c; font-weight: 600; }
-          .total-row.grand-total { background: #eff6ff; border: 2px solid #2563eb; border-radius: 8px; margin-top: 15px; padding: 20px; font-size: 20px; font-weight: 700; color: #1e40af; }
+          .total-row.grand-total { background: #ecfdf5; border: 2px solid #0f766e; border-radius: 8px; margin-top: 15px; padding: 20px; font-size: 20px; font-weight: 700; color: #0f766e; }
           
           .payment-terms { margin-top: 50px; padding: 25px; background: #fef3c7; border-radius: 8px; border-left: 4px solid #f59e0b; }
           .payment-terms h4 { color: #92400e; font-size: 14px; margin-bottom: 10px; font-weight: 600; }
@@ -131,9 +128,7 @@ export function InvoiceDialog({ open, onOpenChange, booking }: InvoiceDialogProp
       <body>
         <div class="invoice">
           <div class="logo-container">
-            <div class="logo-placeholder">TLR</div>
-            <div class="logo-text">Trout Lake Resort</div>
-            <div class="logo-subtitle">Premium Event & Retreat Venue</div>
+            <img src="/ChatGPT_Image_Nov_5_2025_03_58_44_PM.png" alt="Trout Lake Resort Logo" class="logo-image" />
           </div>
 
           <div class="header">
@@ -149,8 +144,8 @@ export function InvoiceDialog({ open, onOpenChange, booking }: InvoiceDialogProp
             <div class="billing-box">
               <h3>Bill To</h3>
               <strong>${invoice.client_name}</strong>
-              ${invoice.client_email ? `<p><Mail style="display: inline; width: 14px; height: 14px; margin-right: 6px;" /> ${invoice.client_email}</p>` : ""}
-              ${invoice.client_phone ? `<p><Phone style="display: inline; width: 14px; height: 14px; margin-right: 6px;" /> ${invoice.client_phone}</p>` : ""}
+              ${invoice.client_email ? `<p>${invoice.client_email}</p>` : ""}
+              ${invoice.client_phone ? `<p>${invoice.client_phone}</p>` : ""}
             </div>
             
             <div class="billing-box">
@@ -278,11 +273,11 @@ export function InvoiceDialog({ open, onOpenChange, booking }: InvoiceDialogProp
           )}
 
           <div className="text-center border-b pb-6 mb-6">
-            <div className="inline-block w-48 h-20 mb-4 bg-gradient-to-br from-blue-600 to-blue-800 rounded-xl flex items-center justify-center shadow-lg">
-              <span className="text-white text-3xl font-bold tracking-wider">TLR</span>
-            </div>
-            <h2 className="text-3xl font-bold text-blue-600 mb-1">Trout Lake Resort</h2>
-            <p className="text-sm text-gray-500">Premium Event & Retreat Venue</p>
+            <img 
+              src="/ChatGPT_Image_Nov_5_2025_03_58_44_PM.png" 
+              alt="Trout Lake Resort Logo" 
+              className="w-64 h-auto mx-auto mb-2"
+            />
           </div>
 
           <div className="flex justify-between items-start">
