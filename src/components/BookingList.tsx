@@ -1,353 +1,306 @@
+
 import { useState } from "react";
-import { Booking, Payment, Expense } from "@/types/booking";
-import { formatCurrency } from "@/lib/bookingCalculations";
-import { format } from "date-fns";
-import { Card, CardContent } from "@/components/ui/card";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Edit, Trash2, Users, Calendar, DollarSign, Clock, CheckCircle2, Eye, Plus } from "lucide-react";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { MoreHorizontal, Calendar, Trash2, Edit, FileText, ChevronDown, ChevronUp, Eye } from "lucide-react";
+import { format, formatDistanceToNow, isFuture } from "date-fns";
+import { Booking, Payment, Expense, BookingType, PaymentStatus } from "@/types/booking";
+import { formatCurrency } from "@/lib/bookingCalculations";
 import { ClientDetailsDialog } from "./ClientDetailsDialog";
-import { PaymentDialog } from "./PaymentDialog";
 
-interface BookingListProps {
-  bookings: Booking[];
-  onEdit: (booking: Booking) => void;
-  onDelete: (bookingId: string) => void;
-  onUpdateBooking: (booking: Booking) => void;
-  expenses?: Expense[];
-  onNavigateToExpenses?: (bookingId: string) => void;
+// We need to define the MappedBooking type here as well, as it's passed from index.tsx
+interface MappedBooking {
+  id: string;
+  bookingType: BookingType;
+  name: string;
+  contactName: string;
+  contactEmail: string | null;
+  contactPhone: string | null;
+  startDate: string;
+  endDate: string;
+  numberOfGuests: number;
+  numberOfRooms: number;
+  baseRate: number;
+  perPersonRate: number;
+  cleaningFee: number;
+  additionalCleaningFee: number;
+  totalCost: number;
+  depositAmount: number;
+  amountPaid: number;
+  balanceDue: number;
+  paymentStatus: PaymentStatus;
+  confirmed: boolean;
+  payments: Payment[];
+  notes: string | null;
+  createdAt: string;
+  updatedAt: string;
+  customPrice: number | null;
+  discountPercent: number | null;
 }
 
-export function BookingList({ 
-  bookings, 
-  onEdit, 
-  onDelete, 
-  onUpdateBooking, 
-  expenses = [],
-  onNavigateToExpenses 
-}: BookingListProps) {
-  const [deleteId, setDeleteId] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState("all");
-  const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
-  const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
-  const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
-  const [editingPayment, setEditingPayment] = useState<Payment | undefined>();
-  const [currentBookingForPayment, setCurrentBookingForPayment] = useState<Booking | null>(null);
+interface BookingListProps {
+  bookings: MappedBooking[];
+  expenses: Expense[];
+  onEdit: (booking: MappedBooking) => void;
+  onDelete: (bookingId: string) => void;
+  onUpdateBooking: (booking: MappedBooking) => void;
+  onNavigateToExpenses: (bookingId: string) => void;
+}
 
-  const handleViewDetails = (booking: Booking) => {
-    setSelectedBooking(booking);
-    setDetailsDialogOpen(true);
+export function BookingList({ bookings, expenses, onEdit, onDelete, onUpdateBooking, onNavigateToExpenses }: BookingListProps) {
+  const [expandedBookingId, setExpandedBookingId] = useState<string | null>(null);
+  const [clientDetailsOpen, setClientDetailsOpen] = useState(false);
+  const [selectedBookingForDetails, setSelectedBookingForDetails] = useState<MappedBooking | null>(null);
+
+  const toggleExpand = (bookingId: string) => {
+    setExpandedBookingId(expandedBookingId === bookingId ? null : bookingId);
   };
 
-  const handleAddPayment = (booking: Booking) => {
-    setCurrentBookingForPayment(booking);
-    setEditingPayment(undefined);
-    setPaymentDialogOpen(true);
-  };
-
-  const handleEditPayment = (booking: Booking, payment: Payment) => {
-    setCurrentBookingForPayment(booking);
-    setEditingPayment(payment);
-    setPaymentDialogOpen(true);
-  };
-
-  const handleSavePayment = (payment: Payment) => {
-    if (!currentBookingForPayment) return;
-
-    const existingPayments = currentBookingForPayment.payments || [];
-    let updatedPayments: Payment[];
-
-    if (editingPayment) {
-      updatedPayments = existingPayments.map(p => p.id === payment.id ? payment : p);
-    } else {
-      updatedPayments = [...existingPayments, payment];
+  const getStatusColor = (status: PaymentStatus) => {
+    switch (status) {
+      case "paid": return "bg-green-100 text-green-700 dark:bg-green-900/50 dark:text-green-300";
+      case "partial": return "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/50 dark:text-yellow-300";
+      case "pending": return "bg-orange-100 text-orange-700 dark:bg-orange-900/50 dark:text-orange-300";
+      default: return "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300";
     }
-
-    const totalPaid = updatedPayments.reduce((sum, p) => sum + p.amount, 0);
-    const updatedBooking: Booking = {
-      ...currentBookingForPayment,
-      payments: updatedPayments,
-      amountPaid: totalPaid,
-      balanceDue: currentBookingForPayment.totalCost - totalPaid
-    };
-
-    onUpdateBooking(updatedBooking);
-    setPaymentDialogOpen(false);
-    setEditingPayment(undefined);
-    setCurrentBookingForPayment(null);
   };
 
-  const renderBookingCard = (booking: Booking) => {
-    const payments = booking.payments || [];
-    const sortedPayments = [...payments].sort((a, b) => 
-      new Date(b.payment_date).getTime() - new Date(a.payment_date).getTime()
-    );
-
-    return (
-      <Card key={booking.id} className="overflow-hidden hover:shadow-lg transition-shadow">
-        <CardContent className="pt-4">
-          <div className="flex justify-between items-start">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4 flex-grow">
-                  <div>
-                    <p className="text-xs text-slate-600 dark:text-slate-400 mb-1">Customer</p>
-                    <div className="flex items-center gap-2">
-                      <p className="font-medium">{booking.contactName}</p>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleViewDetails(booking)}
-                        className="h-6 px-2 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
-                      >
-                        <Eye className="h-3 w-3 mr-1" />
-                        <span className="text-xs">Details</span>
-                      </Button>
-                    </div>
-                    <p className="text-xs text-slate-500">{booking.contactEmail}</p>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Calendar className="h-4 w-4 text-blue-600" />
-                    <div>
-                      <p className="text-xs text-slate-600 dark:text-slate-400">Dates</p>
-                      <p className="text-sm font-medium">
-                        {format(new Date(booking.startDate), "MMM d")} - {format(new Date(booking.endDate), "MMM d, yyyy")}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-2">
-                    <Users className="h-4 w-4 text-green-600" />
-                    <div>
-                      <p className="text-xs text-slate-600 dark:text-slate-400">Guests</p>
-                      <p className="text-sm font-medium">{booking.numberOfGuests} people</p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-2">
-                    <DollarSign className="h-4 w-4 text-emerald-600" />
-                    <div>
-                      <p className="text-xs text-slate-600 dark:text-slate-400">Total Cost</p>
-                      <p className="text-sm font-medium">{formatCurrency(booking.totalCost)}</p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-2">
-                    <DollarSign className="h-4 w-4 text-orange-600" />
-                    <div>
-                      <p className="text-xs text-slate-600 dark:text-slate-400">Balance Due</p>
-                      <p className="text-sm font-medium text-orange-600 dark:text-orange-500">
-                        {formatCurrency(booking.balanceDue)}
-                      </p>
-                    </div>
-                  </div>
-              </div>
-              <div className="flex gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => onEdit(booking)}
-                  >
-                    <Edit className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setDeleteId(booking.id)}
-                  >
-                    <Trash2 className="h-4 w-4 text-red-600" />
-                  </Button>
-              </div>
-          </div>
-
-          <div className="mt-4 pt-4 border-t">
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center gap-2">
-                <DollarSign className="h-4 w-4 text-green-600" />
-                <span className="text-sm font-medium">Payments ({payments.length})</span>
-              </div>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => handleAddPayment(booking)}
-                className="h-8 text-green-600 hover:text-green-700 hover:bg-green-50"
-              >
-                <Plus className="h-3 w-3 mr-1" />
-                Add Payment
-              </Button>
-            </div>
-
-            {payments.length === 0 ? (
-              <p className="text-sm text-slate-500 text-center py-3 bg-slate-50 dark:bg-slate-900 rounded">
-                No payments recorded yet
-              </p>
-            ) : (
-              <div className="space-y-2">
-                {sortedPayments.map((payment) => (
-                  <div
-                    key={payment.id}
-                    className="flex items-center justify-between p-2 bg-slate-50 dark:bg-slate-900 rounded hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
-                    onClick={() => handleEditPayment(booking, payment)}
-                  >
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm font-medium text-green-600">
-                          {formatCurrency(payment.amount)}
-                        </span>
-                        <span className="text-xs text-slate-500">
-                          {format(new Date(payment.payment_date), "MMM d, yyyy")}
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-2 mt-1">
-                        <Badge variant="secondary" className="text-xs">
-                          {payment.payment_method.replace("_", " ")}
-                        </Badge>
-                        {payment.notes && (
-                          <span className="text-xs text-slate-500">
-                            Notes: {payment.notes}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {booking.notes && (
-            <div className="mt-4 pt-4 border-t">
-              <p className="text-sm text-slate-600 dark:text-slate-400">
-                <span className="font-medium">Notes:</span> {booking.notes}
-              </p>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-    );
+  const handleToggleConfirm = async (booking: MappedBooking) => {
+    const updatedBooking = { ...booking, confirmed: !booking.confirmed };
+    await onUpdateBooking(updatedBooking);
   };
-
-  const renderEmptyState = (message: string, icon: React.ReactNode) => (
-    <div className="text-center py-12 text-slate-500 dark:text-slate-400">
-      {icon}
-      <p className="text-lg font-medium mb-2">{message}</p>
-      <p className="text-sm">Check other tabs or create a new booking</p>
-    </div>
-  );
-
-  if (bookings.length === 0) {
-    return null;
-  }
   
-  const sortedBookings = [...bookings].sort((a, b) => 
-    new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-  );
-
-  const pendingBookings = sortedBookings.filter(
-    (b) => !b.confirmed
-  );
-
-  const confirmedBookings = sortedBookings.filter(
-    (b) => b.confirmed === true
-  );
-
+  const handleOpenClientDetails = (booking: MappedBooking) => {
+    setSelectedBookingForDetails(booking);
+    setClientDetailsOpen(true);
+  };
 
   return (
     <>
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-3 mb-6">
-          <TabsTrigger value="all" className="flex items-center gap-2">
-            <Calendar className="h-4 w-4" />
-            All Bookings
-            <Badge variant="secondary" className="ml-1">
-              {bookings.length}
-            </Badge>
-          </TabsTrigger>
-          <TabsTrigger value="pending" className="flex items-center gap-2">
-            <Clock className="h-4 w-4" />
-            Pending
-            <Badge variant="destructive" className="ml-1">
-              {pendingBookings.length}
-            </Badge>
-          </TabsTrigger>
-          <TabsTrigger value="confirmed" className="flex items-center gap-2">
-            <CheckCircle2 className="h-4 w-4" />
-            Confirmed
-            <Badge variant="default" className="ml-1">
-              {confirmedBookings.length}
-            </Badge>
-          </TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="all">
-          <div className="space-y-4">
-            {sortedBookings.map(renderBookingCard)}
-          </div>
-        </TabsContent>
-
-        <TabsContent value="pending">
-          <div className="space-y-4">
-            {pendingBookings.length > 0 
-                ? pendingBookings.map(renderBookingCard) 
-                : renderEmptyState("No Pending Bookings", <Clock className="h-12 w-12 mx-auto mb-4 opacity-50" />)
-            }
-          </div>
-        </TabsContent>
-
-        <TabsContent value="confirmed">
-          <div className="space-y-4">
-            {confirmedBookings.length > 0 
-                ? confirmedBookings.map(renderBookingCard)
-                : renderEmptyState("No Confirmed Bookings", <CheckCircle2 className="h-12 w-12 mx-auto mb-4 opacity-50" />)
-            }
-          </div>
-        </TabsContent>
-      </Tabs>
-
-      {selectedBooking && (
-        <ClientDetailsDialog
-          open={detailsDialogOpen}
-          onOpenChange={setDetailsDialogOpen}
-          booking={selectedBooking}
+      <div className="border rounded-lg overflow-hidden bg-white dark:bg-stone-900/50 border-stone-200 dark:border-stone-800">
+        <Table>
+          <TableHeader>
+            <TableRow className="hover:bg-stone-50 dark:hover:bg-stone-800/50">
+              <TableHead className="w-[50px]"></TableHead>
+              <TableHead>Client / Event</TableHead>
+              <TableHead>Dates</TableHead>
+              <TableHead>Guests</TableHead>
+              <TableHead>Total Cost</TableHead>
+              <TableHead>Balance Due</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead className="text-right">Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {bookings
+              .sort((a, b) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime())
+              .map((booking) => (
+                <>
+                  <TableRow key={booking.id} className="hover:bg-stone-50 dark:hover:bg-stone-800/50">
+                    <TableCell>
+                      <Button variant="ghost" size="icon" onClick={() => toggleExpand(booking.id)}>
+                        {expandedBookingId === booking.id ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                      </Button>
+                    </TableCell>
+                    <TableCell>
+                      <div className="font-medium">{booking.name}</div>
+                      <div className="text-sm text-stone-600 dark:text-stone-400">{booking.contactName}</div>
+                    </TableCell>
+                    <TableCell>
+                      {format(new Date(booking.startDate), "MMM d, yyyy")} - {format(new Date(booking.endDate), "MMM d, yyyy")}
+                    </TableCell>
+                    <TableCell>{booking.numberOfGuests}</TableCell>
+                    <TableCell>{formatCurrency(booking.totalCost)}</TableCell>
+                    <TableCell className={booking.balanceDue > 0 ? "text-orange-600 dark:text-orange-400 font-medium" : "text-green-600 dark:text-green-400"}>
+                      {formatCurrency(booking.balanceDue)}
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex flex-col gap-2 items-start">
+                        <Badge className={getStatusColor(booking.paymentStatus)}>
+                          {booking.paymentStatus.charAt(0).toUpperCase() + booking.paymentStatus.slice(1)}
+                        </Badge>
+                        <Badge variant={booking.confirmed ? "default" : "secondary"}>
+                          {booking.confirmed ? "Confirmed" : "Tentative"}
+                        </Badge>
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" className="h-8 w-8 p-0">
+                            <span className="sr-only">Open menu</span>
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => handleOpenClientDetails(booking)}>
+                            <Eye className="mr-2 h-4 w-4" />
+                            View Details
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => onEdit(booking)}>
+                            <Edit className="mr-2 h-4 w-4" />
+                            Edit
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleToggleConfirm(booking)}>
+                            <Calendar className="mr-2 h-4 w-4" />
+                            {booking.confirmed ? "Mark as Tentative" : "Confirm Booking"}
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => onNavigateToExpenses(booking.id)}>
+                            <FileText className="mr-2 h-4 w-4" />
+                            View Expenses
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => onDelete(booking.id)} className="text-red-600 dark:text-red-500 focus:text-red-600 focus:bg-red-50 dark:focus:bg-red-900/50">
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            Delete
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </TableCell>
+                  </TableRow>
+                  {expandedBookingId === booking.id && (
+                    <TableRow className="bg-stone-50 dark:bg-stone-800/30">
+                      <TableCell colSpan={8}>
+                        <div className="p-4 space-y-4">
+                          <div>
+                            <h4 className="font-semibold mb-2">Booking Notes</h4>
+                            <p className="text-sm text-stone-600 dark:text-stone-400">{booking.notes || "No notes for this booking."}</p>
+                          </div>
+                          <div>
+                            <h4 className="font-semibold mb-2">Payment History</h4>
+                            {booking.payments && booking.payments.length > 0 ? (
+                              <ul className="space-y-2">
+                                {booking.payments.map((payment) => (
+                                  <li key={payment.id} className="text-sm flex justify-between">
+                                    <span>
+                                      {format(new Date(payment.payment_date), "MMM d, yyyy")} - {payment.payment_method}
+                                    </span>
+                                    <span className="font-medium">{formatCurrency(Number(payment.amount))}</span>
+                                  </li>
+                                ))}
+                              </ul>
+                            ) : (
+                              <p className="text-sm text-stone-500">No payments recorded yet.</p>
+                            )}
+                          </div>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </>
+              ))}
+          </TableBody>
+        </Table>
+      </div>
+      {selectedBookingForDetails && (
+        <ClientDetailsDialog 
+          open={clientDetailsOpen}
+          onOpenChange={setClientDetailsOpen}
+          booking={selectedBookingForDetails}
           allExpenses={expenses}
           onNavigateToExpenses={onNavigateToExpenses}
         />
       )}
-
-      {currentBookingForPayment && (
-        <PaymentDialog
-          open={paymentDialogOpen}
-          onOpenChange={setPaymentDialogOpen}
-          payment={editingPayment}
-          bookingId={currentBookingForPayment.id}
-          onSave={handleSavePayment}
-        />
-      )}
-
-      <AlertDialog open={!!deleteId} onOpenChange={() => setDeleteId(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete Booking</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to delete this booking? This action cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() => {
-                if (deleteId) {
-                  onDelete(deleteId);
-                  setDeleteId(null);
-                }
-              }}
-              className="bg-red-600 hover:bg-red-700"
-            >
-              Delete
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </>
+  );
+}
+</full_file-rewrite><full_file_rewrite file_path="src/components/ExpenseList.tsx">
+import { useState } from "react";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { MoreHorizontal, Edit, Trash2 } from "lucide-react";
+import { format } from "date-fns";
+import { Expense, Booking } from "@/types/booking";
+import { formatCurrency } from "@/lib/bookingCalculations";
+
+interface ExpenseListProps {
+  expenses: Expense[];
+  bookings: Booking[];
+  onEdit: (expense: Expense) => void;
+  onDelete: (expenseId: string) => void;
+  filterBookingId?: string;
+}
+
+export function ExpenseList({ expenses, bookings, onEdit, onDelete, filterBookingId }: ExpenseListProps) {
+  const getCategoryColor = (category: string) => {
+    const colors: Record<string, string> = {
+      food: "bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300",
+      cleaning: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300",
+      supplies: "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300",
+      utilities: "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300",
+      staff: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300",
+      equipment: "bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300",
+      "Manager Salary": "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300",
+      other: "bg-slate-100 text-slate-700 dark:bg-slate-900/30 dark:text-slate-300",
+    };
+    return colors[category] || colors.other;
+  };
+
+  const getBookingName = (bookingId: string | null) => {
+    if (!bookingId) return "General";
+    const booking = bookings.find((b) => b.id === bookingId);
+    return booking?.name || "Unknown Booking";
+  };
+
+  const filteredExpenses = filterBookingId
+    ? expenses.filter((e) => e.booking_id === filterBookingId)
+    : expenses;
+
+  return (
+    <div className="border rounded-lg overflow-hidden bg-white dark:bg-stone-900/50 border-stone-200 dark:border-stone-800">
+      <Table>
+        <TableHeader>
+          <TableRow className="hover:bg-stone-50 dark:hover:bg-stone-800/50">
+            <TableHead>Description</TableHead>
+            <TableHead>Category</TableHead>
+            <TableHead>Booking</TableHead>
+            <TableHead>Date</TableHead>
+            <TableHead className="text-right">Amount</TableHead>
+            <TableHead className="text-right">Actions</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {filteredExpenses
+            .sort((a, b) => new Date(b.expense_date).getTime() - new Date(a.expense_date).getTime())
+            .map((expense) => (
+              <TableRow key={expense.id} className="hover:bg-stone-50 dark:hover:bg-stone-800/50">
+                <TableCell>
+                  <div className="font-medium">{expense.description}</div>
+                  <div className="text-sm text-stone-600 dark:text-stone-400">{expense.vendor}</div>
+                </TableCell>
+                <TableCell>
+                  <Badge className={getCategoryColor(expense.category)}>{expense.category}</Badge>
+                </TableCell>
+                <TableCell>{getBookingName(expense.booking_id)}</TableCell>
+                <TableCell>{format(new Date(expense.expense_date), "MMM d, yyyy")}</TableCell>
+                <TableCell className="text-right font-medium">{formatCurrency(Number(expense.amount))}</TableCell>
+                <TableCell className="text-right">
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" className="h-8 w-8 p-0">
+                        <span className="sr-only">Open menu</span>
+                        <MoreHorizontal className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem onClick={() => onEdit(expense)}>
+                        <Edit className="mr-2 h-4 w-4" />
+                        Edit
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => onDelete(expense.id)} className="text-red-600 dark:text-red-500 focus:text-red-600 focus:bg-red-50 dark:focus:bg-red-900/50">
+                        <Trash2 className="mr-2 h-4 w-4" />
+                        Delete
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </TableCell>
+              </TableRow>
+            ))}
+        </TableBody>
+      </Table>
+    </div>
   );
 }

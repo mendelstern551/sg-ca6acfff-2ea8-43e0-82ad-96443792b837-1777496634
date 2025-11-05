@@ -1,19 +1,17 @@
+
+import type { Database } from "@/integrations/supabase/types";
+
+// Raw Supabase types, using snake_case as the source of truth
+export type Expense = Database["public"]["Tables"]["expenses"]["Row"];
+export type Booking = Database["public"]["Tables"]["bookings"]["Row"] & {
+  payments: Payment[];
+};
+export type Payment = Database["public"]["Tables"]["payments"]["Row"];
+
+// Application-level enums/types
 export type BookingType = "yom_tov" | "shabaton" | "night_event";
-
 export type PaymentStatus = "pending" | "deposit_paid" | "partial" | "paid" | "refunded" | "cancelled";
-
-export type PaymentMethod = "cash" | "check" | "credit_card" | "bank_transfer" | "venmo" | "zelle" | "other";
-
-export interface Payment {
-  id: string;
-  bookingId: string;
-  amount: number;
-  payment_date: string; // Changed from date to match db
-  payment_method: PaymentMethod;
-  notes: string | null;
-  created_at: string;
-  updated_at: string;
-}
+export type PaymentMethod = "cash" | "check" | "credit_card" | "bank_transfer" | "venmo" | "zelle" | "other" | "pending";
 
 export interface ManagerPayment {
   id: string;
@@ -34,51 +32,6 @@ export interface ManagerSalaryData {
   seasonStart: string;
   seasonEnd: string;
   payments: ManagerPayment[];
-}
-
-export interface Booking {
-  id: string;
-  bookingType: BookingType;
-  name: string;
-  contactName: string;
-  contactEmail: string | null;
-  contactPhone: string | null;
-  startDate: string;
-  endDate: string;
-  numberOfGuests: number;
-  numberOfRooms: number;
-  baseRate: number;
-  perPersonRate: number;
-  cleaningFee: number;
-  additionalCleaningFee: number;
-  totalCost: number;
-  depositAmount: number;
-  amountPaid: number;
-  balanceDue: number;
-  paymentStatus: PaymentStatus;
-  confirmed: boolean;
-  payments: Payment[];
-  notes: string | null;
-  createdAt: string;
-  updatedAt: string;
-  customPrice: number | null;
-  discountPercent: number | null;
-}
-
-export interface Expense {
-  id: string;
-  bookingId: string | null;
-  date: string;
-  amount: number;
-  category: string;
-  description: string;
-  paymentMethod: string;
-  vendor: string | null;
-  receiptUrls: string[] | null;
-  proofUrls: string[] | null;
-  notes: string | null;
-  createdAt: string;
-  updatedAt: string;
 }
 
 export interface PricingConfig {

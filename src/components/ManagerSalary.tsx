@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Plus, DollarSign, TrendingUp } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -14,13 +15,18 @@ import { EnhancedCalendar } from "@/components/ui/enhanced-calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { CalendarIcon } from "lucide-react";
 import { expenseService } from "@/services/expenseService";
+import type { Database } from "@/integrations/supabase/types";
+
+type ExpenseInsert = Database["public"]["Tables"]["expenses"]["Insert"];
 
 interface ManagerSalaryProps {
   bookings: Booking[];
-  onAddExpense: (expense: Expense) => void;
+  onAddExpense: (expense: ExpenseInsert) => void;
+  allExpenses: Expense[];
+  onExpensesUpdate: () => void;
 }
 
-export function ManagerSalary({ bookings, onAddExpense }: ManagerSalaryProps) {
+export function ManagerSalary({ bookings, onAddExpense, allExpenses, onExpensesUpdate }: ManagerSalaryProps) {
   const [salaryData, setSalaryData] = useState<ManagerSalaryData>({
     maintenanceFeePerMonth: 1000,
     commissionPercentage: 15,
@@ -40,8 +46,7 @@ export function ManagerSalary({ bookings, onAddExpense }: ManagerSalaryProps) {
     relatedBookingId: "",
     notes: ""
   });
-
-  const [isCreatingExpenses, setIsCreatingExpenses] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
 
   useEffect(() => {
     const saved = localStorage.getItem("trout-lake-manager-salary");
@@ -55,164 +60,96 @@ export function ManagerSalary({ bookings, onAddExpense }: ManagerSalaryProps) {
   }, []);
 
   useEffect(() => {
-    if (!isCreatingExpenses) {
+    if (!isProcessing) {
       createAllManagerExpenses();
     }
-  }, [salaryData.seasonStart, salaryData.seasonEnd, salaryData.maintenanceFeePerMonth, bookings]);
+  }, [salaryData.seasonStart, salaryData.seasonEnd, salaryData.maintenanceFeePerMonth, bookings, allExpenses]);
 
   const createAllManagerExpenses = async () => {
+    setIsProcessing(true);
     try {
-      setIsCreatingExpenses(true);
-      await createMonthlyMaintenanceExpenses();
       await createBookingCommissionExpenses();
     } catch (error) {
       console.error("Error creating manager expenses:", error);
     } finally {
-      setIsCreatingExpenses(false);
-    }
-  };
-
-  const createMonthlyMaintenanceExpenses = async () => {
-    const seasonStart = new Date(salaryData.seasonStart);
-    const seasonEnd = new Date(salaryData.seasonEnd);
-    const today = new Date();
-    const currentMonthStart = startOfMonth(today);
-
-    if (isBefore(currentMonthStart, seasonStart)) {
-      return;
-    }
-
-    const endDate = isAfter(currentMonthStart, seasonEnd) ? seasonEnd : currentMonthStart;
-    const monthsToCreate = differenceInMonths(endDate, seasonStart) + 1;
-
-    try {
-      // Fetch all existing manager salary expenses from database
-      const allExpenses = await expenseService.getAllExpenses();
-      const existingMaintenanceExpenses = allExpenses.filter((exp: Expense) => 
-        exp.category === "Manager Salary" && 
-        exp.description?.includes("Monthly Maintenance Fee") &&
-        exp.vendor === "Manager"
-      );
-      
-      for (let i = 0; i < monthsToCreate; i++) {
-        const monthDate = new Date(seasonStart);
-        monthDate.setMonth(monthDate.getMonth() + i);
-        const monthKey = format(startOfMonth(monthDate), "yyyy-MM");
-        const monthDescription = `Monthly Maintenance Fee - ${format(monthDate, "MMMM yyyy")}`;
-        
-        // Check if this month's maintenance fee already exists in database
-        const expenseExists = existingMaintenanceExpenses.some((exp: Expense) => 
-          exp.description === monthDescription &&
-          exp.amount === salaryData.maintenanceFeePerMonth
-        );
-
-        if (!expenseExists) {
-          const expense: Omit<Expense, "id" | "createdAt" | "updatedAt"> = {
-            bookingId: null,
-            date: startOfMonth(monthDate).toISOString(),
-            amount: salaryData.maintenanceFeePerMonth,
-            category: "Manager Salary",
-            description: monthDescription,
-            paymentMethod: "pending",
-            vendor: "Manager",
-            receiptUrls: [],
-            proofUrls: [],
-            notes: "Automatic monthly maintenance fee"
-          };
-          await expenseService.createExpense(expense);
-        }
-      }
-    } catch (error) {
-      console.error("Error creating maintenance expenses:", error);
+      setIsProcessing(false);
     }
   };
 
   const createBookingCommissionExpenses = async () => {
-    try {
-      // Fetch all existing expenses from database
-      const allExpenses = await expenseService.getAllExpenses();
-      
-      // Find all commission expenses
-      const commissionExpenses = allExpenses.filter((exp: Expense) => 
+    const commissionExpenses = allExpenses.filter(exp => 
         exp.category === "Manager Salary" && 
         exp.description?.includes("Manager Commission")
-      );
-      
-      // Group by booking_id to find duplicates
-      const commissionsByBooking = new Map<string, Expense[]>();
-      commissionExpenses.forEach((exp: Expense) => {
-        if (exp.bookingId) {
-          if (!commissionsByBooking.has(exp.bookingId)) {
-            commissionsByBooking.set(exp.bookingId, []);
-          }
-          commissionsByBooking.get(exp.bookingId)!.push(exp);
-        }
-      });
-      
-      // Delete duplicate commissions - keep only the first one for each booking
-      for (const [bookingId, expenses] of commissionsByBooking) {
-        if (expenses.length > 1) {
-          // Keep the first one (oldest), delete the rest
-          const expensesToDelete = expenses.slice(1);
-          for (const expense of expensesToDelete) {
-            try {
-              await expenseService.deleteExpense(expense.id);
-              console.log(`Deleted duplicate commission for booking ${bookingId}`);
-            } catch (error) {
-              console.error(`Error deleting duplicate commission ${expense.id}:`, error);
-            }
-          }
-        }
-      }
-      
-      // Refresh the expense list after cleanup
-      const cleanedExpenses = await expenseService.getAllExpenses();
-      const cleanedCommissionExpenses = cleanedExpenses.filter((exp: Expense) => 
-        exp.category === "Manager Salary" && 
-        exp.description?.includes("Manager Commission")
-      );
-      
-      // Now create missing commissions
-      for (const booking of bookings) {
-        if (!booking || !booking.id || !booking.totalCost) {
-          continue;
-        }
+    );
 
+    // 1. Clean up duplicates from the database
+    const commissionsByBooking = new Map<string, Expense[]>();
+    commissionExpenses.forEach(exp => {
+      if (exp.booking_id) {
+        if (!commissionsByBooking.has(exp.booking_id)) {
+          commissionsByBooking.set(exp.booking_id, []);
+        }
+        commissionsByBooking.get(exp.booking_id)!.push(exp);
+      }
+    });
+
+    const deletePromises: Promise<void>[] = [];
+    for (const [bookingId, expenses] of commissionsByBooking) {
+      if (expenses.length > 1) {
+        const expensesToDelete = expenses.slice(1);
+        expensesToDelete.forEach(expense => {
+          console.log(`Queueing deletion of duplicate commission for booking ${bookingId}`);
+          deletePromises.push(expenseService.deleteExpense(expense.id));
+        });
+      }
+    }
+
+    if (deletePromises.length > 0) {
+      await Promise.all(deletePromises);
+      console.log(`${deletePromises.length} duplicate commissions deleted.`);
+      onExpensesUpdate(); // This will refetch expenses and trigger a re-run
+      return; // Stop here, the re-run will handle creation
+    }
+
+    // 2. Create missing commissions
+    const createPromises: Promise<any>[] = [];
+    for (const booking of bookings) {
+      if (!booking || !booking.id || !booking.total_cost) {
+        continue;
+      }
+
+      const expenseExists = commissionExpenses.some(exp => exp.booking_id === booking.id);
+
+      if (!expenseExists) {
         const commission = Math.max(
-          booking.totalCost * (salaryData.commissionPercentage / 100),
+          booking.total_cost * (salaryData.commissionPercentage / 100),
           salaryData.minimumCommissionPerEvent
         );
 
-        // Check if commission already exists for this booking
-        const expenseExists = cleanedCommissionExpenses.some((exp: Expense) => 
-          exp.bookingId === booking.id &&
-          exp.category === "Manager Salary" &&
-          exp.description?.includes("Manager Commission") &&
-          exp.vendor === "Manager"
-        );
+        const bookingTypeName = booking.booking_type ? 
+          booking.booking_type.toString().replace(/_/g, " ") : 
+          "event";
 
-        if (!expenseExists) {
-          const bookingTypeName = booking.bookingType ? 
-            booking.bookingType.toString().replace(/_/g, " ") : 
-            "event";
-
-          const expense: Omit<Expense, "id" | "createdAt" | "updatedAt"> = {
-            bookingId: booking.id,
-            date: booking.startDate || new Date().toISOString(),
-            amount: commission,
-            category: "Manager Salary",
-            description: `Manager Commission - ${booking.name || "Event"}`,
-            paymentMethod: "pending",
-            vendor: "Manager",
-            notes: `15% commission (min $1,000) for ${bookingTypeName} booking`,
-            receiptUrls: [],
-            proofUrls: []
-          };
-          await expenseService.createExpense(expense);
-        }
+        const expense: ExpenseInsert = {
+          booking_id: booking.id,
+          expense_date: booking.start_date || new Date().toISOString(),
+          amount: commission,
+          category: "Manager Salary",
+          description: `Manager Commission - ${booking.name || "Event"}`,
+          payment_method: "pending",
+          vendor: "Manager",
+          notes: `15% commission (min $1,000) for ${bookingTypeName} booking`,
+          receipt_urls: [],
+          proof_urls: []
+        };
+        console.log(`Queueing creation of commission for booking ${booking.id}`);
+        createPromises.push(onAddExpense(expense));
       }
-    } catch (error) {
-      console.error("Error creating commission expenses:", error);
+    }
+      
+    if (createPromises.length > 0) {
+        await Promise.all(createPromises);
+        console.log(`${createPromises.length} new commissions created.`);
     }
   };
 
@@ -222,36 +159,27 @@ export function ManagerSalary({ bookings, onAddExpense }: ManagerSalaryProps) {
     const today = new Date();
     const currentMonthStart = startOfMonth(today);
 
-    if (isBefore(currentMonthStart, seasonStart)) {
-      return 0;
-    }
-
+    if (isBefore(currentMonthStart, seasonStart)) return 0;
     if (isAfter(currentMonthStart, seasonEnd)) {
-      const totalMonths = differenceInMonths(seasonEnd, seasonStart) + 1;
-      return totalMonths * salaryData.maintenanceFeePerMonth;
+      return (differenceInMonths(seasonEnd, seasonStart) + 1) * salaryData.maintenanceFeePerMonth;
     }
-
-    const monthsElapsed = differenceInMonths(currentMonthStart, seasonStart) + 1;
-    return monthsElapsed * salaryData.maintenanceFeePerMonth;
+    return (differenceInMonths(currentMonthStart, seasonStart) + 1) * salaryData.maintenanceFeePerMonth;
   };
 
   const getMonthsElapsedText = () => {
     const seasonStart = new Date(salaryData.seasonStart);
     const today = new Date();
     const currentMonthStart = startOfMonth(today);
-
-    if (isBefore(currentMonthStart, seasonStart)) {
-      return "Season hasn't started";
-    }
-
+    if (isBefore(currentMonthStart, seasonStart)) return "Season hasn't started";
     const monthsElapsed = differenceInMonths(currentMonthStart, seasonStart) + 1;
     return `${monthsElapsed} ${monthsElapsed === 1 ? "month" : "months"} elapsed`;
   };
 
   const calculateCommissions = () => {
     return bookings.reduce((total, booking) => {
+      if (!booking.total_cost) return total;
       const commission = Math.max(
-        booking.totalCost * (salaryData.commissionPercentage / 100),
+        booking.total_cost * (salaryData.commissionPercentage / 100),
         salaryData.minimumCommissionPerEvent
       );
       return total + commission;
@@ -265,9 +193,7 @@ export function ManagerSalary({ bookings, onAddExpense }: ManagerSalaryProps) {
   const balanceDue = totalOwed - totalPaid;
 
   const handleAddPayment = () => {
-    if (!paymentForm.date || paymentForm.amount <= 0) {
-      return;
-    }
+    if (!paymentForm.date || paymentForm.amount <= 0) return;
 
     const newPayment: ManagerPayment = {
       id: Date.now().toString(),
@@ -281,55 +207,31 @@ export function ManagerSalary({ bookings, onAddExpense }: ManagerSalaryProps) {
       createdAt: new Date().toISOString()
     };
 
-    const updatedData = {
-      ...salaryData,
-      payments: [...(salaryData.payments || []), newPayment]
-    };
-
+    const updatedData = { ...salaryData, payments: [...(salaryData.payments || []), newPayment] };
     setSalaryData(updatedData);
     localStorage.setItem("trout-lake-manager-salary", JSON.stringify(updatedData));
 
-    const expense: Omit<Expense, "id" | "createdAt" | "updatedAt"> & { id: string, createdAt: string } = {
-      id: Date.now().toString(),
-      bookingId: paymentForm.relatedBookingId || null,
-      date: paymentForm.date.toISOString(),
+    const expense: ExpenseInsert = {
+      booking_id: paymentForm.relatedBookingId || null,
+      expense_date: paymentForm.date.toISOString(),
       amount: paymentForm.amount,
       category: "Manager Salary",
       description: `Manager payment - ${paymentForm.type}`,
-      paymentMethod: paymentForm.paymentMethod,
+      payment_method: paymentForm.paymentMethod,
       vendor: "Manager",
       notes: paymentForm.notes,
-      receiptUrls: [],
-      proofUrls: [],
-      createdAt: new Date().toISOString()
+      receipt_urls: [],
+      proof_urls: []
     };
+    onAddExpense(expense);
 
-    onAddExpense(expense as Expense);
-
-    setPaymentForm({
-      date: new Date(),
-      amount: 0,
-      paymentMethod: "check",
-      referenceNumber: "",
-      type: "maintenance",
-      relatedBookingId: "",
-      notes: ""
-    });
+    setPaymentForm({ date: new Date(), amount: 0, paymentMethod: "check", referenceNumber: "", type: "maintenance", relatedBookingId: "", notes: "" });
     setPaymentDialogOpen(false);
   };
 
-  // Reset form when dialog opens to ensure fresh valid date
   const handleOpenDialog = (open: boolean) => {
     if (open) {
-      setPaymentForm({
-        date: new Date(),
-        amount: 0,
-        paymentMethod: "check",
-        referenceNumber: "",
-        type: "maintenance",
-        relatedBookingId: "",
-        notes: ""
-      });
+      setPaymentForm({ date: new Date(), amount: 0, paymentMethod: "check", referenceNumber: "", type: "maintenance", relatedBookingId: "", notes: "" });
     }
     setPaymentDialogOpen(open);
   };
@@ -344,9 +246,7 @@ export function ManagerSalary({ bookings, onAddExpense }: ManagerSalaryProps) {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">${totalMaintenanceFees.toLocaleString()}</div>
-            <p className="text-xs text-slate-600 dark:text-slate-400">
-              {getMonthsElapsedText()}
-            </p>
+            <p className="text-xs text-slate-600 dark:text-slate-400">{getMonthsElapsedText()}</p>
           </CardContent>
         </Card>
 
@@ -357,9 +257,7 @@ export function ManagerSalary({ bookings, onAddExpense }: ManagerSalaryProps) {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">${totalCommissions.toLocaleString()}</div>
-            <p className="text-xs text-slate-600 dark:text-slate-400">
-              15% per booking (min $1,000)
-            </p>
+            <p className="text-xs text-slate-600 dark:text-slate-400">15% per booking (min $1,000)</p>
           </CardContent>
         </Card>
 
@@ -369,12 +267,8 @@ export function ManagerSalary({ bookings, onAddExpense }: ManagerSalaryProps) {
             <DollarSign className="h-4 w-4 text-emerald-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-emerald-600">
-              ${totalPaid.toLocaleString()}
-            </div>
-            <p className="text-xs text-slate-600 dark:text-slate-400">
-              {salaryData.payments.length} payments made
-            </p>
+            <div className="text-2xl font-bold text-emerald-600">${totalPaid.toLocaleString()}</div>
+            <p className="text-xs text-slate-600 dark:text-slate-400">{salaryData.payments.length} payments made</p>
           </CardContent>
         </Card>
 
@@ -384,12 +278,8 @@ export function ManagerSalary({ bookings, onAddExpense }: ManagerSalaryProps) {
             <DollarSign className="h-4 w-4 text-orange-600" />
           </CardHeader>
           <CardContent>
-            <div className={`text-2xl font-bold ${balanceDue > 0 ? "text-orange-600" : "text-green-600"}`}>
-              ${balanceDue.toLocaleString()}
-            </div>
-            <p className="text-xs text-slate-600 dark:text-slate-400">
-              Remaining to pay
-            </p>
+            <div className={`text-2xl font-bold ${balanceDue > 0 ? "text-orange-600" : "text-green-600"}`}>${balanceDue.toLocaleString()}</div>
+            <p className="text-xs text-slate-600 dark:text-slate-400">Remaining to pay</p>
           </CardContent>
         </Card>
       </div>
@@ -407,23 +297,20 @@ export function ManagerSalary({ bookings, onAddExpense }: ManagerSalaryProps) {
               ) : (
                 <div className="space-y-2">
                   {bookings.map((booking) => {
+                    if (!booking.total_cost) return null;
                     const commission = Math.max(
-                      booking.totalCost * (salaryData.commissionPercentage / 100),
+                      booking.total_cost * (salaryData.commissionPercentage / 100),
                       salaryData.minimumCommissionPerEvent
                     );
                     return (
                       <div key={booking.id} className="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-800 rounded-lg">
                         <div>
                           <p className="font-medium text-sm">{booking.name}</p>
-                          <p className="text-xs text-slate-600 dark:text-slate-400">
-                            {format(new Date(booking.startDate), "MMM d, yyyy")}
-                          </p>
+                          <p className="text-xs text-slate-600 dark:text-slate-400">{format(new Date(booking.start_date), "MMM d, yyyy")}</p>
                         </div>
                         <div className="text-right">
                           <p className="font-semibold text-green-600">${commission.toLocaleString()}</p>
-                          <p className="text-xs text-slate-600 dark:text-slate-400">
-                            {commission === salaryData.minimumCommissionPerEvent ? "Minimum" : "15%"}
-                          </p>
+                          <p className="text-xs text-slate-600 dark:text-slate-400">{commission === salaryData.minimumCommissionPerEvent ? "Minimum" : "15%"}</p>
                         </div>
                       </div>
                     );
@@ -442,29 +329,18 @@ export function ManagerSalary({ bookings, onAddExpense }: ManagerSalaryProps) {
                 <CardDescription>Track all payments made to manager</CardDescription>
               </div>
               <Dialog open={paymentDialogOpen} onOpenChange={handleOpenDialog}>
-                <DialogTrigger asChild>
-                  <Button className="bg-blue-600 hover:bg-blue-700">
-                    <Plus className="h-4 w-4 mr-2" />
-                    Add Payment
-                  </Button>
-                </DialogTrigger>
+                <DialogTrigger asChild><Button className="bg-blue-600 hover:bg-blue-700"><Plus className="h-4 w-4 mr-2" />Add Payment</Button></DialogTrigger>
                 <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
                   <DialogHeader>
                     <DialogTitle>Record Manager Payment</DialogTitle>
-                    <DialogDescription>
-                      This will automatically create an expense entry
-                    </DialogDescription>
+                    <DialogDescription>This will automatically create an expense entry</DialogDescription>
                   </DialogHeader>
                   <div className="space-y-4 py-4">
                     <div className="space-y-2">
                       <Label>Date</Label>
                       <Popover modal={false}>
                         <PopoverTrigger asChild>
-                          <Button
-                            type="button"
-                            variant="outline"
-                            className="w-full justify-start text-left font-normal"
-                          >
+                          <Button type="button" variant="outline" className="w-full justify-start text-left font-normal">
                             <CalendarIcon className="mr-2 h-4 w-4" />
                             {paymentForm.date ? format(paymentForm.date, "PPP") : "Pick a date"}
                           </Button>
@@ -486,27 +362,13 @@ export function ManagerSalary({ bookings, onAddExpense }: ManagerSalaryProps) {
 
                     <div className="space-y-2">
                       <Label htmlFor="amount">Amount ($)</Label>
-                      <Input
-                        id="amount"
-                        type="number"
-                        step="0.01"
-                        value={paymentForm.amount}
-                        onChange={(e) => setPaymentForm({ ...paymentForm, amount: parseFloat(e.target.value) || 0 })}
-                        placeholder="0.00"
-                      />
+                      <Input id="amount" type="number" step="0.01" value={paymentForm.amount} onChange={(e) => setPaymentForm({ ...paymentForm, amount: parseFloat(e.target.value) || 0 })} placeholder="0.00" />
                     </div>
 
                     <div className="space-y-2">
                       <Label htmlFor="type">Payment Type</Label>
-                      <Select
-                        value={paymentForm.type}
-                        onValueChange={(value: "maintenance" | "commission" | "other") =>
-                          setPaymentForm({ ...paymentForm, type: value })
-                        }
-                      >
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
+                      <Select value={paymentForm.type} onValueChange={(value: "maintenance" | "commission" | "other") => setPaymentForm({ ...paymentForm, type: value })}>
+                        <SelectTrigger><SelectValue /></SelectTrigger>
                         <SelectContent>
                           <SelectItem value="maintenance">Maintenance Fee</SelectItem>
                           <SelectItem value="commission">Commission</SelectItem>
@@ -518,19 +380,12 @@ export function ManagerSalary({ bookings, onAddExpense }: ManagerSalaryProps) {
                     {paymentForm.type === "commission" && (
                       <div className="space-y-2">
                         <Label htmlFor="booking">Related Booking (Optional)</Label>
-                        <Select
-                          value={paymentForm.relatedBookingId}
-                          onValueChange={(value) => setPaymentForm({ ...paymentForm, relatedBookingId: value })}
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select booking" />
-                          </SelectTrigger>
+                        <Select value={paymentForm.relatedBookingId} onValueChange={(value) => setPaymentForm({ ...paymentForm, relatedBookingId: value })}>
+                          <SelectTrigger><SelectValue placeholder="Select booking" /></SelectTrigger>
                           <SelectContent>
                             <SelectItem value="">None</SelectItem>
                             {bookings.map((booking) => (
-                              <SelectItem key={booking.id} value={booking.id}>
-                                {booking.name} - {format(new Date(booking.startDate), "MMM d, yyyy")}
-                              </SelectItem>
+                              <SelectItem key={booking.id} value={booking.id}>{booking.name} - {format(new Date(booking.start_date), "MMM d, yyyy")}</SelectItem>
                             ))}
                           </SelectContent>
                         </Select>
@@ -539,15 +394,8 @@ export function ManagerSalary({ bookings, onAddExpense }: ManagerSalaryProps) {
 
                     <div className="space-y-2">
                       <Label htmlFor="paymentMethod">Payment Method</Label>
-                      <Select
-                        value={paymentForm.paymentMethod}
-                        onValueChange={(value: PaymentMethod) =>
-                          setPaymentForm({ ...paymentForm, paymentMethod: value })
-                        }
-                      >
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
+                      <Select value={paymentForm.paymentMethod} onValueChange={(value: PaymentMethod) => setPaymentForm({ ...paymentForm, paymentMethod: value })}>
+                        <SelectTrigger><SelectValue /></SelectTrigger>
                         <SelectContent>
                           <SelectItem value="cash">Cash</SelectItem>
                           <SelectItem value="check">Check</SelectItem>
@@ -562,28 +410,15 @@ export function ManagerSalary({ bookings, onAddExpense }: ManagerSalaryProps) {
 
                     <div className="space-y-2">
                       <Label htmlFor="referenceNumber">Reference Number (Optional)</Label>
-                      <Input
-                        id="referenceNumber"
-                        value={paymentForm.referenceNumber}
-                        onChange={(e) => setPaymentForm({ ...paymentForm, referenceNumber: e.target.value })}
-                        placeholder="Check #, Transaction ID, etc."
-                      />
+                      <Input id="referenceNumber" value={paymentForm.referenceNumber} onChange={(e) => setPaymentForm({ ...paymentForm, referenceNumber: e.target.value })} placeholder="Check #, Transaction ID, etc." />
                     </div>
 
                     <div className="space-y-2">
                       <Label htmlFor="notes">Notes (Optional)</Label>
-                      <Textarea
-                        id="notes"
-                        value={paymentForm.notes}
-                        onChange={(e) => setPaymentForm({ ...paymentForm, notes: e.target.value })}
-                        placeholder="Any additional information..."
-                        rows={3}
-                      />
+                      <Textarea id="notes" value={paymentForm.notes} onChange={(e) => setPaymentForm({ ...paymentForm, notes: e.target.value })} placeholder="Any additional information..." rows={3} />
                     </div>
 
-                    <Button onClick={handleAddPayment} className="w-full bg-blue-600 hover:bg-blue-700">
-                      Record Payment
-                    </Button>
+                    <Button onClick={handleAddPayment} className="w-full bg-blue-600 hover:bg-blue-700">Record Payment</Button>
                   </div>
                 </DialogContent>
               </Dialog>
@@ -600,19 +435,11 @@ export function ManagerSalary({ bookings, onAddExpense }: ManagerSalaryProps) {
                     <div key={payment.id} className="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-800 rounded-lg">
                       <div>
                         <div className="flex items-center gap-2">
-                          <p className="font-medium text-sm">
-                            ${payment.amount.toLocaleString()}
-                          </p>
-                          <Badge variant={payment.type === "maintenance" ? "default" : "secondary"}>
-                            {payment.type}
-                          </Badge>
+                          <p className="font-medium text-sm">${payment.amount.toLocaleString()}</p>
+                          <Badge variant={payment.type === "maintenance" ? "default" : "secondary"}>{payment.type}</Badge>
                         </div>
-                        <p className="text-xs text-slate-600 dark:text-slate-400">
-                          {format(new Date(payment.date), "MMM d, yyyy")} • {payment.paymentMethod}
-                        </p>
-                        {payment.notes && (
-                          <p className="text-xs text-slate-500 mt-1">{payment.notes}</p>
-                        )}
+                        <p className="text-xs text-slate-600 dark:text-slate-400">{format(new Date(payment.date), "MMM d, yyyy")} • {payment.paymentMethod}</p>
+                        {payment.notes && <p className="text-xs text-slate-500 mt-1">{payment.notes}</p>}
                       </div>
                     </div>
                   ))}
