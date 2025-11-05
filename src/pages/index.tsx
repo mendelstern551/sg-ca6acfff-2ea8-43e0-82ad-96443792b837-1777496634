@@ -19,6 +19,7 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import type { Booking, Expense, Payment, BookingType, PaymentStatus } from "@/types/booking";
 import { formatCurrency } from "@/lib/bookingCalculations";
+import { invoiceService } from "@/services/invoiceService";
 
 export default function HomePage() {
   const [activeTab, setActiveTab] = useState("bookings");
@@ -195,18 +196,59 @@ export default function HomePage() {
         notes: booking.notes,
       };
 
+      let savedBookingId: string;
+
       if (editingBooking) {
         await bookingService.updateBooking(editingBooking.id, bookingData);
+        savedBookingId = editingBooking.id;
         toast({
           title: "Booking Updated",
           description: `Balance due recalculated: ${formatCurrency(balanceDue)}`
         });
       } else {
-        await bookingService.createBooking(bookingData);
+        const newBooking = await bookingService.createBooking(bookingData);
+        savedBookingId = newBooking.id;
         toast({
           title: "Booking Created",
           description: "New booking has been created successfully."
         });
+      }
+
+      // Auto-generate invoice if booking is confirmed
+      if (booking.confirmed) {
+        try {
+          const existingInvoice = await invoiceService.getInvoiceByBookingId(savedBookingId);
+          
+          if (!existingInvoice) {
+            await invoiceService.createInvoice(savedBookingId, {
+              clientName: booking.contactName,
+              clientEmail: booking.contactEmail || undefined,
+              clientPhone: booking.contactPhone || undefined,
+              eventDateStart: booking.startDate,
+              eventDateEnd: booking.endDate,
+              numberOfGuests: booking.numberOfGuests,
+              numberOfRooms: booking.numberOfRooms,
+              basePrice: booking.totalCost,
+              depositAmount: booking.depositAmount,
+              balanceDue: balanceDue,
+              totalAmount: booking.totalCost,
+              notes: booking.notes || undefined
+            });
+            
+            toast({
+              title: "✓ Invoice Generated",
+              description: "A professional invoice has been automatically created for this confirmed booking.",
+              variant: "default"
+            });
+          }
+        } catch (invoiceError) {
+          console.error("Error creating invoice:", invoiceError);
+          toast({
+            title: "Invoice Creation Failed",
+            description: "Booking saved, but invoice creation failed. You can create it manually later.",
+            variant: "destructive"
+          });
+        }
       }
 
       await loadAllData();
