@@ -253,6 +253,9 @@ export default function HomePage() {
   const totalExpenses = allExpenses.reduce((sum, e) => sum + Number(e.amount), 0);
   const netProfit = totalRevenue - totalExpenses;
 
+  const confirmedCount = bookings.filter(b => b.confirmed).length;
+  const pendingCount = bookings.filter(b => !b.confirmed).length;
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-amber-50 via-rose-50 to-blue-50 dark:from-stone-950 dark:via-slate-900 dark:to-indigo-950 flex items-center justify-center">
@@ -275,7 +278,14 @@ export default function HomePage() {
         <div className="grid gap-6 md:grid-cols-4 mb-8">
           <Card className="bg-white dark:bg-stone-900 border-stone-200 dark:border-stone-800 hover:shadow-lg transition-all duration-300">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2"><CardTitle className="text-sm font-medium text-stone-700 dark:text-stone-300">Total Bookings</CardTitle><div className="p-2 bg-amber-100 dark:bg-amber-900/30 rounded-lg"><Calendar className="h-4 w-4 text-amber-600 dark:text-amber-400" /></div></CardHeader>
-            <CardContent><div className="text-2xl font-bold text-stone-900 dark:text-stone-100">{bookings.length}</div><p className="text-xs text-stone-600 dark:text-stone-400 mt-1">Active reservations</p></CardContent>
+            <CardContent>
+              <div className="text-2xl font-bold text-stone-900 dark:text-stone-100">{bookings.length}</div>
+              <p className="text-xs text-stone-600 dark:text-stone-400 mt-1">
+                <span className="text-green-600 dark:text-green-400 font-medium">{confirmedCount} Confirmed</span>
+                {" • "}
+                <span className="text-orange-600 dark:text-orange-400 font-medium">{pendingCount} Pending</span>
+              </p>
+            </CardContent>
           </Card>
           <Card className="bg-white dark:bg-stone-900 border-stone-200 dark:border-stone-800 hover:shadow-lg transition-all duration-300">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2"><CardTitle className="text-sm font-medium text-stone-700 dark:text-stone-300">Total Guests</CardTitle><div className="p-2 bg-emerald-100 dark:bg-emerald-900/30 rounded-lg"><Users className="h-4 w-4 text-emerald-600 dark:text-emerald-400" /></div></CardHeader>
