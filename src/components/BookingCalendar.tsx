@@ -246,9 +246,22 @@ export function BookingCalendar({ bookings, onDateClick, onBookingClick, onAddBo
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-7 gap-2 mb-2">
-            {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((day) => (
-              <div key={day} className="text-center text-sm font-medium text-slate-600 dark:text-slate-400 py-2">
-                {day}
+            {[
+              { en: "Sun", he: "ראשון" },
+              { en: "Mon", he: "שני" },
+              { en: "Tue", he: "שלישי" },
+              { en: "Wed", he: "רביעי" },
+              { en: "Thu", he: "חמישי" },
+              { en: "Fri", he: "שישי" },
+              { en: "Sat", he: "שבת" }
+            ].map((day) => (
+              <div key={day.en} className="text-center py-2">
+                <div className="text-sm font-medium text-slate-600 dark:text-slate-400">
+                  {day.en}
+                </div>
+                <div className="text-xs text-slate-500 dark:text-slate-500 font-hebrew">
+                  {day.he}
+                </div>
               </div>
             ))}
           </div>
