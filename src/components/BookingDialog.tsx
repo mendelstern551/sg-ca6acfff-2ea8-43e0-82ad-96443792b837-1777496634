@@ -424,7 +424,7 @@ export function BookingDialog({ open, onOpenChange, onSave, booking: editingBook
                             Discount: {discountPercent}%
                           </p>
                           <p className="text-lg font-semibold text-orange-600">
-                            -{formatCurrency(totalCost - (totalCost * (1 - discountPercent / 100))}
+                            -{formatCurrency(totalCost - (totalCost * (1 - discountPercent / 100)))}
                           </p>
                         </div>
                       </>
