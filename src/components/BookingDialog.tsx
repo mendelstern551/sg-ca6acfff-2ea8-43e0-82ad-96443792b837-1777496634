@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -158,6 +159,16 @@ export function BookingDialog({ open, onOpenChange, onSave, booking: editingBook
     onSave(bookingData);
     onOpenChange(false);
   };
+  
+  const handleBookingTypeChange = (value: string) => {
+    if (value === "yom_tov" || value === "shabaton" || value === "night_event") {
+        setBookingType(value);
+    }
+  };
+
+  const handleConfirmedChange = (checked: boolean | string) => {
+    setConfirmed(Boolean(checked));
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -174,7 +185,7 @@ export function BookingDialog({ open, onOpenChange, onSave, booking: editingBook
             <div className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="type">Booking Type</Label>
-                <Select value={bookingType} onValueChange={(value) => setBookingType(value as BookingType)}>
+                <Select value={bookingType} onValueChange={handleBookingTypeChange}>
                   <SelectTrigger><SelectValue placeholder="Select booking type" /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="yom_tov">Yom Tov</SelectItem>
@@ -185,7 +196,7 @@ export function BookingDialog({ open, onOpenChange, onSave, booking: editingBook
               </div>
 
               <div className="flex items-center space-x-3 p-4 bg-blue-50 dark:bg-blue-950/30 rounded-lg border-2 border-blue-200 dark:border-blue-800">
-                <Checkbox id="confirmed" checked={confirmed} onCheckedChange={(checked) => setConfirmed(Boolean(checked))} />
+                <Checkbox id="confirmed" checked={confirmed} onCheckedChange={handleConfirmedChange} />
                 <Label htmlFor="confirmed" className="text-sm font-semibold cursor-pointer flex items-center gap-2">
                   <span className="text-blue-700 dark:text-blue-300">✓ Booking Confirmed</span>
                   <span className="text-xs font-normal text-slate-600 dark:text-slate-400">(Check to mark as confirmed)</span>
