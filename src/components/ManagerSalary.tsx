@@ -13,6 +13,7 @@ import { format, startOfMonth, isAfter, isBefore, differenceInMonths } from "dat
 import { EnhancedCalendar } from "@/components/ui/enhanced-calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { CalendarIcon } from "lucide-react";
+import { expenseService } from "@/services/expenseService";
 
 interface ManagerSalaryProps {
   bookings: Booking[];
@@ -40,6 +41,8 @@ export function ManagerSalary({ bookings, onAddExpense }: ManagerSalaryProps) {
     notes: ""
   });
 
+  const [isCreatingExpenses, setIsCreatingExpenses] = useState(false);
+
   useEffect(() => {
     const saved = localStorage.getItem("trout-lake-manager-salary");
     if (saved) {
@@ -52,11 +55,24 @@ export function ManagerSalary({ bookings, onAddExpense }: ManagerSalaryProps) {
   }, []);
 
   useEffect(() => {
-    createMonthlyMaintenanceExpenses();
-    createBookingCommissionExpenses();
+    if (!isCreatingExpenses) {
+      createAllManagerExpenses();
+    }
   }, [salaryData.seasonStart, salaryData.seasonEnd, salaryData.maintenanceFeePerMonth, bookings]);
 
-  const createMonthlyMaintenanceExpenses = () => {
+  const createAllManagerExpenses = async () => {
+    try {
+      setIsCreatingExpenses(true);
+      await createMonthlyMaintenanceExpenses();
+      await createBookingCommissionExpenses();
+    } catch (error) {
+      console.error("Error creating manager expenses:", error);
+    } finally {
+      setIsCreatingExpenses(false);
+    }
+  };
+
+  const createMonthlyMaintenanceExpenses = async () => {
     const seasonStart = new Date(salaryData.seasonStart);
     const seasonEnd = new Date(salaryData.seasonEnd);
     const today = new Date();
@@ -69,126 +85,135 @@ export function ManagerSalary({ bookings, onAddExpense }: ManagerSalaryProps) {
     const endDate = isAfter(currentMonthStart, seasonEnd) ? seasonEnd : currentMonthStart;
     const monthsToCreate = differenceInMonths(endDate, seasonStart) + 1;
 
-    const existingExpenses = JSON.parse(localStorage.getItem("trout-lake-expenses") || "[]");
-    
-    for (let i = 0; i < monthsToCreate; i++) {
-      const monthDate = new Date(seasonStart);
-      monthDate.setMonth(monthDate.getMonth() + i);
-      const monthKey = format(startOfMonth(monthDate), "yyyy-MM");
-      const expenseId = `maintenance-${monthKey}`;
-      
-      // Check for duplicates more thoroughly
-      const expenseExists = existingExpenses.some((exp: Expense) => 
-        exp.id === expenseId || (
-          exp.category === "Manager Salary" && 
-          exp.description === `Monthly Maintenance Fee - ${format(monthDate, "MMMM yyyy")}` &&
-          exp.vendor === "Manager" &&
-          exp.amount === salaryData.maintenanceFeePerMonth
-        )
+    try {
+      // Fetch all existing manager salary expenses from database
+      const allExpenses = await expenseService.getAllExpenses();
+      const existingMaintenanceExpenses = allExpenses.filter((exp: Expense) => 
+        exp.category === "Manager Salary" && 
+        exp.description?.includes("Monthly Maintenance Fee") &&
+        exp.vendor === "Manager"
       );
+      
+      for (let i = 0; i < monthsToCreate; i++) {
+        const monthDate = new Date(seasonStart);
+        monthDate.setMonth(monthDate.getMonth() + i);
+        const monthKey = format(startOfMonth(monthDate), "yyyy-MM");
+        const monthDescription = `Monthly Maintenance Fee - ${format(monthDate, "MMMM yyyy")}`;
+        
+        // Check if this month's maintenance fee already exists in database
+        const expenseExists = existingMaintenanceExpenses.some((exp: Expense) => 
+          exp.description === monthDescription &&
+          exp.amount === salaryData.maintenanceFeePerMonth
+        );
 
-      if (!expenseExists) {
-        const expense: Omit<Expense, "id" | "createdAt" | "updatedAt"> & { id: string, createdAt: string } = {
-          id: expenseId,
-          bookingId: null,
-          date: startOfMonth(monthDate).toISOString(),
-          amount: salaryData.maintenanceFeePerMonth,
-          category: "Manager Salary",
-          description: `Monthly Maintenance Fee - ${format(monthDate, "MMMM yyyy")}`,
-          paymentMethod: "pending",
-          vendor: "Manager",
-          receiptUrls: [],
-          proofUrls: [],
-          notes: "Automatic monthly maintenance fee",
-          createdAt: new Date().toISOString()
-        };
-        onAddExpense(expense as Expense);
-        existingExpenses.push(expense);
+        if (!expenseExists) {
+          const expense: Omit<Expense, "id" | "createdAt" | "updatedAt"> = {
+            bookingId: null,
+            date: startOfMonth(monthDate).toISOString(),
+            amount: salaryData.maintenanceFeePerMonth,
+            category: "Manager Salary",
+            description: monthDescription,
+            paymentMethod: "pending",
+            vendor: "Manager",
+            receiptUrls: [],
+            proofUrls: [],
+            notes: "Automatic monthly maintenance fee"
+          };
+          await expenseService.createExpense(expense);
+        }
       }
+    } catch (error) {
+      console.error("Error creating maintenance expenses:", error);
     }
   };
 
-  const createBookingCommissionExpenses = () => {
-    const existingExpenses = JSON.parse(localStorage.getItem("trout-lake-expenses") || "[]");
-    
-    // Remove any duplicate commission entries first
-    const commissionExpenses = existingExpenses.filter((exp: Expense) => 
-      exp.category === "Manager Salary" && 
-      exp.description?.includes("Manager Commission")
-    );
-    
-    // Group by booking_id to find duplicates
-    const commissionsByBooking = new Map<string, Expense[]>();
-    commissionExpenses.forEach((exp: Expense) => {
-      if (exp.bookingId) {
-        if (!commissionsByBooking.has(exp.bookingId)) {
-          commissionsByBooking.set(exp.bookingId, []);
+  const createBookingCommissionExpenses = async () => {
+    try {
+      // Fetch all existing expenses from database
+      const allExpenses = await expenseService.getAllExpenses();
+      
+      // Find all commission expenses
+      const commissionExpenses = allExpenses.filter((exp: Expense) => 
+        exp.category === "Manager Salary" && 
+        exp.description?.includes("Manager Commission")
+      );
+      
+      // Group by booking_id to find duplicates
+      const commissionsByBooking = new Map<string, Expense[]>();
+      commissionExpenses.forEach((exp: Expense) => {
+        if (exp.bookingId) {
+          if (!commissionsByBooking.has(exp.bookingId)) {
+            commissionsByBooking.set(exp.bookingId, []);
+          }
+          commissionsByBooking.get(exp.bookingId)!.push(exp);
         }
-        commissionsByBooking.get(exp.bookingId)!.push(exp);
-      }
-    });
-    
-    // Keep only the first commission for each booking, remove duplicates
-    const expensesToKeep = existingExpenses.filter((exp: Expense) => {
-      if (exp.category !== "Manager Salary" || !exp.description?.includes("Manager Commission")) {
-        return true; // Keep non-commission expenses
+      });
+      
+      // Delete duplicate commissions - keep only the first one for each booking
+      for (const [bookingId, expenses] of commissionsByBooking) {
+        if (expenses.length > 1) {
+          // Keep the first one (oldest), delete the rest
+          const expensesToDelete = expenses.slice(1);
+          for (const expense of expensesToDelete) {
+            try {
+              await expenseService.deleteExpense(expense.id);
+              console.log(`Deleted duplicate commission for booking ${bookingId}`);
+            } catch (error) {
+              console.error(`Error deleting duplicate commission ${expense.id}:`, error);
+            }
+          }
+        }
       }
       
-      if (!exp.bookingId) {
-        return true; // Keep if no booking ID
-      }
-      
-      const bookingCommissions = commissionsByBooking.get(exp.bookingId) || [];
-      // Keep only if this is the first commission for this booking
-      return bookingCommissions.indexOf(exp) === 0;
-    });
-    
-    // Save cleaned up expenses
-    localStorage.setItem("trout-lake-expenses", JSON.stringify(expensesToKeep));
-    
-    // Now create missing commissions
-    bookings.forEach((booking) => {
-      if (!booking || !booking.id || !booking.totalCost) {
-        return;
-      }
-
-      const commission = Math.max(
-        booking.totalCost * (salaryData.commissionPercentage / 100),
-        salaryData.minimumCommissionPerEvent
+      // Refresh the expense list after cleanup
+      const cleanedExpenses = await expenseService.getAllExpenses();
+      const cleanedCommissionExpenses = cleanedExpenses.filter((exp: Expense) => 
+        exp.category === "Manager Salary" && 
+        exp.description?.includes("Manager Commission")
       );
-
-      const expenseId = `commission-${booking.id}`;
       
-      // Check if commission already exists for this booking (more strict check)
-      const expenseExists = expensesToKeep.some((exp: Expense) => 
-        (exp.id === expenseId || exp.bookingId === booking.id) &&
-        exp.category === "Manager Salary" &&
-        exp.description?.includes("Manager Commission") &&
-        exp.vendor === "Manager"
-      );
+      // Now create missing commissions
+      for (const booking of bookings) {
+        if (!booking || !booking.id || !booking.totalCost) {
+          continue;
+        }
 
-      if (!expenseExists) {
-        const bookingTypeName = booking.bookingType ? 
-          booking.bookingType.toString().replace(/_/g, " ") : 
-          "event";
+        const commission = Math.max(
+          booking.totalCost * (salaryData.commissionPercentage / 100),
+          salaryData.minimumCommissionPerEvent
+        );
 
-        const expense: Omit<Expense, "id" | "createdAt" | "updatedAt"> & { id: string, createdAt: string } = {
-          id: expenseId,
-          bookingId: booking.id,
-          date: booking.startDate || new Date().toISOString(),
-          amount: commission,
-          category: "Manager Salary",
-          description: `Manager Commission - ${booking.name || "Event"}`,
-          paymentMethod: "pending",
-          vendor: "Manager",
-          notes: `15% commission (min $1,000) for ${bookingTypeName} booking`,
-          receiptUrls: [],
-          proofUrls: [],
-          createdAt: new Date().toISOString()
-        };
-        onAddExpense(expense as Expense);
+        // Check if commission already exists for this booking
+        const expenseExists = cleanedCommissionExpenses.some((exp: Expense) => 
+          exp.bookingId === booking.id &&
+          exp.category === "Manager Salary" &&
+          exp.description?.includes("Manager Commission") &&
+          exp.vendor === "Manager"
+        );
+
+        if (!expenseExists) {
+          const bookingTypeName = booking.bookingType ? 
+            booking.bookingType.toString().replace(/_/g, " ") : 
+            "event";
+
+          const expense: Omit<Expense, "id" | "createdAt" | "updatedAt"> = {
+            bookingId: booking.id,
+            date: booking.startDate || new Date().toISOString(),
+            amount: commission,
+            category: "Manager Salary",
+            description: `Manager Commission - ${booking.name || "Event"}`,
+            paymentMethod: "pending",
+            vendor: "Manager",
+            notes: `15% commission (min $1,000) for ${bookingTypeName} booking`,
+            receiptUrls: [],
+            proofUrls: []
+          };
+          await expenseService.createExpense(expense);
+        }
       }
-    });
+    } catch (error) {
+      console.error("Error creating commission expenses:", error);
+    }
   };
 
   const calculateMaintenanceFees = () => {
