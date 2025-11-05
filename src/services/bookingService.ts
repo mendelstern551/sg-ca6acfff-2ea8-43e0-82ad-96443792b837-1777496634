@@ -1,24 +1,18 @@
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
+import type { Booking } from "@/types/booking";
 
-type BookingRow = Database["public"]["Tables"]["bookings"]["Row"];
 type BookingInsert = Database["public"]["Tables"]["bookings"]["Insert"];
 type BookingUpdate = Database["public"]["Tables"]["bookings"]["Update"];
 
-export interface Booking extends BookingRow {
-  payments?: Payment[];
-}
-
-export interface Payment {
-  id: string;
-  booking_id: string;
-  amount: number;
-  payment_method: string;
-  payment_date: string;
-  notes?: string;
-  created_at: string;
-  updated_at: string;
-}
+// Helper to ensure payments array is always present
+const normalizeBooking = (booking: any): Booking => {
+  if (!booking) return booking;
+  return {
+    ...booking,
+    payments: Array.isArray(booking.payments) ? booking.payments : [],
+  };
+};
 
 export const bookingService = {
   async getAllBookings(): Promise<Booking[]> {
@@ -31,7 +25,7 @@ export const bookingService = {
       .order("start_date", { ascending: false });
 
     if (error) throw error;
-    return (data as Booking[]) || [];
+    return (data || []).map(normalizeBooking);
   },
 
   async getBookingById(id: string): Promise<Booking | null> {
@@ -45,7 +39,7 @@ export const bookingService = {
       .single();
 
     if (error) throw error;
-    return data as Booking;
+    return data ? normalizeBooking(data) : null;
   },
 
   async createBooking(booking: Omit<BookingInsert, "id" | "created_at" | "updated_at">): Promise<Booking> {
@@ -56,7 +50,7 @@ export const bookingService = {
       .single();
 
     if (error) throw error;
-    return data as Booking;
+    return normalizeBooking(data);
   },
 
   async updateBooking(id: string, updates: BookingUpdate): Promise<Booking> {
@@ -64,11 +58,14 @@ export const bookingService = {
       .from("bookings")
       .update({ ...updates, updated_at: new Date().toISOString() })
       .eq("id", id)
-      .select()
+      .select(`
+        *,
+        payments (*)
+      `)
       .single();
 
     if (error) throw error;
-    return data as Booking;
+    return normalizeBooking(data);
   },
 
   async deleteBooking(id: string): Promise<void> {
@@ -92,7 +89,7 @@ export const bookingService = {
       .order("start_date", { ascending: true });
 
     if (error) throw error;
-    return (data as Booking[]) || [];
+    return (data || []).map(normalizeBooking);
   },
 
   async getConfirmedBookings(): Promise<Booking[]> {
@@ -106,7 +103,7 @@ export const bookingService = {
       .order("start_date", { ascending: true });
 
     if (error) throw error;
-    return (data as Booking[]) || [];
+    return (data || []).map(normalizeBooking);
   },
 
   async getPendingBookings(): Promise<Booking[]> {
@@ -120,6 +117,6 @@ export const bookingService = {
       .order("start_date", { ascending: true });
 
     if (error) throw error;
-    return (data as Booking[]) || [];
+    return (data || []).map(normalizeBooking);
   }
 };
