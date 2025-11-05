@@ -20,6 +20,9 @@ import type { Booking, Expense, Payment, BookingType, PaymentStatus } from "@/ty
 import { formatCurrency } from "@/lib/bookingCalculations";
 import { invoiceService } from "@/services/invoiceService";
 import type { Database } from "@/integrations/supabase/types";
+import { Badge } from "@/components/ui/badge";
+import { InvoiceDialog } from "@/components/InvoiceDialog";
+import { format } from "date-fns";
 
 type Invoice = Database["public"]["Tables"]["invoices"]["Row"];
 
