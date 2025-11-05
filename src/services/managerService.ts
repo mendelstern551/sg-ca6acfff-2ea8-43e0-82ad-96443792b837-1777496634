@@ -12,7 +12,7 @@ export interface ManagerCompensation extends ManagerCompensationRow {
   manager_payments?: ManagerPayment[];
 }
 
-export interface ManagerPayment extends ManagerPaymentRow {}
+export type ManagerPayment = ManagerPaymentRow;
 
 export const managerService = {
   async getAllCompensation(): Promise<ManagerCompensation[]> {

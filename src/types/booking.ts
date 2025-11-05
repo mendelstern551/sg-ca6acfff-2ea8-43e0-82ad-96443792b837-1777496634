@@ -8,11 +8,11 @@ export interface Payment {
   id: string;
   bookingId: string;
   amount: number;
-  date: string;
-  paymentMethod: PaymentMethod;
-  referenceNumber?: string;
-  notes: string;
-  createdAt: string;
+  payment_date: string; // Changed from date to match db
+  payment_method: PaymentMethod;
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface ManagerPayment {
@@ -41,8 +41,8 @@ export interface Booking {
   bookingType: BookingType;
   name: string;
   contactName: string;
-  contactEmail: string;
-  contactPhone: string;
+  contactEmail: string | null;
+  contactPhone: string | null;
   startDate: string;
   endDate: string;
   numberOfGuests: number;
@@ -54,30 +54,30 @@ export interface Booking {
   depositAmount: number;
   amountPaid: number;
   balanceDue: number;
-  paymentStatus: "pending" | "deposit_paid" | "partial" | "paid" | "refunded" | "cancelled";
+  paymentStatus: PaymentStatus;
   confirmed: boolean;
-  payments?: Payment[];
-  notes: string;
+  payments: Payment[];
+  notes: string | null;
   createdAt: string;
   updatedAt: string;
-  customPrice?: number;
-  discountPercent?: number;
+  customPrice: number | null;
+  discountPercent: number | null;
 }
 
 export interface Expense {
   id: string;
-  bookingId?: string;
+  bookingId: string | null;
   date: string;
   amount: number;
   category: string;
   description: string;
   paymentMethod: string;
-  vendor: string;
-  receiptUrl?: string;
-  proofOfPaymentUrl?: string;
-  receiptFiles?: { id: string; url: string; name: string; uploadedAt: string }[];
-  notes: string;
+  vendor: string | null;
+  receiptUrls: string[] | null;
+  proofUrls: string[] | null;
+  notes: string | null;
   createdAt: string;
+  updatedAt: string;
 }
 
 export interface PricingConfig {

@@ -5,7 +5,7 @@ type ExpenseRow = Database["public"]["Tables"]["expenses"]["Row"];
 type ExpenseInsert = Database["public"]["Tables"]["expenses"]["Insert"];
 type ExpenseUpdate = Database["public"]["Tables"]["expenses"]["Update"];
 
-export interface Expense extends ExpenseRow {}
+export type Expense = ExpenseRow;
 
 export const expenseService = {
   async getAllExpenses(): Promise<Expense[]> {

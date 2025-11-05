@@ -5,7 +5,7 @@ type PaymentRow = Database["public"]["Tables"]["payments"]["Row"];
 type PaymentInsert = Database["public"]["Tables"]["payments"]["Insert"];
 type PaymentUpdate = Database["public"]["Tables"]["payments"]["Update"];
 
-export interface Payment extends PaymentRow {}
+export type Payment = PaymentRow;
 
 export const paymentService = {
   async getPaymentsByBooking(bookingId: string): Promise<Payment[]> {

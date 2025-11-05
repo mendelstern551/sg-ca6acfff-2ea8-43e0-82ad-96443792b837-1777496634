@@ -12,52 +12,10 @@ import { BudgetDashboard } from "@/components/BudgetDashboard";
 import { ManagerSalary } from "@/components/ManagerSalary";
 import { BookingCalendar } from "@/components/BookingCalendar";
 import { ReceiptLibrary } from "@/components/ReceiptLibrary";
-import { bookingService, type Booking as SupabaseBooking } from "@/services/bookingService";
+import { bookingService, type Booking as SupabaseBooking, type Payment as SupabasePayment } from "@/services/bookingService";
 import { expenseService, type Expense as SupabaseExpense } from "@/services/expenseService";
 import { useToast } from "@/hooks/use-toast";
-
-// Map Supabase types to existing component types
-type Booking = SupabaseBooking & {
-  id: string;
-  name: string;
-  bookingType: string;
-  contactName: string;
-  contactEmail: string | null;
-  contactPhone: string | null;
-  startDate: string;
-  endDate: string;
-  numberOfGuests: number;
-  baseRate: number;
-  perPersonRate: number;
-  cleaningFee: number;
-  additionalCleaningFee: number;
-  totalCost: number;
-  depositAmount: number;
-  amountPaid: number;
-  balanceDue: number;
-  paymentStatus: string;
-  confirmed: boolean;
-  customPrice: number | null;
-  discountPercent: number | null;
-  notes: string | null;
-  createdAt: string;
-  updatedAt: string;
-  payments?: any[];
-};
-
-type Expense = SupabaseExpense & {
-  id: string;
-  bookingId: string | null;
-  description: string;
-  amount: number;
-  category: string;
-  vendor: string | null;
-  paymentMethod: string;
-  date: string;
-  receiptUrls: string[] | null;
-  proofUrls: string[] | null;
-  notes: string | null;
-};
+import type { Booking, Expense, Payment, BookingType, PaymentStatus } from "@/types/booking";
 
 export default function HomePage() {
   const [activeTab, setActiveTab] = useState("bookings");
@@ -72,7 +30,6 @@ export default function HomePage() {
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
 
-  // Load data from Supabase on mount
   useEffect(() => {
     loadAllData();
   }, []);
@@ -85,36 +42,48 @@ export default function HomePage() {
         expenseService.getAllExpenses()
       ]);
 
-      // Map Supabase data to component format
-      const mappedBookings: Booking[] = bookingsData.map(b => ({
-        id: b.id,
-        name: b.name,
-        bookingType: b.booking_type,
-        contactName: b.contact_name,
-        contactEmail: b.contact_email,
-        contactPhone: b.contact_phone,
-        startDate: b.start_date,
-        endDate: b.end_date,
-        numberOfGuests: b.number_of_guests,
-        baseRate: Number(b.base_rate),
-        perPersonRate: Number(b.per_person_rate),
-        cleaningFee: Number(b.cleaning_fee),
-        additionalCleaningFee: Number(b.additional_cleaning_fee),
-        totalCost: Number(b.total_cost),
-        depositAmount: Number(b.deposit_amount),
-        amountPaid: Number(b.amount_paid),
-        balanceDue: Number(b.balance_due),
-        paymentStatus: b.payment_status,
-        confirmed: b.confirmed,
-        customPrice: b.custom_price ? Number(b.custom_price) : null,
-        discountPercent: b.discount_percent ? Number(b.discount_percent) : null,
-        notes: b.notes,
-        createdAt: b.created_at || new Date().toISOString(),
-        updatedAt: b.updated_at || new Date().toISOString(),
-        payments: b.payments || []
-      }));
+      const mappedBookings: Booking[] = bookingsData.map((b: SupabaseBooking): Booking => {
+        const payments = (b.payments || []).map((p: SupabasePayment): Payment => ({
+          id: p.id,
+          bookingId: p.booking_id,
+          amount: Number(p.amount),
+          payment_date: p.payment_date,
+          payment_method: p.payment_method as any, // Cast for now
+          notes: p.notes,
+          created_at: p.created_at,
+          updated_at: p.updated_at,
+        }));
+        
+        return {
+          id: b.id,
+          name: b.name,
+          bookingType: b.booking_type as BookingType,
+          contactName: b.contact_name,
+          contactEmail: b.contact_email,
+          contactPhone: b.contact_phone,
+          startDate: b.start_date,
+          endDate: b.end_date,
+          numberOfGuests: b.number_of_guests,
+          baseRate: Number(b.base_rate),
+          perPersonRate: Number(b.per_person_rate),
+          cleaningFee: Number(b.cleaning_fee),
+          additionalCleaningFee: Number(b.additional_cleaning_fee),
+          totalCost: Number(b.total_cost),
+          depositAmount: Number(b.deposit_amount),
+          amountPaid: Number(b.amount_paid),
+          balanceDue: Number(b.balance_due),
+          paymentStatus: b.payment_status as PaymentStatus,
+          confirmed: b.confirmed,
+          customPrice: b.custom_price ? Number(b.custom_price) : null,
+          discountPercent: b.discount_percent ? Number(b.discount_percent) : null,
+          notes: b.notes,
+          createdAt: b.created_at,
+          updatedAt: b.updated_at,
+          payments: payments,
+        };
+      });
 
-      const mappedExpenses: Expense[] = expensesData.map(e => ({
+      const mappedExpenses: Expense[] = expensesData.map((e: SupabaseExpense): Expense => ({
         id: e.id,
         bookingId: e.booking_id,
         description: e.description,
@@ -125,7 +94,9 @@ export default function HomePage() {
         date: e.expense_date,
         receiptUrls: e.receipt_urls,
         proofUrls: e.proof_urls,
-        notes: e.notes
+        notes: e.notes,
+        createdAt: e.created_at,
+        updatedAt: e.updated_at,
       }));
 
       setBookings(mappedBookings);
@@ -134,7 +105,7 @@ export default function HomePage() {
       console.error("Error loading data:", error);
       toast({
         title: "Error Loading Data",
-        description: "Failed to load bookings and expenses from database.",
+        description: "Failed to load bookings and expenses from the database.",
         variant: "destructive"
       });
     } finally {
@@ -142,7 +113,7 @@ export default function HomePage() {
     }
   };
 
-  const handleSaveBooking = async (booking: Booking) => {
+  const handleSaveBooking = async (booking: Omit<Booking, "id" | "createdAt" | "updatedAt">) => {
     try {
       const bookingData = {
         name: booking.name,
@@ -165,11 +136,11 @@ export default function HomePage() {
         confirmed: booking.confirmed,
         custom_price: booking.customPrice,
         discount_percent: booking.discountPercent,
-        notes: booking.notes
+        notes: booking.notes,
       };
 
       if (editingBooking) {
-        await bookingService.updateBooking(booking.id, bookingData);
+        await bookingService.updateBooking(editingBooking.id, bookingData);
         toast({
           title: "Booking Updated",
           description: "The booking has been updated successfully."
@@ -194,7 +165,7 @@ export default function HomePage() {
       });
     }
   };
-
+  
   const handleUpdateBooking = async (booking: Booking) => {
     try {
       await bookingService.updateBooking(booking.id, {
@@ -256,7 +227,7 @@ export default function HomePage() {
     }
   };
 
-  const handleSaveExpense = async (expense: Expense) => {
+  const handleSaveExpense = async (expense: Omit<Expense, "id" | "createdAt" | "updatedAt">) => {
     try {
       const expenseData = {
         booking_id: expense.bookingId,
@@ -272,7 +243,7 @@ export default function HomePage() {
       };
 
       if (editingExpense) {
-        await expenseService.updateExpense(expense.id, expenseData);
+        await expenseService.updateExpense(editingExpense.id, expenseData);
         toast({
           title: "Expense Updated",
           description: "The expense has been updated successfully."
@@ -320,7 +291,7 @@ export default function HomePage() {
     }
   };
 
-  const handleAddExpense = async (expense: Expense) => {
+  const handleAddExpense = async (expense: Omit<Expense, "id" | "createdAt" | "updatedAt">) => {
     try {
       await expenseService.createExpense({
         booking_id: expense.bookingId,
@@ -339,7 +310,7 @@ export default function HomePage() {
       console.error("Error adding expense:", error);
     }
   };
-
+  
   const handleNavigateToExpenses = (bookingId: string) => {
     setFilteredBookingId(bookingId);
     setActiveTab("expenses");
@@ -381,6 +352,7 @@ export default function HomePage() {
 
       <main className="container mx-auto px-4 py-8">
         <div className="grid gap-6 md:grid-cols-4 mb-8">
+          {/* Summary Cards */}
           <Card className="hover:shadow-lg transition-shadow">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Total Bookings</CardTitle>
@@ -502,7 +474,7 @@ export default function HomePage() {
               key={`calendar-${refreshKey}-${bookings.length}`}
               bookings={bookings} 
               onBookingClick={handleEditBooking}
-              onAddBooking={(date) => {
+              onAddBooking={() => {
                 setEditingBooking(undefined);
                 setBookingDialogOpen(true);
               }}
@@ -580,6 +552,7 @@ export default function HomePage() {
         onOpenChange={setBookingDialogOpen}
         onSave={handleSaveBooking}
         booking={editingBooking}
+        bookings={bookings}
       />
 
       <ExpenseDialog
