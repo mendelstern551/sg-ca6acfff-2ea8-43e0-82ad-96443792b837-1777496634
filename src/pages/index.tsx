@@ -10,9 +10,54 @@ import { ExpenseDialog } from "@/components/ExpenseDialog";
 import { ExpenseList } from "@/components/ExpenseList";
 import { BudgetDashboard } from "@/components/BudgetDashboard";
 import { ManagerSalary } from "@/components/ManagerSalary";
-import { Booking, Expense } from "@/types/booking";
 import { BookingCalendar } from "@/components/BookingCalendar";
 import { ReceiptLibrary } from "@/components/ReceiptLibrary";
+import { bookingService, type Booking as SupabaseBooking } from "@/services/bookingService";
+import { expenseService, type Expense as SupabaseExpense } from "@/services/expenseService";
+import { useToast } from "@/hooks/use-toast";
+
+// Map Supabase types to existing component types
+type Booking = SupabaseBooking & {
+  id: string;
+  name: string;
+  bookingType: string;
+  contactName: string;
+  contactEmail: string | null;
+  contactPhone: string | null;
+  startDate: string;
+  endDate: string;
+  numberOfGuests: number;
+  baseRate: number;
+  perPersonRate: number;
+  cleaningFee: number;
+  additionalCleaningFee: number;
+  totalCost: number;
+  depositAmount: number;
+  amountPaid: number;
+  balanceDue: number;
+  paymentStatus: string;
+  confirmed: boolean;
+  customPrice: number | null;
+  discountPercent: number | null;
+  notes: string | null;
+  createdAt: string;
+  updatedAt: string;
+  payments?: any[];
+};
+
+type Expense = SupabaseExpense & {
+  id: string;
+  bookingId: string | null;
+  description: string;
+  amount: number;
+  category: string;
+  vendor: string | null;
+  paymentMethod: string;
+  date: string;
+  receiptUrls: string[] | null;
+  proofUrls: string[] | null;
+  notes: string | null;
+};
 
 export default function HomePage() {
   const [activeTab, setActiveTab] = useState("bookings");
@@ -24,89 +69,168 @@ export default function HomePage() {
   const [editingExpense, setEditingExpense] = useState<Expense | undefined>();
   const [refreshKey, setRefreshKey] = useState(0);
   const [filteredBookingId, setFilteredBookingId] = useState<string | undefined>();
+  const [loading, setLoading] = useState(true);
+  const { toast } = useToast();
 
+  // Load data from Supabase on mount
   useEffect(() => {
-    const savedBookings = localStorage.getItem("trout-lake-bookings");
-    const savedExpenses = localStorage.getItem("trout-lake-expenses");
-    
-    if (savedBookings) {
-      try {
-        const bookingsData: Booking[] = JSON.parse(savedBookings);
-        // Ensure all bookings have proper structure including payments array
-        const migratedBookings = bookingsData.map(b => {
-          // Validate and provide defaults for all critical fields
-          const validatedBooking: Booking = {
-            id: b.id || Date.now().toString(),
-            name: b.name || "Unnamed Event",
-            bookingType: b.bookingType || "yom_tov",
-            contactName: b.contactName || "",
-            contactEmail: b.contactEmail || "",
-            contactPhone: b.contactPhone || "",
-            startDate: b.startDate || new Date().toISOString(),
-            endDate: b.endDate || new Date().toISOString(),
-            numberOfGuests: b.numberOfGuests || 0,
-            baseRate: b.baseRate || 0,
-            perPersonRate: b.perPersonRate || 0,
-            cleaningFee: b.cleaningFee || 0,
-            additionalCleaningFee: b.additionalCleaningFee || 0,
-            totalCost: b.totalCost || 0,
-            depositAmount: b.depositAmount || 0,
-            amountPaid: b.amountPaid || 0,
-            balanceDue: b.balanceDue ?? (b.totalCost || 0),
-            paymentStatus: b.paymentStatus || "pending",
-            confirmed: b.confirmed ?? false,
-            payments: Array.isArray(b.payments) ? b.payments : [],
-            notes: b.notes || "",
-            createdAt: b.createdAt || new Date().toISOString(),
-            updatedAt: b.updatedAt || new Date().toISOString(),
-            customPrice: b.customPrice,
-            discountPercent: b.discountPercent,
-          };
-          return validatedBooking;
-        }).filter(b => b.id && b.name); // Filter out any invalid bookings
-        
-        setBookings(migratedBookings);
-        console.log("Loaded bookings with payments:", migratedBookings);
-      } catch (error) {
-        console.error("Error loading bookings:", error);
-        setBookings([]);
-      }
-    }
-    if (savedExpenses) {
-      try {
-        const expensesData: Expense[] = JSON.parse(savedExpenses);
-        // Validate expenses
-        const validatedExpenses = expensesData.filter(e => 
-          e && e.id && e.amount !== undefined && e.date
-        );
-        setExpenses(validatedExpenses);
-      } catch (error) {
-        console.error("Error loading expenses:", error);
-        setExpenses([]);
-      }
-    }
+    loadAllData();
   }, []);
 
-  const handleSaveBooking = (booking: Booking) => {
-    let updatedBookings: Booking[];
-    
-    if (editingBooking) {
-      updatedBookings = bookings.map((b) => (b.id === booking.id ? booking : b));
-    } else {
-      updatedBookings = [...bookings, booking];
+  const loadAllData = async () => {
+    try {
+      setLoading(true);
+      const [bookingsData, expensesData] = await Promise.all([
+        bookingService.getAllBookings(),
+        expenseService.getAllExpenses()
+      ]);
+
+      // Map Supabase data to component format
+      const mappedBookings: Booking[] = bookingsData.map(b => ({
+        id: b.id,
+        name: b.name,
+        bookingType: b.booking_type,
+        contactName: b.contact_name,
+        contactEmail: b.contact_email,
+        contactPhone: b.contact_phone,
+        startDate: b.start_date,
+        endDate: b.end_date,
+        numberOfGuests: b.number_of_guests,
+        baseRate: Number(b.base_rate),
+        perPersonRate: Number(b.per_person_rate),
+        cleaningFee: Number(b.cleaning_fee),
+        additionalCleaningFee: Number(b.additional_cleaning_fee),
+        totalCost: Number(b.total_cost),
+        depositAmount: Number(b.deposit_amount),
+        amountPaid: Number(b.amount_paid),
+        balanceDue: Number(b.balance_due),
+        paymentStatus: b.payment_status,
+        confirmed: b.confirmed,
+        customPrice: b.custom_price ? Number(b.custom_price) : null,
+        discountPercent: b.discount_percent ? Number(b.discount_percent) : null,
+        notes: b.notes,
+        createdAt: b.created_at || new Date().toISOString(),
+        updatedAt: b.updated_at || new Date().toISOString(),
+        payments: b.payments || []
+      }));
+
+      const mappedExpenses: Expense[] = expensesData.map(e => ({
+        id: e.id,
+        bookingId: e.booking_id,
+        description: e.description,
+        amount: Number(e.amount),
+        category: e.category,
+        vendor: e.vendor,
+        paymentMethod: e.payment_method,
+        date: e.expense_date,
+        receiptUrls: e.receipt_urls,
+        proofUrls: e.proof_urls,
+        notes: e.notes
+      }));
+
+      setBookings(mappedBookings);
+      setExpenses(mappedExpenses);
+    } catch (error) {
+      console.error("Error loading data:", error);
+      toast({
+        title: "Error Loading Data",
+        description: "Failed to load bookings and expenses from database.",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
     }
-    
-    setBookings(updatedBookings);
-    localStorage.setItem("trout-lake-bookings", JSON.stringify(updatedBookings));
-    setEditingBooking(undefined);
-    setRefreshKey(prev => prev + 1);
   };
 
-  const handleUpdateBooking = (booking: Booking) => {
-    const updatedBookings = bookings.map((b) => (b.id === booking.id ? booking : b));
-    setBookings(updatedBookings);
-    localStorage.setItem("trout-lake-bookings", JSON.stringify(updatedBookings));
-    setRefreshKey(prev => prev + 1);
+  const handleSaveBooking = async (booking: Booking) => {
+    try {
+      const bookingData = {
+        name: booking.name,
+        booking_type: booking.bookingType,
+        contact_name: booking.contactName,
+        contact_email: booking.contactEmail,
+        contact_phone: booking.contactPhone,
+        start_date: booking.startDate,
+        end_date: booking.endDate,
+        number_of_guests: booking.numberOfGuests,
+        base_rate: booking.baseRate,
+        per_person_rate: booking.perPersonRate,
+        cleaning_fee: booking.cleaningFee,
+        additional_cleaning_fee: booking.additionalCleaningFee,
+        total_cost: booking.totalCost,
+        deposit_amount: booking.depositAmount,
+        amount_paid: booking.amountPaid,
+        balance_due: booking.balanceDue,
+        payment_status: booking.paymentStatus,
+        confirmed: booking.confirmed,
+        custom_price: booking.customPrice,
+        discount_percent: booking.discountPercent,
+        notes: booking.notes
+      };
+
+      if (editingBooking) {
+        await bookingService.updateBooking(booking.id, bookingData);
+        toast({
+          title: "Booking Updated",
+          description: "The booking has been updated successfully."
+        });
+      } else {
+        await bookingService.createBooking(bookingData);
+        toast({
+          title: "Booking Created",
+          description: "New booking has been created successfully."
+        });
+      }
+
+      await loadAllData();
+      setEditingBooking(undefined);
+      setRefreshKey(prev => prev + 1);
+    } catch (error) {
+      console.error("Error saving booking:", error);
+      toast({
+        title: "Error",
+        description: "Failed to save booking. Please try again.",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleUpdateBooking = async (booking: Booking) => {
+    try {
+      await bookingService.updateBooking(booking.id, {
+        name: booking.name,
+        booking_type: booking.bookingType,
+        contact_name: booking.contactName,
+        contact_email: booking.contactEmail,
+        contact_phone: booking.contactPhone,
+        start_date: booking.startDate,
+        end_date: booking.endDate,
+        number_of_guests: booking.numberOfGuests,
+        base_rate: booking.baseRate,
+        per_person_rate: booking.perPersonRate,
+        cleaning_fee: booking.cleaningFee,
+        additional_cleaning_fee: booking.additionalCleaningFee,
+        total_cost: booking.totalCost,
+        deposit_amount: booking.depositAmount,
+        amount_paid: booking.amountPaid,
+        balance_due: booking.balanceDue,
+        payment_status: booking.paymentStatus,
+        confirmed: booking.confirmed,
+        custom_price: booking.customPrice,
+        discount_percent: booking.discountPercent,
+        notes: booking.notes
+      });
+
+      await loadAllData();
+      setRefreshKey(prev => prev + 1);
+    } catch (error) {
+      console.error("Error updating booking:", error);
+      toast({
+        title: "Error",
+        description: "Failed to update booking.",
+        variant: "destructive"
+      });
+    }
   };
 
   const handleEditBooking = (booking: Booking) => {
@@ -114,24 +238,63 @@ export default function HomePage() {
     setBookingDialogOpen(true);
   };
 
-  const handleDeleteBooking = (bookingId: string) => {
-    const updatedBookings = bookings.filter((b) => b.id !== bookingId);
-    setBookings(updatedBookings);
-    localStorage.setItem("trout-lake-bookings", JSON.stringify(updatedBookings));
+  const handleDeleteBooking = async (bookingId: string) => {
+    try {
+      await bookingService.deleteBooking(bookingId);
+      toast({
+        title: "Booking Deleted",
+        description: "The booking has been deleted successfully."
+      });
+      await loadAllData();
+    } catch (error) {
+      console.error("Error deleting booking:", error);
+      toast({
+        title: "Error",
+        description: "Failed to delete booking.",
+        variant: "destructive"
+      });
+    }
   };
 
-  const handleSaveExpense = (expense: Expense) => {
-    let updatedExpenses: Expense[];
-    
-    if (editingExpense) {
-      updatedExpenses = expenses.map((e) => (e.id === expense.id ? expense : e));
-    } else {
-      updatedExpenses = [...expenses, expense];
+  const handleSaveExpense = async (expense: Expense) => {
+    try {
+      const expenseData = {
+        booking_id: expense.bookingId,
+        description: expense.description,
+        amount: expense.amount,
+        category: expense.category,
+        vendor: expense.vendor,
+        payment_method: expense.paymentMethod,
+        expense_date: expense.date,
+        receipt_urls: expense.receiptUrls,
+        proof_urls: expense.proofUrls,
+        notes: expense.notes
+      };
+
+      if (editingExpense) {
+        await expenseService.updateExpense(expense.id, expenseData);
+        toast({
+          title: "Expense Updated",
+          description: "The expense has been updated successfully."
+        });
+      } else {
+        await expenseService.createExpense(expenseData);
+        toast({
+          title: "Expense Created",
+          description: "New expense has been recorded successfully."
+        });
+      }
+
+      await loadAllData();
+      setEditingExpense(undefined);
+    } catch (error) {
+      console.error("Error saving expense:", error);
+      toast({
+        title: "Error",
+        description: "Failed to save expense.",
+        variant: "destructive"
+      });
     }
-    
-    setExpenses(updatedExpenses);
-    localStorage.setItem("trout-lake-expenses", JSON.stringify(updatedExpenses));
-    setEditingExpense(undefined);
   };
 
   const handleEditExpense = (expense: Expense) => {
@@ -139,22 +302,42 @@ export default function HomePage() {
     setExpenseDialogOpen(true);
   };
 
-  const handleDeleteExpense = (expenseId: string) => {
-    const updatedExpenses = expenses.filter((e) => e.id !== expenseId);
-    setExpenses(updatedExpenses);
-    localStorage.setItem("trout-lake-expenses", JSON.stringify(updatedExpenses));
+  const handleDeleteExpense = async (expenseId: string) => {
+    try {
+      await expenseService.deleteExpense(expenseId);
+      toast({
+        title: "Expense Deleted",
+        description: "The expense has been deleted successfully."
+      });
+      await loadAllData();
+    } catch (error) {
+      console.error("Error deleting expense:", error);
+      toast({
+        title: "Error",
+        description: "Failed to delete expense.",
+        variant: "destructive"
+      });
+    }
   };
 
-  const handleAddExpense = (expense: Expense) => {
-    setExpenses(prev => {
-      const exists = prev.some(e => e.id === expense.id);
-      if (exists) {
-        return prev;
-      }
-      const updated = [...prev, expense];
-      localStorage.setItem("trout-lake-expenses", JSON.stringify(updated));
-      return updated;
-    });
+  const handleAddExpense = async (expense: Expense) => {
+    try {
+      await expenseService.createExpense({
+        booking_id: expense.bookingId,
+        description: expense.description,
+        amount: expense.amount,
+        category: expense.category,
+        vendor: expense.vendor,
+        payment_method: expense.paymentMethod,
+        expense_date: expense.date,
+        receipt_urls: expense.receiptUrls,
+        proof_urls: expense.proofUrls,
+        notes: expense.notes
+      });
+      await loadAllData();
+    } catch (error) {
+      console.error("Error adding expense:", error);
+    }
   };
 
   const handleNavigateToExpenses = (bookingId: string) => {
@@ -162,17 +345,24 @@ export default function HomePage() {
     setActiveTab("expenses");
   };
 
-  const handleClearExpenseFilter = () => {
-    setFilteredBookingId(undefined);
-  };
-
   const totalGuests = bookings.reduce((sum, b) => sum + b.numberOfGuests, 0);
   const totalRevenue = bookings.reduce((sum, b) => sum + b.totalCost, 0);
   const totalExpenses = expenses.reduce((sum, e) => sum + e.amount, 0);
   const netProfit = totalRevenue - totalExpenses;
 
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-slate-50 dark:from-slate-950 dark:via-blue-950 dark:to-slate-950 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-slate-600 dark:text-slate-400">Loading your data...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-slate-50 dark:from-slate-950 dark:via-blue-950 dark:to-slate-50">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-slate-50 dark:from-slate-950 dark:via-blue-950 dark:to-slate-950">
       <header className="border-b bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm sticky top-0 z-50">
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
