@@ -175,9 +175,13 @@ export function BookingCalendar({ bookings, onDateClick, onBookingClick, onAddBo
       const englishMonth = hDate.getMonthName();
       const yiddishMonth = monthNames[englishMonth] || englishMonth;
       
-      // Get the year in Hebrew characters (gematria)
+      // Get the year in Hebrew characters using gematriya
+      // The render method with 'he' locale returns the full date in Hebrew
+      // We need to use gematriya function to convert the year number
       const year = hDate.getFullYear();
-      const hebrewYear = hDate.renderGematriya().split(" ")[1] || hDate.renderGematriya();
+      // Import gematriya function from @hebcal/core
+      const { gematriya } = require("@hebcal/core");
+      const hebrewYear = gematriya(year);
       
       return `${yiddishMonth} ${hebrewYear}`;
     } catch (error) {
