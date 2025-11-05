@@ -480,9 +480,10 @@ export default function HomePage() {
             setFilteredBookingId(undefined);
           }
         }} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-6 lg:w-[900px] bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 p-1">
+          <TabsList className="grid w-full grid-cols-7 lg:w-[1050px] bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 p-1">
             <TabsTrigger value="bookings" className="data-[state=active]:bg-amber-100 dark:data-[state=active]:bg-amber-900/30 data-[state=active]:text-amber-900 dark:data-[state=active]:text-amber-100">Bookings</TabsTrigger>
             <TabsTrigger value="calendar" className="data-[state=active]:bg-amber-100 dark:data-[state=active]:bg-amber-900/30 data-[state=active]:text-amber-900 dark:data-[state=active]:text-amber-100">Calendar</TabsTrigger>
+            <TabsTrigger value="invoices" className="data-[state=active]:bg-amber-100 dark:data-[state=active]:bg-amber-900/30 data-[state=active]:text-amber-900 dark:data-[state=active]:text-amber-100">Invoices</TabsTrigger>
             <TabsTrigger value="budget" className="data-[state=active]:bg-amber-100 dark:data-[state=active]:bg-amber-900/30 data-[state=active]:text-amber-900 dark:data-[state=active]:text-amber-100">Budget</TabsTrigger>
             <TabsTrigger value="expenses" className="data-[state=active]:bg-amber-100 dark:data-[state=active]:bg-amber-900/30 data-[state=active]:text-amber-900 dark:data-[state=active]:text-amber-100">Expenses</TabsTrigger>
             <TabsTrigger value="receipts" className="data-[state=active]:bg-amber-100 dark:data-[state=active]:bg-amber-900/30 data-[state=active]:text-amber-900 dark:data-[state=active]:text-amber-100">Receipts</TabsTrigger>
@@ -543,6 +544,60 @@ export default function HomePage() {
                 setBookingDialogOpen(true);
               }}
             />
+          </TabsContent>
+
+          <TabsContent value="invoices" className="space-y-4">
+            <Card className="bg-white dark:bg-stone-900 border-stone-200 dark:border-stone-800">
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle className="text-stone-900 dark:text-stone-100 flex items-center gap-2">
+                      <FileText className="h-5 w-5 text-blue-600" />
+                      Invoice Management
+                    </CardTitle>
+                    <CardDescription className="text-stone-600 dark:text-stone-400">
+                      View all invoices for your bookings
+                    </CardDescription>
+                  </div>
+                  <Button 
+                    className="bg-orange-600 hover:bg-orange-700 text-white shadow-md hover:shadow-lg transition-all"
+                    onClick={() => window.location.href = "/invoices"}
+                  >
+                    <FileText className="h-4 w-4 mr-2" />
+                    View All Invoices
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="text-center py-12">
+                  <FileText className="h-16 w-16 mx-auto mb-4 text-blue-300 dark:text-blue-700" />
+                  <h3 className="text-lg font-medium text-stone-900 dark:text-stone-100 mb-2">
+                    Invoice Management System
+                  </h3>
+                  <p className="text-stone-600 dark:text-stone-400 mb-6 max-w-md mx-auto">
+                    All invoices are automatically generated for each booking with detailed cost breakdowns. 
+                    Click the button above to view and manage all invoices, or use the "Open Invoice" button in any client details dialog.
+                  </p>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 max-w-2xl mx-auto mt-8">
+                    <div className="p-4 bg-blue-50 dark:bg-blue-950/30 rounded-lg">
+                      <FileText className="h-8 w-8 text-blue-600 mx-auto mb-2" />
+                      <h4 className="font-semibold text-stone-900 dark:text-stone-100 mb-1">Auto-Generated</h4>
+                      <p className="text-sm text-stone-600 dark:text-stone-400">Invoices created automatically for each booking</p>
+                    </div>
+                    <div className="p-4 bg-green-50 dark:bg-green-950/30 rounded-lg">
+                      <DollarSign className="h-8 w-8 text-green-600 mx-auto mb-2" />
+                      <h4 className="font-semibold text-stone-900 dark:text-stone-100 mb-1">Cost Breakdown</h4>
+                      <p className="text-sm text-stone-600 dark:text-stone-400">Detailed breakdown of all charges and payments</p>
+                    </div>
+                    <div className="p-4 bg-orange-50 dark:bg-orange-950/30 rounded-lg">
+                      <Calendar className="h-8 w-8 text-orange-600 mx-auto mb-2" />
+                      <h4 className="font-semibold text-stone-900 dark:text-stone-100 mb-1">Download PDF</h4>
+                      <p className="text-sm text-stone-600 dark:text-stone-400">Print or download invoices as PDF</p>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
           </TabsContent>
 
           <TabsContent value="budget" className="space-y-4">
