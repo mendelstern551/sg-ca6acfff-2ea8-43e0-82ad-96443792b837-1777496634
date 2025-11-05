@@ -2,12 +2,19 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Expense, Booking } from "@/types/booking";
 import { formatCurrency } from "@/lib/bookingCalculations";
 import { format } from "date-fns";
-import { DollarSign, TrendingUp, TrendingDown, Receipt, Calendar, Users, FileText } from "lucide-react";
+import { DollarSign, TrendingUp, TrendingDown, Receipt, Calendar, Users, FileText, Plus, StickyNote } from "lucide-react";
 import { InvoiceDialog } from "./InvoiceDialog";
 import { useState } from "react";
+import { paymentService } from "@/services/paymentService";
+import { bookingService } from "@/services/bookingService";
+import { useToast } from "@/hooks/use-toast";
 
 interface ClientDetailsDialogProps {
   open: boolean;
@@ -25,10 +32,119 @@ export function ClientDetailsDialog({
   onNavigateToExpenses 
 }: ClientDetailsDialogProps) {
   const [invoiceOpen, setInvoiceOpen] = useState(false);
-  const clientExpenses = allExpenses.filter(e => e.booking_id === booking.id);
+  const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
+  const [noteDialogOpen, setNoteDialogOpen] = useState(false);
+  const [localBooking, setLocalBooking] = useState(booking);
+  
+  const [paymentAmount, setPaymentAmount] = useState("");
+  const [paymentMethod, setPaymentMethod] = useState("cash");
+  const [paymentDate, setPaymentDate] = useState(format(new Date(), "yyyy-MM-dd"));
+  const [paymentNotes, setPaymentNotes] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  
+  const [noteText, setNoteText] = useState(booking.notes || "");
+  
+  const { toast } = useToast();
+
+  const clientExpenses = allExpenses.filter(e => e.booking_id === localBooking.id);
   const totalExpenses = clientExpenses.reduce((sum, e) => sum + e.amount, 0);
-  const netProfit = booking.total_cost - totalExpenses;
-  const profitMargin = booking.total_cost > 0 ? ((netProfit / booking.total_cost) * 100).toFixed(1) : "0";
+  const netProfit = localBooking.total_cost - totalExpenses;
+  const profitMargin = localBooking.total_cost > 0 ? ((netProfit / localBooking.total_cost) * 100).toFixed(1) : "0";
+
+  const handleAddPayment = async () => {
+    if (!paymentAmount || parseFloat(paymentAmount) <= 0) {
+      toast({
+        title: "Invalid Amount",
+        description: "Please enter a valid payment amount.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    try {
+      setSubmitting(true);
+      
+      await paymentService.createPayment({
+        booking_id: localBooking.id,
+        amount: parseFloat(paymentAmount),
+        payment_method: paymentMethod,
+        payment_date: paymentDate,
+        notes: paymentNotes || undefined
+      });
+
+      const updatedBooking = await bookingService.getBookingById(localBooking.id);
+      if (updatedBooking) {
+        const totalPaid = updatedBooking.payments?.reduce((sum, p) => sum + Number(p.amount), 0) || 0;
+        const balanceDue = updatedBooking.total_cost - totalPaid;
+        
+        let paymentStatus: "pending" | "partial" | "paid" = "pending";
+        if (balanceDue <= 0) paymentStatus = "paid";
+        else if (totalPaid > 0) paymentStatus = "partial";
+
+        await bookingService.updateBooking(localBooking.id, {
+          amount_paid: totalPaid,
+          balance_due: balanceDue,
+          payment_status: paymentStatus
+        });
+
+        const refreshedBooking = await bookingService.getBookingById(localBooking.id);
+        if (refreshedBooking) {
+          setLocalBooking(refreshedBooking);
+        }
+      }
+
+      toast({
+        title: "Payment Added",
+        description: `Payment of ${formatCurrency(parseFloat(paymentAmount))} recorded successfully.`
+      });
+
+      setPaymentAmount("");
+      setPaymentMethod("cash");
+      setPaymentDate(format(new Date(), "yyyy-MM-dd"));
+      setPaymentNotes("");
+      setPaymentDialogOpen(false);
+    } catch (error) {
+      console.error("Error adding payment:", error);
+      toast({
+        title: "Error",
+        description: "Failed to add payment. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleUpdateNote = async () => {
+    try {
+      setSubmitting(true);
+      
+      await bookingService.updateBooking(localBooking.id, {
+        notes: noteText || null
+      });
+
+      const refreshedBooking = await bookingService.getBookingById(localBooking.id);
+      if (refreshedBooking) {
+        setLocalBooking(refreshedBooking);
+      }
+
+      toast({
+        title: "Note Updated",
+        description: "Booking note has been updated successfully."
+      });
+
+      setNoteDialogOpen(false);
+    } catch (error) {
+      console.error("Error updating note:", error);
+      toast({
+        title: "Error",
+        description: "Failed to update note. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   const getCategoryColor = (category: string) => {
     const colors: Record<string, string> = {
@@ -52,16 +168,37 @@ export function ClientDetailsDialog({
             <div className="flex items-center justify-between">
               <DialogTitle className="flex items-center gap-2 text-xl">
                 <Users className="h-5 w-5 text-blue-600" />
-                Client Details - {booking.contact_name}
+                Client Details - {localBooking.contact_name}
               </DialogTitle>
-              <Button 
-                onClick={() => setInvoiceOpen(true)}
-                variant="outline"
-                className="flex items-center gap-2"
-              >
-                <FileText className="h-4 w-4" />
-                Open Invoice
-              </Button>
+              <div className="flex gap-2">
+                <Button 
+                  onClick={() => setPaymentDialogOpen(true)}
+                  variant="default"
+                  size="sm"
+                  className="flex items-center gap-2 bg-green-600 hover:bg-green-700"
+                >
+                  <Plus className="h-4 w-4" />
+                  Add Payment
+                </Button>
+                <Button 
+                  onClick={() => setNoteDialogOpen(true)}
+                  variant="default"
+                  size="sm"
+                  className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700"
+                >
+                  <StickyNote className="h-4 w-4" />
+                  Add Note
+                </Button>
+                <Button 
+                  onClick={() => setInvoiceOpen(true)}
+                  variant="outline"
+                  size="sm"
+                  className="flex items-center gap-2"
+                >
+                  <FileText className="h-4 w-4" />
+                  Invoice
+                </Button>
+              </div>
             </div>
           </DialogHeader>
 
@@ -69,13 +206,13 @@ export function ClientDetailsDialog({
             <div className="grid grid-cols-3 gap-4">
               <div className="text-center p-4 bg-blue-50 dark:bg-blue-950 rounded-lg">
                 <p className="text-sm text-slate-600 dark:text-slate-400 mb-1">Revenue</p>
-                <p className="text-2xl font-bold text-blue-600">{formatCurrency(booking.total_cost)}</p>
+                <p className="text-2xl font-bold text-blue-600">{formatCurrency(localBooking.total_cost)}</p>
               </div>
               <div 
                 className="text-center p-4 bg-red-50 dark:bg-red-950 rounded-lg cursor-pointer hover:bg-red-100 dark:hover:bg-red-900 transition-colors"
                 onClick={() => {
                   if (onNavigateToExpenses) {
-                    onNavigateToExpenses(booking.id);
+                    onNavigateToExpenses(localBooking.id);
                     onOpenChange(false);
                   }
                 }}
@@ -104,25 +241,25 @@ export function ClientDetailsDialog({
                 <CardContent className="space-y-2 text-sm">
                   <div className="flex justify-between">
                     <span className="text-slate-600 dark:text-slate-400">Contact:</span>
-                    <span className="font-medium">{booking.contact_name}</span>
+                    <span className="font-medium">{localBooking.contact_name}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-slate-600 dark:text-slate-400">Email:</span>
-                    <span className="font-medium">{booking.contact_email}</span>
+                    <span className="font-medium">{localBooking.contact_email}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-slate-600 dark:text-slate-400">Phone:</span>
-                    <span className="font-medium">{booking.contact_phone}</span>
+                    <span className="font-medium">{localBooking.contact_phone}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-slate-600 dark:text-slate-400">Dates:</span>
                     <span className="font-medium">
-                      {format(new Date(booking.start_date), "MMM d")} - {format(new Date(booking.end_date), "MMM d, yyyy")}
+                      {format(new Date(localBooking.start_date), "MMM d")} - {format(new Date(localBooking.end_date), "MMM d, yyyy")}
                     </span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-slate-600 dark:text-slate-400">Guests:</span>
-                    <span className="font-medium">{booking.number_of_guests} people</span>
+                    <span className="font-medium">{localBooking.number_of_guests} people</span>
                   </div>
                 </CardContent>
               </Card>
@@ -137,7 +274,7 @@ export function ClientDetailsDialog({
                 <CardContent className="space-y-2 text-sm">
                   <div className="flex justify-between">
                     <span className="text-slate-600 dark:text-slate-400">Total Revenue:</span>
-                    <span className="font-bold text-green-600">{formatCurrency(booking.total_cost)}</span>
+                    <span className="font-bold text-green-600">{formatCurrency(localBooking.total_cost)}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-slate-600 dark:text-slate-400">Total Expenses:</span>
@@ -172,27 +309,27 @@ export function ClientDetailsDialog({
                     <p className="font-medium">Base Rate</p>
                     <p className="text-xs text-slate-600 dark:text-slate-400">Resort rental fee</p>
                   </div>
-                  <p className="font-bold text-green-600">{formatCurrency(booking.base_rate)}</p>
+                  <p className="font-bold text-green-600">{formatCurrency(localBooking.base_rate)}</p>
                 </div>
                 <div className="flex justify-between items-center p-3 bg-green-50 dark:bg-green-900/20 rounded-lg">
                   <div>
                     <p className="font-medium">Per Person Charges</p>
-                    <p className="text-xs text-slate-600 dark:text-slate-400">{booking.number_of_guests} guests × ${booking.per_person_rate}</p>
+                    <p className="text-xs text-slate-600 dark:text-slate-400">{localBooking.number_of_guests} guests × ${localBooking.per_person_rate}</p>
                   </div>
-                  <p className="font-bold text-green-600">{formatCurrency(booking.number_of_guests * booking.per_person_rate)}</p>
+                  <p className="font-bold text-green-600">{formatCurrency(localBooking.number_of_guests * localBooking.per_person_rate)}</p>
                 </div>
                 <div className="flex justify-between items-center p-3 bg-green-50 dark:bg-green-900/20 rounded-lg">
                   <div>
                     <p className="font-medium">Cleaning Fees</p>
                     <p className="text-xs text-slate-600 dark:text-slate-400">
-                      Base: ${booking.cleaning_fee} {booking.additional_cleaning_fee > 0 && `+ Additional: $${booking.additional_cleaning_fee}`}
+                      Base: ${localBooking.cleaning_fee} {localBooking.additional_cleaning_fee > 0 && `+ Additional: $${localBooking.additional_cleaning_fee}`}
                     </p>
                   </div>
-                  <p className="font-bold text-green-600">{formatCurrency(booking.cleaning_fee + booking.additional_cleaning_fee)}</p>
+                  <p className="font-bold text-green-600">{formatCurrency(localBooking.cleaning_fee + localBooking.additional_cleaning_fee)}</p>
                 </div>
                 <div className="flex justify-between items-center p-4 bg-green-100 dark:bg-green-900/30 rounded-lg border-2 border-green-600">
                   <p className="font-bold text-lg">Total Revenue</p>
-                  <p className="font-bold text-2xl text-green-600">{formatCurrency(booking.total_cost)}</p>
+                  <p className="font-bold text-2xl text-green-600">{formatCurrency(localBooking.total_cost)}</p>
                 </div>
               </CardContent>
             </Card>
@@ -253,24 +390,23 @@ export function ClientDetailsDialog({
               <CardContent className="space-y-3">
                 <div className="flex justify-between items-center p-3 bg-slate-50 dark:bg-slate-800 rounded-lg">
                   <span className="text-slate-600 dark:text-slate-400">Amount Paid:</span>
-                  <span className="font-bold text-green-600">{formatCurrency(booking.amount_paid)}</span>
+                  <span className="font-bold text-green-600">{formatCurrency(localBooking.amount_paid)}</span>
                 </div>
                 <div className="flex justify-between items-center p-3 bg-slate-50 dark:bg-slate-800 rounded-lg">
                   <span className="text-slate-600 dark:text-slate-400">Balance Due:</span>
-                  <span className={`font-bold ${booking.balance_due > 0 ? "text-orange-600" : "text-green-600"}`}>
-                    {formatCurrency(booking.balance_due)}
+                  <span className={`font-bold ${localBooking.balance_due > 0 ? "text-orange-600" : "text-green-600"}`}>
+                    {formatCurrency(localBooking.balance_due)}
                   </span>
                 </div>
                 <div className="flex justify-between items-center p-3 bg-slate-50 dark:bg-slate-800 rounded-lg">
                   <span className="text-slate-600 dark:text-slate-400">Payment Status:</span>
-                  <Badge variant={booking.payment_status === "paid" ? "default" : "secondary"}>
-                    {(booking.payment_status || '').replace("_", " ")}
+                  <Badge variant={localBooking.payment_status === "paid" ? "default" : "secondary"}>
+                    {(localBooking.payment_status || '').replace("_", " ")}
                   </Badge>
                 </div>
               </CardContent>
             </Card>
 
-            {/* Total Profit Summary Bar */}
             <Card className={`border-2 ${netProfit >= 0 ? "border-green-600 bg-green-50 dark:bg-green-950/20" : "border-red-600 bg-red-50 dark:bg-red-950/20"}`}>
               <CardContent className="pt-6">
                 <div className="flex items-center justify-between">
@@ -287,7 +423,7 @@ export function ClientDetailsDialog({
                     <div>
                       <p className="text-sm font-medium text-slate-600 dark:text-slate-400">Total Profit for This Client</p>
                       <p className="text-xs text-slate-500 dark:text-slate-500">
-                        Revenue ({formatCurrency(booking.total_cost)}) - Expenses ({formatCurrency(totalExpenses)})
+                        Revenue ({formatCurrency(localBooking.total_cost)}) - Expenses ({formatCurrency(totalExpenses)})
                       </p>
                     </div>
                   </div>
@@ -306,10 +442,110 @@ export function ClientDetailsDialog({
         </DialogContent>
       </Dialog>
 
+      <Dialog open={paymentDialogOpen} onOpenChange={setPaymentDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <DollarSign className="h-5 w-5 text-green-600" />
+              Add Payment
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="amount">Payment Amount</Label>
+              <Input
+                id="amount"
+                type="number"
+                placeholder="0.00"
+                value={paymentAmount}
+                onChange={(e) => setPaymentAmount(e.target.value)}
+                step="0.01"
+                min="0"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="payment-method">Payment Method</Label>
+              <Select value={paymentMethod} onValueChange={setPaymentMethod}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="cash">Cash</SelectItem>
+                  <SelectItem value="check">Check</SelectItem>
+                  <SelectItem value="credit_card">Credit Card</SelectItem>
+                  <SelectItem value="bank_transfer">Bank Transfer</SelectItem>
+                  <SelectItem value="venmo">Venmo</SelectItem>
+                  <SelectItem value="zelle">Zelle</SelectItem>
+                  <SelectItem value="other">Other</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="payment-date">Payment Date</Label>
+              <Input
+                id="payment-date"
+                type="date"
+                value={paymentDate}
+                onChange={(e) => setPaymentDate(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="payment-notes">Notes (Optional)</Label>
+              <Textarea
+                id="payment-notes"
+                placeholder="Additional payment details..."
+                value={paymentNotes}
+                onChange={(e) => setPaymentNotes(e.target.value)}
+                rows={3}
+              />
+            </div>
+          </div>
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" onClick={() => setPaymentDialogOpen(false)} disabled={submitting}>
+              Cancel
+            </Button>
+            <Button onClick={handleAddPayment} disabled={submitting} className="bg-green-600 hover:bg-green-700">
+              {submitting ? "Adding..." : "Add Payment"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={noteDialogOpen} onOpenChange={setNoteDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <StickyNote className="h-5 w-5 text-blue-600" />
+              Add/Update Note
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="note-text">Booking Note</Label>
+              <Textarea
+                id="note-text"
+                placeholder="Add notes about this booking..."
+                value={noteText}
+                onChange={(e) => setNoteText(e.target.value)}
+                rows={6}
+              />
+            </div>
+          </div>
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" onClick={() => setNoteDialogOpen(false)} disabled={submitting}>
+              Cancel
+            </Button>
+            <Button onClick={handleUpdateNote} disabled={submitting} className="bg-blue-600 hover:bg-blue-700">
+              {submitting ? "Saving..." : "Save Note"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       <InvoiceDialog 
         open={invoiceOpen}
         onOpenChange={setInvoiceOpen}
-        booking={booking}
+        booking={localBooking}
       />
     </>
   );
