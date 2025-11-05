@@ -1,4 +1,4 @@
- 
+/* eslint-disable @typescript-eslint/no-empty-object-type */
 export type Json =
   | string
   | number
@@ -145,6 +145,77 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "expenses_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      invoices: {
+        Row: {
+          balance_due: number
+          base_price: number
+          booking_id: string
+          client_email: string | null
+          client_name: string
+          client_phone: string | null
+          created_at: string | null
+          deposit_amount: number
+          event_date_end: string
+          event_date_start: string
+          id: string
+          invoice_number: string
+          notes: string | null
+          number_of_guests: number
+          number_of_rooms: number
+          status: string
+          total_amount: number
+          updated_at: string | null
+        }
+        Insert: {
+          balance_due: number
+          base_price: number
+          booking_id: string
+          client_email?: string | null
+          client_name: string
+          client_phone?: string | null
+          created_at?: string | null
+          deposit_amount: number
+          event_date_end: string
+          event_date_start: string
+          id?: string
+          invoice_number: string
+          notes?: string | null
+          number_of_guests: number
+          number_of_rooms: number
+          status?: string
+          total_amount: number
+          updated_at?: string | null
+        }
+        Update: {
+          balance_due?: number
+          base_price?: number
+          booking_id?: string
+          client_email?: string | null
+          client_name?: string
+          client_phone?: string | null
+          created_at?: string | null
+          deposit_amount?: number
+          event_date_end?: string
+          event_date_start?: string
+          id?: string
+          invoice_number?: string
+          notes?: string | null
+          number_of_guests?: number
+          number_of_rooms?: number
+          status?: string
+          total_amount?: number
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invoices_booking_id_fkey"
             columns: ["booking_id"]
             isOneToOne: false
             referencedRelation: "bookings"
