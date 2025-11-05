@@ -377,25 +377,25 @@ export default function HomePage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-slate-100 to-slate-200 dark:from-slate-950 dark:via-slate-900 dark:to-slate-800 flex items-center justify-center">
+      <div className="min-h-screen bg-stone-50 dark:bg-stone-950 flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-slate-600 dark:text-slate-400">Loading your data...</p>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-500 mx-auto mb-4"></div>
+          <p className="text-stone-600 dark:text-stone-400">Loading your data...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-slate-100 to-slate-200 dark:from-slate-950 dark:via-slate-900 dark:to-slate-800">
-      <header className="border-b border-slate-200 dark:border-slate-700 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md sticky top-0 z-50 shadow-sm">
+    <div className="min-h-screen bg-stone-50 dark:bg-stone-950">
+      <header className="border-b border-stone-200 dark:border-stone-800 bg-white/95 dark:bg-stone-900/95 backdrop-blur-sm sticky top-0 z-50 shadow-sm">
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-2xl font-bold text-slate-900 dark:text-white bg-gradient-to-r from-blue-600 to-cyan-600 bg-clip-text text-transparent">
+              <h1 className="text-2xl font-bold text-stone-900 dark:text-stone-100">
                 Trout Lake Resort
               </h1>
-              <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">
+              <p className="text-sm text-stone-600 dark:text-stone-400 mt-1">
                 Booking Management System
               </p>
             </div>
@@ -406,39 +406,39 @@ export default function HomePage() {
 
       <main className="container mx-auto px-4 py-8">
         <div className="grid gap-6 md:grid-cols-4 mb-8">
-          <Card className="bg-gradient-to-br from-white to-slate-50 dark:from-slate-800 dark:to-slate-900 border-slate-200 dark:border-slate-700 hover:shadow-lg transition-all duration-300 hover:-translate-y-1">
+          <Card className="bg-white dark:bg-stone-900 border-stone-200 dark:border-stone-800 hover:shadow-lg transition-all duration-300">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-slate-700 dark:text-slate-300">Total Bookings</CardTitle>
-              <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
-                <Calendar className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+              <CardTitle className="text-sm font-medium text-stone-700 dark:text-stone-300">Total Bookings</CardTitle>
+              <div className="p-2 bg-amber-100 dark:bg-amber-900/30 rounded-lg">
+                <Calendar className="h-4 w-4 text-amber-600 dark:text-amber-400" />
               </div>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-slate-900 dark:text-white">{bookings.length}</div>
-              <p className="text-xs text-slate-600 dark:text-slate-400 mt-1">
+              <div className="text-2xl font-bold text-stone-900 dark:text-stone-100">{bookings.length}</div>
+              <p className="text-xs text-stone-600 dark:text-stone-400 mt-1">
                 Active reservations
               </p>
             </CardContent>
           </Card>
 
-          <Card className="bg-gradient-to-br from-white to-emerald-50 dark:from-slate-800 dark:to-emerald-900/20 border-slate-200 dark:border-slate-700 hover:shadow-lg transition-all duration-300 hover:-translate-y-1">
+          <Card className="bg-white dark:bg-stone-900 border-stone-200 dark:border-stone-800 hover:shadow-lg transition-all duration-300">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-slate-700 dark:text-slate-300">Total Guests</CardTitle>
+              <CardTitle className="text-sm font-medium text-stone-700 dark:text-stone-300">Total Guests</CardTitle>
               <div className="p-2 bg-emerald-100 dark:bg-emerald-900/30 rounded-lg">
                 <Users className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
               </div>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-slate-900 dark:text-white">{totalGuests}</div>
-              <p className="text-xs text-slate-600 dark:text-slate-400 mt-1">
+              <div className="text-2xl font-bold text-stone-900 dark:text-stone-100">{totalGuests}</div>
+              <p className="text-xs text-stone-600 dark:text-stone-400 mt-1">
                 Expected attendees
               </p>
             </CardContent>
           </Card>
 
-          <Card className="bg-gradient-to-br from-white to-green-50 dark:from-slate-800 dark:to-green-900/20 border-slate-200 dark:border-slate-700 hover:shadow-lg transition-all duration-300 hover:-translate-y-1">
+          <Card className="bg-white dark:bg-stone-900 border-stone-200 dark:border-stone-800 hover:shadow-lg transition-all duration-300">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-slate-700 dark:text-slate-300">Total Revenue</CardTitle>
+              <CardTitle className="text-sm font-medium text-stone-700 dark:text-stone-300">Total Revenue</CardTitle>
               <div className="p-2 bg-green-100 dark:bg-green-900/30 rounded-lg">
                 <DollarSign className="h-4 w-4 text-green-600 dark:text-green-400" />
               </div>
@@ -447,15 +447,15 @@ export default function HomePage() {
               <div className="text-2xl font-bold text-green-600 dark:text-green-400">
                 ${totalRevenue.toLocaleString()}
               </div>
-              <p className="text-xs text-slate-600 dark:text-slate-400 mt-1">
+              <p className="text-xs text-stone-600 dark:text-stone-400 mt-1">
                 From all bookings
               </p>
             </CardContent>
           </Card>
 
-          <Card className={`bg-gradient-to-br ${netProfit >= 0 ? 'from-white to-cyan-50 dark:from-slate-800 dark:to-cyan-900/20' : 'from-white to-red-50 dark:from-slate-800 dark:to-red-900/20'} border-slate-200 dark:border-slate-700 hover:shadow-lg transition-all duration-300 hover:-translate-y-1`}>
+          <Card className={`bg-white dark:bg-stone-900 border-stone-200 dark:border-stone-800 hover:shadow-lg transition-all duration-300`}>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-slate-700 dark:text-slate-300">Net Profit</CardTitle>
+              <CardTitle className="text-sm font-medium text-stone-700 dark:text-stone-300">Net Profit</CardTitle>
               <div className={`p-2 ${netProfit >= 0 ? 'bg-cyan-100 dark:bg-cyan-900/30' : 'bg-red-100 dark:bg-red-900/30'} rounded-lg`}>
                 <FileText className={`h-4 w-4 ${netProfit >= 0 ? 'text-cyan-600 dark:text-cyan-400' : 'text-red-600 dark:text-red-400'}`} />
               </div>
@@ -464,7 +464,7 @@ export default function HomePage() {
               <div className={`text-2xl font-bold ${netProfit >= 0 ? "text-cyan-600 dark:text-cyan-400" : "text-red-600 dark:text-red-400"}`}>
                 ${netProfit.toLocaleString()}
               </div>
-              <p className="text-xs text-slate-600 dark:text-slate-400 mt-1">
+              <p className="text-xs text-stone-600 dark:text-stone-400 mt-1">
                 Revenue - Expenses
               </p>
             </CardContent>
@@ -477,27 +477,27 @@ export default function HomePage() {
             setFilteredBookingId(undefined);
           }
         }} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-6 lg:w-[900px] bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-1">
-            <TabsTrigger value="bookings" className="data-[state=active]:bg-blue-100 dark:data-[state=active]:bg-blue-900/30 data-[state=active]:text-blue-700 dark:data-[state=active]:text-blue-300">Bookings</TabsTrigger>
-            <TabsTrigger value="calendar" className="data-[state=active]:bg-blue-100 dark:data-[state=active]:bg-blue-900/30 data-[state=active]:text-blue-700 dark:data-[state=active]:text-blue-300">Calendar</TabsTrigger>
-            <TabsTrigger value="budget" className="data-[state=active]:bg-blue-100 dark:data-[state=active]:bg-blue-900/30 data-[state=active]:text-blue-700 dark:data-[state=active]:text-blue-300">Budget</TabsTrigger>
-            <TabsTrigger value="expenses" className="data-[state=active]:bg-blue-100 dark:data-[state=active]:bg-blue-900/30 data-[state=active]:text-blue-700 dark:data-[state=active]:text-blue-300">Expenses</TabsTrigger>
-            <TabsTrigger value="receipts" className="data-[state=active]:bg-blue-100 dark:data-[state=active]:bg-blue-900/30 data-[state=active]:text-blue-700 dark:data-[state=active]:text-blue-300">Receipts</TabsTrigger>
-            <TabsTrigger value="manager" className="data-[state=active]:bg-blue-100 dark:data-[state=active]:bg-blue-900/30 data-[state=active]:text-blue-700 dark:data-[state=active]:text-blue-300">Manager</TabsTrigger>
+          <TabsList className="grid w-full grid-cols-6 lg:w-[900px] bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 p-1">
+            <TabsTrigger value="bookings" className="data-[state=active]:bg-amber-100 dark:data-[state=active]:bg-amber-900/30 data-[state=active]:text-amber-900 dark:data-[state=active]:text-amber-100">Bookings</TabsTrigger>
+            <TabsTrigger value="calendar" className="data-[state=active]:bg-amber-100 dark:data-[state=active]:bg-amber-900/30 data-[state=active]:text-amber-900 dark:data-[state=active]:text-amber-100">Calendar</TabsTrigger>
+            <TabsTrigger value="budget" className="data-[state=active]:bg-amber-100 dark:data-[state=active]:bg-amber-900/30 data-[state=active]:text-amber-900 dark:data-[state=active]:text-amber-100">Budget</TabsTrigger>
+            <TabsTrigger value="expenses" className="data-[state=active]:bg-amber-100 dark:data-[state=active]:bg-amber-900/30 data-[state=active]:text-amber-900 dark:data-[state=active]:text-amber-100">Expenses</TabsTrigger>
+            <TabsTrigger value="receipts" className="data-[state=active]:bg-amber-100 dark:data-[state=active]:bg-amber-900/30 data-[state=active]:text-amber-900 dark:data-[state=active]:text-amber-100">Receipts</TabsTrigger>
+            <TabsTrigger value="manager" className="data-[state=active]:bg-amber-100 dark:data-[state=active]:bg-amber-900/30 data-[state=active]:text-amber-900 dark:data-[state=active]:text-amber-100">Manager</TabsTrigger>
           </TabsList>
 
           <TabsContent value="bookings" className="space-y-4">
-            <Card className="bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700">
+            <Card className="bg-white dark:bg-stone-900 border-stone-200 dark:border-stone-800">
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <div>
-                    <CardTitle className="text-slate-900 dark:text-white">All Bookings</CardTitle>
-                    <CardDescription className="text-slate-600 dark:text-slate-400">
+                    <CardTitle className="text-stone-900 dark:text-stone-100">All Bookings</CardTitle>
+                    <CardDescription className="text-stone-600 dark:text-stone-400">
                       Manage your Yom Tov, Shabaton, and Night Event bookings
                     </CardDescription>
                   </div>
                   <Button
-                    className="bg-blue-600 hover:bg-blue-700 text-white shadow-md hover:shadow-lg transition-all"
+                    className="bg-orange-600 hover:bg-orange-700 text-white shadow-md hover:shadow-lg transition-all"
                     onClick={() => {
                       setEditingBooking(undefined);
                       setBookingDialogOpen(true);
@@ -510,7 +510,7 @@ export default function HomePage() {
               </CardHeader>
               <CardContent>
                 {bookings.length === 0 ? (
-                  <div className="text-center py-12 text-slate-500 dark:text-slate-400">
+                  <div className="text-center py-12 text-stone-500 dark:text-stone-400">
                     <Calendar className="h-12 w-12 mx-auto mb-4 opacity-50" />
                     <p className="text-lg font-medium mb-2">No bookings yet</p>
                     <p className="text-sm">Create your first booking to get started</p>
@@ -547,17 +547,17 @@ export default function HomePage() {
           </TabsContent>
 
           <TabsContent value="expenses" className="space-y-4">
-            <Card className="bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700">
+            <Card className="bg-white dark:bg-stone-900 border-stone-200 dark:border-stone-800">
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <div>
-                    <CardTitle className="text-slate-900 dark:text-white">Expense Tracking</CardTitle>
-                    <CardDescription className="text-slate-600 dark:text-slate-400">
+                    <CardTitle className="text-stone-900 dark:text-stone-100">Expense Tracking</CardTitle>
+                    <CardDescription className="text-stone-600 dark:text-stone-400">
                       Record expenses with receipts and payment proof
                     </CardDescription>
                   </div>
                   <Button 
-                    className="bg-blue-600 hover:bg-blue-700 text-white shadow-md hover:shadow-lg transition-all"
+                    className="bg-orange-600 hover:bg-orange-700 text-white shadow-md hover:shadow-lg transition-all"
                     onClick={() => {
                       setEditingExpense(undefined);
                       setExpenseDialogOpen(true);
@@ -570,7 +570,7 @@ export default function HomePage() {
               </CardHeader>
               <CardContent>
                 {expenses.length === 0 ? (
-                  <div className="text-center py-12 text-slate-500 dark:text-slate-400">
+                  <div className="text-center py-12 text-stone-500 dark:text-stone-400">
                     <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
                     <p className="text-lg font-medium mb-2">No expenses recorded</p>
                     <p className="text-sm">Start tracking your expenses with receipts</p>
@@ -593,10 +593,10 @@ export default function HomePage() {
           </TabsContent>
 
           <TabsContent value="manager" className="space-y-4">
-            <Card className="bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700">
+            <Card className="bg-white dark:bg-stone-900 border-stone-200 dark:border-stone-800">
               <CardHeader>
-                <CardTitle className="text-slate-900 dark:text-white">Manager Compensation</CardTitle>
-                <CardDescription className="text-slate-600 dark:text-slate-400">
+                <CardTitle className="text-stone-900 dark:text-stone-100">Manager Compensation</CardTitle>
+                <CardDescription className="text-stone-600 dark:text-stone-400">
                   Track maintenance fees, commissions, and payments to manager
                 </CardDescription>
               </CardHeader>

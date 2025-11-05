@@ -3,68 +3,68 @@
 @tailwind utilities;
 
 :root {
-  /* Warm, comfortable background colors */
-  --background: 250 250 252;
-  --foreground: 15 23 42;
+  /* Warm, neutral backgrounds */
+  --background: 45 20% 97%;
+  --foreground: 20 10% 15%;
   
-  /* Soft card backgrounds */
-  --card: 255 255 255;
-  --card-foreground: 15 23 42;
+  /* Clean card backgrounds */
+  --card: 0 0% 100%;
+  --card-foreground: 20 10% 15%;
   
-  /* Subtle borders */
-  --border: 226 232 240;
-  --input: 226 232 240;
+  /* Natural borders */
+  --border: 30 15% 88%;
+  --input: 30 15% 88%;
   
-  /* Professional accent colors */
-  --primary: 59 130 246;
-  --primary-foreground: 255 255 255;
+  /* Warm accent colors */
+  --primary: 24 85% 50%;
+  --primary-foreground: 0 0% 100%;
   
-  --secondary: 241 245 249;
-  --secondary-foreground: 15 23 42;
+  --secondary: 45 20% 94%;
+  --secondary-foreground: 20 10% 15%;
   
-  --muted: 241 245 249;
-  --muted-foreground: 100 116 139;
+  --muted: 45 20% 94%;
+  --muted-foreground: 20 10% 45%;
   
-  --accent: 241 245 249;
-  --accent-foreground: 15 23 42;
+  --accent: 45 20% 94%;
+  --accent-foreground: 20 10% 15%;
   
-  --destructive: 239 68 68;
-  --destructive-foreground: 255 255 255;
+  --destructive: 0 72% 51%;
+  --destructive-foreground: 0 0% 100%;
   
-  --ring: 59 130 246;
+  --ring: 24 85% 50%;
   --radius: 0.5rem;
 }
 
 .dark {
-  /* Deep, comfortable dark backgrounds */
-  --background: 15 23 42;
-  --foreground: 248 250 252;
+  /* Deep, warm dark backgrounds */
+  --background: 20 15% 10%;
+  --foreground: 45 20% 95%;
   
   /* Elevated dark cards */
-  --card: 30 41 59;
-  --card-foreground: 248 250 252;
+  --card: 20 15% 15%;
+  --card-foreground: 45 20% 95%;
   
-  /* Subtle dark borders */
-  --border: 51 65 85;
-  --input: 51 65 85;
+  /* Warm dark borders */
+  --border: 20 15% 25%;
+  --input: 20 15% 25%;
   
-  /* Professional dark accents */
-  --primary: 96 165 250;
-  --primary-foreground: 15 23 42;
+  /* Warm dark accents */
+  --primary: 24 85% 55%;
+  --primary-foreground: 20 15% 10%;
   
-  --secondary: 51 65 85;
-  --secondary-foreground: 248 250 252;
+  --secondary: 20 15% 20%;
+  --secondary-foreground: 45 20% 95%;
   
-  --muted: 51 65 85;
-  --muted-foreground: 148 163 184;
+  --muted: 20 15% 20%;
+  --muted-foreground: 45 15% 65%;
   
-  --accent: 51 65 85;
-  --accent-foreground: 248 250 252;
+  --accent: 20 15% 20%;
+  --accent-foreground: 45 20% 95%;
   
-  --destructive: 248 113 113;
-  --destructive-foreground: 15 23 42;
+  --destructive: 0 72% 60%;
+  --destructive-foreground: 20 15% 10%;
   
-  --ring: 96 165 250;
+  --ring: 24 85% 55%;
 }
 
 * {
@@ -76,30 +76,30 @@ body {
   font-feature-settings: "rlig" 1, "calt" 1;
 }
 
-/* Smooth transitions for theme changes */
+/* Smooth transitions */
 * {
   transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
 }
 
-/* Custom scrollbar for better aesthetics */
+/* Custom scrollbar */
 ::-webkit-scrollbar {
   width: 10px;
   height: 10px;
 }
 
 ::-webkit-scrollbar-track {
-  @apply bg-slate-100 dark:bg-slate-800;
+  @apply bg-neutral-100 dark:bg-neutral-800;
 }
 
 ::-webkit-scrollbar-thumb {
-  @apply bg-slate-300 dark:bg-slate-600 rounded-lg;
+  @apply bg-neutral-300 dark:bg-neutral-600 rounded-lg;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  @apply bg-slate-400 dark:bg-slate-500;
+  @apply bg-neutral-400 dark:bg-neutral-500;
 }
 
-/* Soft shadows for depth */
+/* Soft shadows */
 .card-shadow {
   box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px -1px rgba(0, 0, 0, 0.1);
 }
