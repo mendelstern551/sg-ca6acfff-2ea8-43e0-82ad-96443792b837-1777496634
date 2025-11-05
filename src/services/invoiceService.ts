@@ -65,11 +65,11 @@ export const invoiceService = {
     const { data, error } = await supabase
       .from("invoices")
       .insert([invoiceData])
-      .select()
-      .single();
+      .select();
 
     if (error) throw error;
-    return data;
+    if (!data || data.length === 0) throw new Error("Failed to create invoice");
+    return data[0];
   },
 
   async getInvoiceByBookingId(bookingId: string): Promise<Invoice | null> {
@@ -78,11 +78,18 @@ export const invoiceService = {
       .select("*")
       .eq("booking_id", bookingId)
       .order("created_at", { ascending: false })
-      .limit(1)
-      .single();
+      .limit(1);
 
-    if (error && error.code !== "PGRST116") throw error;
-    return data;
+    if (error) {
+      console.error("Error fetching invoice:", error);
+      throw error;
+    }
+    
+    if (!data || data.length === 0) {
+      return null;
+    }
+    
+    return data[0];
   },
 
   async getAllInvoices(): Promise<Invoice[]> {
