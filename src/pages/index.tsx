@@ -239,7 +239,7 @@ export default function HomePage() {
       expense_date: comp.due_date,
       receipt_urls: [],
       proof_urls: [],
-      notes: comp.notes || `15% commission (min $1,000) for ${booking?.type || 'booking'}`,
+      notes: comp.notes || `15% commission (min $1,000) for ${booking?.booking_type || 'booking'}`,
       created_at: comp.created_at,
       updated_at: comp.updated_at,
     };
