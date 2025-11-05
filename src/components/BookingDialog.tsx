@@ -34,7 +34,6 @@ export function BookingDialog({ open, onOpenChange, onSave, booking: editingBook
   const [contactPhone, setContactPhone] = useState("");
   const [dateRange, setDateRange] = useState<DateRange | undefined>();
   const [numberOfGuests, setNumberOfGuests] = useState<number | "">("");
-  const [numberOfRooms, setNumberOfRooms] = useState<number | "">(1);
   const [baseRate, setBaseRate] = useState<number>(0);
   const [perPersonRate, setPerPersonRate] = useState<number>(0);
   const [cleaningFee, setCleaningFee] = useState<number>(0);
@@ -58,7 +57,6 @@ export function BookingDialog({ open, onOpenChange, onSave, booking: editingBook
       setContactPhone(editingBooking.contact_phone || "");
       setDateRange({ from: new Date(editingBooking.start_date), to: new Date(editingBooking.end_date) });
       setNumberOfGuests(editingBooking.number_of_guests);
-      setNumberOfRooms(editingBooking.number_of_rooms || 1);
       setBaseRate(editingBooking.base_rate);
       setPerPersonRate(editingBooking.per_person_rate);
       setCleaningFee(editingBooking.cleaning_fee);
@@ -91,7 +89,6 @@ export function BookingDialog({ open, onOpenChange, onSave, booking: editingBook
     setContactPhone("");
     setDateRange(undefined);
     setNumberOfGuests("");
-    setNumberOfRooms(1);
     setBaseRate(0);
     setPerPersonRate(0);
     setCleaningFee(0);
@@ -141,7 +138,7 @@ export function BookingDialog({ open, onOpenChange, onSave, booking: editingBook
       start_date: dateRange.from.toISOString(),
       end_date: dateRange.to.toISOString(),
       number_of_guests: Number(numberOfGuests),
-      number_of_rooms: Number(numberOfRooms || 1),
+      number_of_rooms: 1,
       base_rate: baseRate,
       per_person_rate: perPersonRate,
       cleaning_fee: cleaningFee,
@@ -244,12 +241,9 @@ export function BookingDialog({ open, onOpenChange, onSave, booking: editingBook
 
               <div className="space-y-2">
                 <Label htmlFor="numberOfGuests">Number of Guests</Label>
-                <Input id="numberOfGuests" type="number" min="0" value={numberOfGuests} onChange={(e) => setNumberOfGuests(e.target.value === '' ? '' : parseInt(e.target.value))} placeholder="0" required />
+                <Input id="numberOfGuests" type="number" min="1" value={numberOfGuests} onChange={(e) => setNumberOfGuests(e.target.value === '' ? '' : parseInt(e.target.value))} placeholder="Enter number of guests" required />
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="numberOfRooms">Number of Rooms</Label>
-                <Input id="numberOfRooms" type="number" min="1" value={numberOfRooms} onChange={(e) => setNumberOfRooms(e.target.value === '' ? '' : parseInt(e.target.value))} placeholder="1" />
-              </div>
+
               <div className="space-y-2 pt-2 border-t">
                 <Label className="text-blue-600 font-semibold">Pricing Adjustments</Label>
                 <div className="grid grid-cols-2 gap-2">
