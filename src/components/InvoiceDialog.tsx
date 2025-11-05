@@ -197,6 +197,16 @@ export function InvoiceDialog({ open, onOpenChange, booking }: InvoiceDialogProp
             </div>
           </div>
 
+          <div style="margin-top: 40px; padding: 25px; background: #eff6ff; border-radius: 8px; border-left: 4px solid #2563eb;">
+            <h4 style="color: #1e40af; font-size: 14px; margin-bottom: 12px; font-weight: 600;">Payment Instructions</h4>
+            <p style="color: #1e293b; font-size: 13px; line-height: 1.8; margin-bottom: 8px;">
+              <strong>Checks:</strong> Please make checks payable to <strong>Cong Zera Kodesh</strong>
+            </p>
+            <p style="color: #1e293b; font-size: 13px; line-height: 1.8;">
+              <strong>E-Transfer:</strong> Send to <strong>thetroutlakeresort@gmail.com</strong>
+            </p>
+          </div>
+
           ${invoice.balance_due > 0 ? `
           <div class="payment-terms">
             <h4>⚠ Payment Required</h4>
@@ -376,6 +386,18 @@ export function InvoiceDialog({ open, onOpenChange, booking }: InvoiceDialogProp
               </p>
             </div>
           )}
+
+          <div className="bg-blue-50 border-l-4 border-blue-500 p-5 rounded-lg">
+            <h4 className="font-semibold text-blue-800 mb-3 text-base">Payment Instructions</h4>
+            <div className="space-y-2 text-sm text-blue-900">
+              <p>
+                <strong>Checks:</strong> Please make checks payable to <strong>Cong Zera Kodesh</strong>
+              </p>
+              <p>
+                <strong>E-Transfer:</strong> Send to <strong>thetroutlakeresort@gmail.com</strong>
+              </p>
+            </div>
+          </div>
 
           {invoice.notes && (
             <div className="bg-gray-50 p-4 rounded-lg">
