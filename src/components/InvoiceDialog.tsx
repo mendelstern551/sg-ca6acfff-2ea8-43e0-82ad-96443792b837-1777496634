@@ -75,9 +75,12 @@ export function InvoiceDialog({ open, onOpenChange, booking }: InvoiceDialogProp
           body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 0; background: white; }
           .invoice { max-width: 850px; margin: 40px auto; background: white; padding: 60px; }
           
-          .header { display: flex; justify-content: space-between; align-items: start; margin-bottom: 50px; padding-bottom: 30px; border-bottom: 3px solid #2563eb; }
-          .company-info h1 { font-size: 32px; color: #1e40af; margin-bottom: 8px; font-weight: 700; }
-          .company-info p { color: #64748b; font-size: 14px; line-height: 1.6; }
+          .logo-container { text-align: center; margin-bottom: 40px; padding-bottom: 30px; border-bottom: 3px solid #2563eb; }
+          .logo-placeholder { width: 200px; height: 80px; margin: 0 auto 20px; background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%); border-radius: 12px; display: flex; align-items: center; justify-content: center; color: white; font-size: 24px; font-weight: 700; letter-spacing: 2px; box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3); }
+          .logo-text { color: #1e40af; font-size: 28px; font-weight: 700; margin-bottom: 4px; }
+          .logo-subtitle { color: #64748b; font-size: 14px; }
+          
+          .header { display: flex; justify-content: space-between; align-items: start; margin-bottom: 50px; }
           
           .invoice-meta { text-align: right; }
           .invoice-meta h2 { font-size: 36px; color: #1e293b; margin-bottom: 8px; font-weight: 300; letter-spacing: -1px; }
@@ -127,12 +130,14 @@ export function InvoiceDialog({ open, onOpenChange, booking }: InvoiceDialogProp
       </head>
       <body>
         <div class="invoice">
+          <div class="logo-container">
+            <div class="logo-placeholder">TLR</div>
+            <div class="logo-text">Trout Lake Resort</div>
+            <div class="logo-subtitle">Premium Event & Retreat Venue</div>
+          </div>
+
           <div class="header">
-            <div class="company-info">
-              <h1>Trout Lake Resort</h1>
-              <p>Premium Event & Retreat Venue<br>
-              Booking Management Services</p>
-            </div>
+            <div style="flex: 1;"></div>
             <div class="invoice-meta">
               <h2>INVOICE</h2>
               <div class="invoice-number">#${invoice.invoice_number}</div>
@@ -150,7 +155,7 @@ export function InvoiceDialog({ open, onOpenChange, booking }: InvoiceDialogProp
             
             <div class="billing-box">
               <h3>Event Information</h3>
-              <strong>${invoice.number_of_guests} Guests • ${invoice.number_of_rooms} Room${invoice.number_of_rooms > 1 ? "s" : ""}</strong>
+              <strong>${invoice.number_of_guests} Guests</strong>
               <p>${format(new Date(invoice.event_date_start), "EEEE, MMMM dd, yyyy")}</p>
               <p>through</p>
               <p>${format(new Date(invoice.event_date_end), "EEEE, MMMM dd, yyyy")}</p>
@@ -169,7 +174,7 @@ export function InvoiceDialog({ open, onOpenChange, booking }: InvoiceDialogProp
                 <td>
                   <strong>Event Venue Rental</strong><br>
                   <span style="font-size: 13px; color: #64748b;">
-                    ${invoice.number_of_guests} guests accommodated in ${invoice.number_of_rooms} room${invoice.number_of_rooms > 1 ? "s" : ""}<br>
+                    ${invoice.number_of_guests} guests<br>
                     ${format(new Date(invoice.event_date_start), "MMM dd")} - ${format(new Date(invoice.event_date_end), "MMM dd, yyyy")}
                   </span>
                 </td>
@@ -184,7 +189,7 @@ export function InvoiceDialog({ open, onOpenChange, booking }: InvoiceDialogProp
               <span>$${Number(invoice.base_price).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
             </div>
             <div class="total-row payment">
-              <span>Deposit Paid</span>
+              <span>Amount Paid</span>
               <span>-$${Number(invoice.deposit_amount).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
             </div>
             <div class="total-row balance">
@@ -272,11 +277,16 @@ export function InvoiceDialog({ open, onOpenChange, booking }: InvoiceDialogProp
             </div>
           )}
 
-          <div className="flex justify-between items-start border-b pb-6">
-            <div>
-              <h2 className="text-3xl font-bold text-blue-600 mb-1">Trout Lake Resort</h2>
-              <p className="text-sm text-gray-500">Premium Event & Retreat Venue</p>
+          <div className="text-center border-b pb-6 mb-6">
+            <div className="inline-block w-48 h-20 mb-4 bg-gradient-to-br from-blue-600 to-blue-800 rounded-xl flex items-center justify-center shadow-lg">
+              <span className="text-white text-3xl font-bold tracking-wider">TLR</span>
             </div>
+            <h2 className="text-3xl font-bold text-blue-600 mb-1">Trout Lake Resort</h2>
+            <p className="text-sm text-gray-500">Premium Event & Retreat Venue</p>
+          </div>
+
+          <div className="flex justify-between items-start">
+            <div></div>
             <div className="text-right">
               <h3 className="text-4xl font-light text-gray-800 mb-2">INVOICE</h3>
               <p className="text-lg font-semibold text-blue-600">#{invoice.invoice_number}</p>
@@ -303,7 +313,7 @@ export function InvoiceDialog({ open, onOpenChange, booking }: InvoiceDialogProp
             <div className="bg-blue-50 p-5 rounded-lg border-l-4 border-blue-600">
               <h3 className="text-xs uppercase tracking-wide text-blue-700 font-semibold mb-3">Event Information</h3>
               <p className="text-lg font-bold text-gray-800 mb-2">
-                {invoice.number_of_guests} Guests • {invoice.number_of_rooms} Room{invoice.number_of_rooms > 1 ? "s" : ""}
+                {invoice.number_of_guests} Guests
               </p>
               <p className="text-sm text-gray-700">{format(new Date(invoice.event_date_start), "EEEE, MMMM dd, yyyy")}</p>
               <p className="text-xs text-gray-500">through</p>
@@ -324,7 +334,7 @@ export function InvoiceDialog({ open, onOpenChange, booking }: InvoiceDialogProp
                   <td className="p-4">
                     <p className="font-semibold text-gray-800">Event Venue Rental</p>
                     <p className="text-sm text-gray-500 mt-1">
-                      {invoice.number_of_guests} guests accommodated in {invoice.number_of_rooms} room{invoice.number_of_rooms > 1 ? "s" : ""}
+                      {invoice.number_of_guests} guests
                     </p>
                     <p className="text-xs text-gray-400">
                       {format(new Date(invoice.event_date_start), "MMM dd")} - {format(new Date(invoice.event_date_end), "MMM dd, yyyy")}
@@ -341,7 +351,7 @@ export function InvoiceDialog({ open, onOpenChange, booking }: InvoiceDialogProp
                 <span className="font-medium">${Number(invoice.base_price).toFixed(2)}</span>
               </div>
               <div className="flex justify-between text-green-600 font-medium">
-                <span>Deposit Paid:</span>
+                <span>Amount Paid:</span>
                 <span>-${Number(invoice.deposit_amount).toFixed(2)}</span>
               </div>
               <div className="flex justify-between text-orange-600 font-medium">
