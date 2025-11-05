@@ -405,7 +405,7 @@ export function BookingCalendar({ bookings, onDateClick, onBookingClick, onAddBo
 
                   {isShabbat && parshaName && (
                     <div className="mb-2 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-md px-2 py-1.5 text-[11px] font-bold text-center shadow-sm border border-blue-600 font-hebrew">
-                      📖 {parshaName}
+                      {parshaName}
                     </div>
                   )}
 
