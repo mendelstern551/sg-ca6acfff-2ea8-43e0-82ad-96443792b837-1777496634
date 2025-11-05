@@ -34,9 +34,10 @@ export function InvoiceDialog({ open, onOpenChange, booking }: InvoiceDialogProp
       if (!existingInvoice) {
         setGenerating(true);
         
-        // Calculate actual amount paid from payments - only if payments exist
-        const amountPaid = (booking.payments && booking.payments.length > 0) 
-          ? booking.payments.reduce((sum, p) => sum + p.amount, 0) 
+        // Calculate actual amount paid from payments - only if valid payments exist
+        const validPayments = (booking.payments || []).filter(p => p && p.amount && p.amount > 0);
+        const amountPaid = validPayments.length > 0 
+          ? validPayments.reduce((sum, p) => sum + p.amount, 0) 
           : 0;
         const balanceDue = booking.totalCost - amountPaid;
         
@@ -68,11 +69,13 @@ export function InvoiceDialog({ open, onOpenChange, booking }: InvoiceDialogProp
   const handleDownloadPDF = () => {
     if (!invoice) return;
 
-    // Calculate actual payments from booking
-    const actualAmountPaid = (booking.payments && booking.payments.length > 0) 
-      ? booking.payments.reduce((sum, p) => sum + p.amount, 0) 
+    // Calculate actual payments from booking - only valid non-zero payments
+    const validPayments = (booking.payments || []).filter(p => p && p.amount && p.amount > 0);
+    const actualAmountPaid = validPayments.length > 0
+      ? validPayments.reduce((sum, p) => sum + p.amount, 0) 
       : 0;
     const actualBalanceDue = invoice.total_amount - actualAmountPaid;
+    const hasPayments = validPayments.length > 0 && actualAmountPaid > 0;
 
     const printWindow = window.open("", "_blank");
     if (!printWindow) return;
@@ -196,7 +199,7 @@ export function InvoiceDialog({ open, onOpenChange, booking }: InvoiceDialogProp
               <span>Subtotal</span>
               <span>$${Number(invoice.base_price).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
             </div>
-            ${actualAmountPaid > 0 ? `
+            ${hasPayments ? `
             <div class="total-row payment">
               <span>Amount Paid</span>
               <span>-$${actualAmountPaid.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
@@ -222,15 +225,20 @@ export function InvoiceDialog({ open, onOpenChange, booking }: InvoiceDialogProp
             </p>
           </div>
 
-          ${actualBalanceDue > 0 ? `
+          ${hasPayments && actualBalanceDue > 0 ? `
           <div class="payment-terms">
             <h4>⚠ Payment Required</h4>
             <p>A balance of <strong>$${actualBalanceDue.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong> remains outstanding. Please remit payment by the agreed due date to maintain your reservation.</p>
           </div>
-          ` : `
+          ` : hasPayments && actualBalanceDue <= 0 ? `
           <div class="payment-terms" style="background: #d1fae5; border-left-color: #059669;">
             <h4 style="color: #065f46;">✓ Paid in Full</h4>
             <p style="color: #047857;">Thank you! Your payment has been received and your reservation is confirmed.</p>
+          </div>
+          ` : `
+          <div class="payment-terms">
+            <h4>⚠ Payment Required</h4>
+            <p>Full payment of <strong>$${Number(invoice.total_amount).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong> is required. Please remit payment by the agreed due date to maintain your reservation.</p>
           </div>
           `}
 
@@ -274,11 +282,13 @@ export function InvoiceDialog({ open, onOpenChange, booking }: InvoiceDialogProp
 
   if (!invoice) return null;
 
-  // Calculate actual payments from booking for display
-  const actualAmountPaid = (booking.payments && booking.payments.length > 0) 
-    ? booking.payments.reduce((sum, p) => sum + p.amount, 0) 
+  // Calculate actual payments from booking for display - only valid non-zero payments
+  const validPayments = (booking.payments || []).filter(p => p && p.amount && p.amount > 0);
+  const actualAmountPaid = validPayments.length > 0
+    ? validPayments.reduce((sum, p) => sum + p.amount, 0) 
     : 0;
   const actualBalanceDue = invoice.total_amount - actualAmountPaid;
+  const hasPayments = validPayments.length > 0 && actualAmountPaid > 0;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -376,7 +386,7 @@ export function InvoiceDialog({ open, onOpenChange, booking }: InvoiceDialogProp
                 <span>Subtotal:</span>
                 <span className="font-medium">${Number(invoice.base_price).toFixed(2)}</span>
               </div>
-              {actualAmountPaid > 0 && (
+              {hasPayments && (
                 <>
                   <div className="flex justify-between text-green-600 font-medium">
                     <span>Amount Paid:</span>
@@ -395,7 +405,7 @@ export function InvoiceDialog({ open, onOpenChange, booking }: InvoiceDialogProp
             </div>
           </div>
 
-          {actualBalanceDue > 0 ? (
+          {hasPayments && actualBalanceDue > 0 ? (
             <div className="bg-amber-50 border-l-4 border-amber-500 p-4 rounded">
               <h4 className="font-semibold text-amber-800 mb-1">⚠ Payment Required</h4>
               <p className="text-sm text-amber-700">
@@ -403,11 +413,19 @@ export function InvoiceDialog({ open, onOpenChange, booking }: InvoiceDialogProp
                 Please remit payment by the agreed due date to maintain your reservation.
               </p>
             </div>
-          ) : (
+          ) : hasPayments && actualBalanceDue <= 0 ? (
             <div className="bg-green-50 border-l-4 border-green-500 p-4 rounded">
               <h4 className="font-semibold text-green-800 mb-1">✓ Paid in Full</h4>
               <p className="text-sm text-green-700">
                 Thank you! Your payment has been received and your reservation is confirmed.
+              </p>
+            </div>
+          ) : (
+            <div className="bg-amber-50 border-l-4 border-amber-500 p-4 rounded">
+              <h4 className="font-semibold text-amber-800 mb-1">⚠ Payment Required</h4>
+              <p className="text-sm text-amber-700">
+                Full payment of <strong>${Number(invoice.total_amount).toFixed(2)}</strong> is required. 
+                Please remit payment by the agreed due date to maintain your reservation.
               </p>
             </div>
           )}
