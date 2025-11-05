@@ -157,21 +157,29 @@ export function BookingCalendar({ bookings, onDateClick, onBookingClick, onAddBo
       if (date.getDay() !== 6) return "";
       
       const hDate = new HDate(date);
-      const events = HebrewCalendar.getHolidaysOnDate(hDate, false) || [];
+      // Use HebrewCalendar.calendar with sedrot flag to get Torah readings
+      const events = HebrewCalendar.calendar({
+        start: hDate,
+        end: hDate,
+        sedrot: true,
+        noHolidays: false,
+      });
       
-      // Look for Parashat event
+      // Look for Parashat event in the results
       const parshaEvent = events.find((event: any) => {
         const desc = event.getDesc();
-        return desc.startsWith("Parashat");
+        return desc.startsWith("Parashat") || desc.includes("Torah");
       });
       
       if (parshaEvent) {
+        const fullText = parshaEvent.render();
         // Remove "Parashat " prefix to get just the parsha name
-        return parshaEvent.render().replace("Parashat ", "");
+        return fullText.replace("Parashat ", "").replace("Torah: ", "");
       }
       
       return "";
     } catch (error) {
+      console.error("Error getting Parsha:", error);
       return "";
     }
   };
