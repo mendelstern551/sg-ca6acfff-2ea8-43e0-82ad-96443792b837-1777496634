@@ -154,10 +154,32 @@ export function BookingCalendar({ bookings, onDateClick, onBookingClick, onAddBo
   const getHebrewMonthYear = (date: Date): string => {
     try {
       const hDate = new HDate(date);
-      // Get Hebrew month name and year - use render() to get Hebrew text
-      const monthName = hDate.render("he").split(" ")[0]; // Get just the month part
+      // Get the month name in Yiddish
+      const monthNames: { [key: string]: string } = {
+        "Nisan": "ניסן",
+        "Iyyar": "אייר",
+        "Sivan": "סיון",
+        "Tamuz": "תמוז",
+        "Av": "אב",
+        "Elul": "אלול",
+        "Tishrei": "תשרי",
+        "Cheshvan": "חשון",
+        "Kislev": "כסלו",
+        "Tevet": "טבת",
+        "Sh'vat": "שבט",
+        "Adar": "אדר",
+        "Adar I": "אדר א",
+        "Adar II": "אדר ב"
+      };
+      
+      const englishMonth = hDate.getMonthName();
+      const yiddishMonth = monthNames[englishMonth] || englishMonth;
+      
+      // Get the year in Hebrew characters (gematria)
       const year = hDate.getFullYear();
-      return `${monthName} ${year}`;
+      const hebrewYear = hDate.renderGematriya().split(" ")[1] || hDate.renderGematriya();
+      
+      return `${yiddishMonth} ${hebrewYear}`;
     } catch (error) {
       return "";
     }
