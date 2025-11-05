@@ -82,7 +82,7 @@ export function BookingList({
   const renderBookingCard = (booking: Booking) => {
     const payments = booking.payments || [];
     const sortedPayments = [...payments].sort((a, b) => 
-      new Date(b.date).getTime() - new Date(a.date).getTime()
+      new Date(b.payment_date).getTime() - new Date(a.payment_date).getTime()
     );
 
     return (
@@ -195,16 +195,16 @@ export function BookingList({
                           {formatCurrency(payment.amount)}
                         </span>
                         <span className="text-xs text-slate-500">
-                          {format(new Date(payment.date), "MMM d, yyyy")}
+                          {format(new Date(payment.payment_date), "MMM d, yyyy")}
                         </span>
                       </div>
                       <div className="flex items-center gap-2 mt-1">
                         <Badge variant="secondary" className="text-xs">
-                          {payment.paymentMethod.replace("_", " ")}
+                          {payment.payment_method.replace("_", " ")}
                         </Badge>
-                        {payment.referenceNumber && (
+                        {payment.notes && (
                           <span className="text-xs text-slate-500">
-                            Ref: {payment.referenceNumber}
+                            Notes: {payment.notes}
                           </span>
                         )}
                       </div>

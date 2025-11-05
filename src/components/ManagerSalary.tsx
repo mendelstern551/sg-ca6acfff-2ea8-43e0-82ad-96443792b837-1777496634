@@ -85,18 +85,21 @@ export function ManagerSalary({ bookings, onAddExpense }: ManagerSalaryProps) {
       );
 
       if (!expenseExists) {
-        const expense: Expense = {
+        const expense: Omit<Expense, "id" | "createdAt" | "updatedAt"> & { id: string, createdAt: string } = {
           id: expenseId,
+          bookingId: null,
           date: startOfMonth(monthDate).toISOString(),
           amount: salaryData.maintenanceFeePerMonth,
           category: "Manager Salary",
           description: `Monthly Maintenance Fee - ${format(monthDate, "MMMM yyyy")}`,
           paymentMethod: "pending",
           vendor: "Manager",
+          receiptUrls: [],
+          proofUrls: [],
           notes: "Automatic monthly maintenance fee",
           createdAt: new Date().toISOString()
         };
-        onAddExpense(expense);
+        onAddExpense(expense as Expense);
         existingExpenses.push(expense);
       }
     }
@@ -129,7 +132,7 @@ export function ManagerSalary({ bookings, onAddExpense }: ManagerSalaryProps) {
           booking.bookingType.toString().replace(/_/g, " ") : 
           "event";
 
-        const expense: Expense = {
+        const expense: Omit<Expense, "id" | "createdAt" | "updatedAt"> & { id: string, createdAt: string } = {
           id: expenseId,
           bookingId: booking.id,
           date: booking.startDate || new Date().toISOString(),
@@ -139,9 +142,11 @@ export function ManagerSalary({ bookings, onAddExpense }: ManagerSalaryProps) {
           paymentMethod: "pending",
           vendor: "Manager",
           notes: `15% commission (min $1,000) for ${bookingTypeName} booking`,
+          receiptUrls: [],
+          proofUrls: [],
           createdAt: new Date().toISOString()
         };
-        onAddExpense(expense);
+        onAddExpense(expense as Expense);
         existingExpenses.push(expense);
       }
     });
@@ -220,9 +225,9 @@ export function ManagerSalary({ bookings, onAddExpense }: ManagerSalaryProps) {
     setSalaryData(updatedData);
     localStorage.setItem("trout-lake-manager-salary", JSON.stringify(updatedData));
 
-    const expense: Expense = {
+    const expense: Omit<Expense, "id" | "createdAt" | "updatedAt"> & { id: string, createdAt: string } = {
       id: Date.now().toString(),
-      bookingId: paymentForm.relatedBookingId || undefined,
+      bookingId: paymentForm.relatedBookingId || null,
       date: paymentForm.date.toISOString(),
       amount: paymentForm.amount,
       category: "Manager Salary",
@@ -230,10 +235,12 @@ export function ManagerSalary({ bookings, onAddExpense }: ManagerSalaryProps) {
       paymentMethod: paymentForm.paymentMethod,
       vendor: "Manager",
       notes: paymentForm.notes,
+      receiptUrls: [],
+      proofUrls: [],
       createdAt: new Date().toISOString()
     };
 
-    onAddExpense(expense);
+    onAddExpense(expense as Expense);
 
     setPaymentForm({
       date: new Date(),

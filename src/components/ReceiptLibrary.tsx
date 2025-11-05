@@ -54,55 +54,40 @@ export function ReceiptLibrary({ expenses, bookings }: ReceiptLibraryProps) {
     }> = [];
 
     expenses.forEach((expense) => {
-      if (expense.receiptUrl) {
-        receipts.push({
-          id: `${expense.id}-receipt`,
-          expenseId: expense.id,
-          expenseDescription: expense.description,
-          vendor: expense.vendor,
-          category: expense.category,
-          amount: expense.amount,
-          date: expense.date,
-          bookingName: getBookingName(expense.bookingId),
-          url: expense.receiptUrl,
-          name: "Receipt",
-          uploadedAt: expense.createdAt,
-          type: "receipt",
-        });
-      }
-
-      if (expense.proofOfPaymentUrl) {
-        receipts.push({
-          id: `${expense.id}-proof`,
-          expenseId: expense.id,
-          expenseDescription: expense.description,
-          vendor: expense.vendor,
-          category: expense.category,
-          amount: expense.amount,
-          date: expense.date,
-          bookingName: getBookingName(expense.bookingId),
-          url: expense.proofOfPaymentUrl,
-          name: "Proof of Payment",
-          uploadedAt: expense.createdAt,
-          type: "proof",
-        });
-      }
-
-      if (expense.receiptFiles && expense.receiptFiles.length > 0) {
-        expense.receiptFiles.forEach((file) => {
+      if (expense.receiptUrls && expense.receiptUrls.length > 0) {
+        expense.receiptUrls.forEach((url, index) => {
           receipts.push({
-            id: file.id,
+            id: `${expense.id}-receipt-${index}`,
             expenseId: expense.id,
             expenseDescription: expense.description,
-            vendor: expense.vendor,
+            vendor: expense.vendor || 'N/A',
             category: expense.category,
             amount: expense.amount,
             date: expense.date,
             bookingName: getBookingName(expense.bookingId),
-            url: file.url,
-            name: file.name,
-            uploadedAt: file.uploadedAt,
-            type: "file",
+            url: url,
+            name: `Receipt ${index + 1}`,
+            uploadedAt: expense.createdAt,
+            type: "receipt",
+          });
+        });
+      }
+
+      if (expense.proofUrls && expense.proofUrls.length > 0) {
+        expense.proofUrls.forEach((url, index) => {
+          receipts.push({
+            id: `${expense.id}-proof-${index}`,
+            expenseId: expense.id,
+            expenseDescription: expense.description,
+            vendor: expense.vendor || 'N/A',
+            category: expense.category,
+            amount: expense.amount,
+            date: expense.date,
+            bookingName: getBookingName(expense.bookingId),
+            url: url,
+            name: `Proof of Payment ${index + 1}`,
+            uploadedAt: expense.createdAt,
+            type: "proof",
           });
         });
       }

@@ -32,9 +32,8 @@ const paymentMethodLabels: Record<PaymentMethod, string> = {
 export function PaymentDialog({ open, onOpenChange, payment, bookingId, onSave }: PaymentDialogProps) {
   const [formData, setFormData] = useState({
     amount: 0,
-    date: undefined as Date | undefined,
-    paymentMethod: "cash" as PaymentMethod,
-    referenceNumber: "",
+    payment_date: undefined as Date | undefined,
+    payment_method: "cash" as PaymentMethod,
     notes: "",
   });
 
@@ -42,10 +41,9 @@ export function PaymentDialog({ open, onOpenChange, payment, bookingId, onSave }
     if (payment) {
       setFormData({
         amount: payment.amount,
-        date: new Date(payment.date),
-        paymentMethod: payment.paymentMethod,
-        referenceNumber: payment.referenceNumber || "",
-        notes: payment.notes,
+        payment_date: new Date(payment.payment_date),
+        payment_method: payment.payment_method,
+        notes: payment.notes || "",
       });
     } else {
       resetForm();
@@ -55,9 +53,8 @@ export function PaymentDialog({ open, onOpenChange, payment, bookingId, onSave }
   const resetForm = () => {
     setFormData({
       amount: 0,
-      date: new Date(),
-      paymentMethod: "cash",
-      referenceNumber: "",
+      payment_date: new Date(),
+      payment_method: "cash",
       notes: "",
     });
   };
@@ -65,7 +62,7 @@ export function PaymentDialog({ open, onOpenChange, payment, bookingId, onSave }
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!formData.date) {
+    if (!formData.payment_date) {
       alert("Please select a payment date");
       return;
     }
@@ -79,11 +76,11 @@ export function PaymentDialog({ open, onOpenChange, payment, bookingId, onSave }
       id: payment?.id || `payment-${Date.now()}`,
       bookingId,
       amount: formData.amount,
-      date: formData.date.toISOString(),
-      paymentMethod: formData.paymentMethod,
-      referenceNumber: formData.referenceNumber || undefined,
+      payment_date: formData.payment_date.toISOString(),
+      payment_method: formData.payment_method,
       notes: formData.notes,
-      createdAt: payment?.createdAt || new Date().toISOString(),
+      created_at: payment?.created_at || new Date().toISOString(),
+      updated_at: new Date().toISOString(),
     };
     
     onSave(newPayment);
@@ -126,14 +123,14 @@ export function PaymentDialog({ open, onOpenChange, payment, bookingId, onSave }
                     className="w-full justify-start text-left font-normal"
                   >
                     <CalendarIcon className="mr-2 h-4 w-4" />
-                    {formData.date ? format(formData.date, "PPP") : <span>Pick a date</span>}
+                    {formData.payment_date ? format(formData.payment_date, "PPP") : <span>Pick a date</span>}
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0" align="start">
                   <EnhancedCalendar
                     mode="single"
-                    selected={formData.date}
-                    onSelect={(date) => setFormData({ ...formData, date })}
+                    selected={formData.payment_date}
+                    onSelect={(date) => setFormData({ ...formData, payment_date: date })}
                     initialFocus
                   />
                 </PopoverContent>
@@ -144,8 +141,8 @@ export function PaymentDialog({ open, onOpenChange, payment, bookingId, onSave }
           <div className="space-y-2">
             <Label htmlFor="paymentMethod">Payment Method *</Label>
             <Select
-              value={formData.paymentMethod}
-              onValueChange={(value) => setFormData({ ...formData, paymentMethod: value as PaymentMethod })}
+              value={formData.payment_method}
+              onValueChange={(value) => setFormData({ ...formData, payment_method: value as PaymentMethod })}
             >
               <SelectTrigger id="paymentMethod">
                 <SelectValue />
@@ -158,19 +155,6 @@ export function PaymentDialog({ open, onOpenChange, payment, bookingId, onSave }
                 ))}
               </SelectContent>
             </Select>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="referenceNumber">
-              Reference Number
-              <span className="text-xs text-slate-500 ml-2">(Check #, Transaction ID, etc.)</span>
-            </Label>
-            <Input
-              id="referenceNumber"
-              value={formData.referenceNumber}
-              onChange={(e) => setFormData({ ...formData, referenceNumber: e.target.value })}
-              placeholder="Optional"
-            />
           </div>
 
           <div className="space-y-2">

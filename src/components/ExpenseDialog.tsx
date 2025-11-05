@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -16,7 +15,7 @@ import { Badge } from "@/components/ui/badge";
 interface ExpenseDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSave: (expense: Expense) => void;
+  onSave: (expense: Omit<Expense, "id" | "createdAt" | "updatedAt">) => void;
   expense?: Expense;
   bookings: Booking[];
 }
@@ -29,9 +28,8 @@ const initialFormData = {
   description: "",
   paymentMethod: "cash" as PaymentMethod,
   vendor: "",
-  receiptUrl: "",
-  proofOfPaymentUrl: "",
-  receiptFiles: [] as { id: string; url: string; name: string; uploadedAt: string }[],
+  receiptUrls: [] as string[],
+  proofUrls: [] as string[],
   notes: "",
 };
 
@@ -48,11 +46,10 @@ export function ExpenseDialog({ open, onOpenChange, onSave, expense, bookings }:
           category: expense.category,
           description: expense.description,
           paymentMethod: expense.paymentMethod as PaymentMethod,
-          vendor: expense.vendor,
-          receiptUrl: expense.receiptUrl || "",
-          proofOfPaymentUrl: expense.proofOfPaymentUrl || "",
-          receiptFiles: expense.receiptFiles || [],
-          notes: expense.notes,
+          vendor: expense.vendor || "",
+          receiptUrls: expense.receiptUrls || [],
+          proofUrls: expense.proofUrls || [],
+          notes: expense.notes || "",
         });
       } else {
         setFormData(initialFormData);
@@ -60,75 +57,53 @@ export function ExpenseDialog({ open, onOpenChange, onSave, expense, bookings }:
     }
   }, [expense, open]);
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>, type: "receipt" | "proof" | "additional") => {
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>, type: "receipt" | "proof") => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
 
-    if (type === "additional") {
-      const newFiles: { id: string; url: string; name: string; uploadedAt: string }[] = [];
-      const fileArray = Array.from(files);
-      let filesProcessed = 0;
+    const fileArray = Array.from(files);
+    const urls: string[] = [];
+    let filesProcessed = 0;
 
-      fileArray.forEach((file) => {
-        const reader = new FileReader();
-        reader.onloadend = () => {
-          const dataUrl = reader.result as string;
-          newFiles.push({
-            id: `file-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-            url: dataUrl,
-            name: file.name,
-            uploadedAt: new Date().toISOString(),
-          });
-          
-          filesProcessed++;
-          if (filesProcessed === fileArray.length) {
-            setFormData(prev => ({
-              ...prev,
-              receiptFiles: [...prev.receiptFiles, ...newFiles],
-            }));
-          }
-        };
-        reader.readAsDataURL(file);
-      });
-    } else {
-      const file = files[0];
+    fileArray.forEach((file) => {
       const reader = new FileReader();
       reader.onloadend = () => {
-        const dataUrl = reader.result as string;
-        if (type === "receipt") {
-          setFormData(prev => ({ ...prev, receiptUrl: dataUrl }));
-        } else if (type === "proof") {
-          setFormData(prev => ({ ...prev, proofOfPaymentUrl: dataUrl }));
+        urls.push(reader.result as string);
+        filesProcessed++;
+        if (filesProcessed === fileArray.length) {
+          if (type === "receipt") {
+            setFormData(prev => ({ ...prev, receiptUrls: [...prev.receiptUrls, ...urls] }));
+          } else {
+            setFormData(prev => ({ ...prev, proofUrls: [...prev.proofUrls, ...urls] }));
+          }
         }
       };
       reader.readAsDataURL(file);
-    }
+    });
   };
   
-  const handleRemoveReceiptFile = (fileId: string) => {
-    setFormData({
-      ...formData,
-      receiptFiles: formData.receiptFiles.filter((f) => f.id !== fileId),
-    });
+  const handleRemoveFile = (index: number, type: "receipt" | "proof") => {
+    if (type === "receipt") {
+      setFormData({ ...formData, receiptUrls: formData.receiptUrls.filter((_, i) => i !== index) });
+    } else {
+      setFormData({ ...formData, proofUrls: formData.proofUrls.filter((_, i) => i !== index) });
+    }
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
-    const expenseData: Expense = {
-      id: expense?.id || `expense-${Date.now()}`,
-      bookingId: formData.bookingId || undefined,
+    const expenseData: Omit<Expense, "id" | "createdAt" | "updatedAt"> = {
+      bookingId: formData.bookingId || null,
       date: formData.date.toISOString(),
       amount: formData.amount,
       category: formData.category,
       description: formData.description,
       paymentMethod: formData.paymentMethod,
       vendor: formData.vendor,
-      receiptUrl: formData.receiptUrl || undefined,
-      proofOfPaymentUrl: formData.proofOfPaymentUrl || undefined,
-      receiptFiles: formData.receiptFiles.length > 0 ? formData.receiptFiles : undefined,
+      receiptUrls: formData.receiptUrls,
+      proofUrls: formData.proofUrls,
       notes: formData.notes,
-      createdAt: expense?.createdAt || new Date().toISOString(),
     };
 
     onSave(expenseData);
@@ -258,103 +233,62 @@ export function ExpenseDialog({ open, onOpenChange, onSave, expense, bookings }:
 
           <div className="space-y-4 pt-4 border-t">
             <h3 className="text-sm font-semibold">Upload Files</h3>
+            <p className="text-xs text-slate-500 dark:text-slate-400">You can upload multiple files for receipts and proofs.</p>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="receipt" className="flex items-center gap-2">
                   <ImageIcon className="h-4 w-4" />
-                  Receipt
+                  Receipts
                 </Label>
-                <div className="flex gap-2">
-                  <Input
-                    id="receipt"
-                    type="file"
-                    accept="image/*,application/pdf"
-                    onChange={(e) => handleFileUpload(e, "receipt")}
-                    className="flex-1"
-                  />
-                  {formData.receiptUrl && (
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setFormData({ ...formData, receiptUrl: "" })}
-                    >
-                      <X className="h-4 w-4" />
-                    </Button>
-                  )}
-                </div>
-                {formData.receiptUrl && (
-                  <Badge variant="secondary" className="text-xs">
-                    Receipt uploaded
-                  </Badge>
+                <Input
+                  id="receipt"
+                  type="file"
+                  accept="image/*,application/pdf"
+                  onChange={(e) => handleFileUpload(e, "receipt")}
+                  className="flex-1"
+                  multiple
+                />
+                {formData.receiptUrls.length > 0 && (
+                  <div className="flex flex-wrap gap-2 mt-2">
+                    {formData.receiptUrls.map((url, index) => (
+                       <Badge key={index} variant="secondary" className="flex items-center gap-2">
+                         Receipt {index + 1}
+                         <button type="button" onClick={() => handleRemoveFile(index, "receipt")} className="hover:text-red-600">
+                           <X className="h-3 w-3" />
+                         </button>
+                       </Badge>
+                    ))}
+                  </div>
                 )}
               </div>
 
               <div className="space-y-2">
                 <Label htmlFor="proof" className="flex items-center gap-2">
                   <FileText className="h-4 w-4" />
-                  Proof of Payment
+                  Proofs of Payment
                 </Label>
-                <div className="flex gap-2">
-                  <Input
-                    id="proof"
-                    type="file"
-                    accept="image/*,application/pdf"
-                    onChange={(e) => handleFileUpload(e, "proof")}
-                    className="flex-1"
-                  />
-                  {formData.proofOfPaymentUrl && (
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setFormData({ ...formData, proofOfPaymentUrl: "" })}
-                    >
-                      <X className="h-4 w-4" />
-                    </Button>
-                  )}
-                </div>
-                {formData.proofOfPaymentUrl && (
-                  <Badge variant="secondary" className="text-xs">
-                    Proof uploaded
-                  </Badge>
+                <Input
+                  id="proof"
+                  type="file"
+                  accept="image/*,application/pdf"
+                  onChange={(e) => handleFileUpload(e, "proof")}
+                  className="flex-1"
+                  multiple
+                />
+                {formData.proofUrls.length > 0 && (
+                   <div className="flex flex-wrap gap-2 mt-2">
+                   {formData.proofUrls.map((url, index) => (
+                      <Badge key={index} variant="secondary" className="flex items-center gap-2">
+                        Proof {index + 1}
+                        <button type="button" onClick={() => handleRemoveFile(index, "proof")} className="hover:text-red-600">
+                          <X className="h-3 w-3" />
+                        </button>
+                      </Badge>
+                   ))}
+                 </div>
                 )}
               </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="additionalFiles" className="flex items-center gap-2">
-                <Upload className="h-4 w-4" />
-                Additional Files
-              </Label>
-              <Input
-                id="additionalFiles"
-                type="file"
-                accept="image/*,application/pdf"
-                onChange={(e) => {
-                  handleFileUpload(e, "additional");
-                  e.target.value = "";
-                }}
-                multiple
-              />
-              <p className="text-xs text-slate-500 dark:text-slate-400">You can select multiple files.</p>
-              {formData.receiptFiles.length > 0 && (
-                <div className="flex flex-wrap gap-2 mt-2">
-                  {formData.receiptFiles.map((file) => (
-                    <Badge key={file.id} variant="secondary" className="flex items-center gap-2">
-                      {file.name}
-                      <button
-                        type="button"
-                        onClick={() => handleRemoveReceiptFile(file.id)}
-                        className="hover:text-red-600"
-                      >
-                        <X className="h-3 w-3" />
-                      </button>
-                    </Badge>
-                  ))}
-                </div>
-              )}
             </div>
           </div>
 

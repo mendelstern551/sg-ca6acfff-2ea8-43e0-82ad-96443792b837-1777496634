@@ -264,42 +264,28 @@ export function ExpenseList({ expenses, bookings, onEdit, onDelete, filterBookin
                   </div>
 
                   <div className="flex flex-wrap items-center gap-2">
-                    {expense.receiptUrl && (
+                    {expense.receiptUrls && expense.receiptUrls.length > 0 && expense.receiptUrls.map((url, index) => (
                       <Button
+                        key={`receipt-${index}`}
                         variant="outline"
                         size="sm"
-                        onClick={() => window.open(expense.receiptUrl, "_blank")}
+                        onClick={() => window.open(url, "_blank")}
                       >
                         <Image className="h-4 w-4 mr-1" />
-                        Receipt
+                        Receipt {expense.receiptUrls.length > 1 ? index + 1 : ""}
                       </Button>
-                    )}
-                    {expense.proofOfPaymentUrl && (
+                    ))}
+                    {expense.proofUrls && expense.proofUrls.length > 0 && expense.proofUrls.map((url, index) => (
                       <Button
+                        key={`proof-${index}`}
                         variant="outline"
                         size="sm"
-                        onClick={() => window.open(expense.proofOfPaymentUrl, "_blank")}
+                        onClick={() => window.open(url, "_blank")}
                       >
                         <FileText className="h-4 w-4 mr-1" />
-                        Proof
+                        Proof {expense.proofUrls.length > 1 ? index + 1 : ""}
                       </Button>
-                    )}
-                    {expense.receiptFiles && expense.receiptFiles.length > 0 && (
-                      <div className="flex flex-wrap gap-2">
-                        {expense.receiptFiles.map((file) => (
-                          <Button
-                            key={file.id}
-                            variant="outline"
-                            size="sm"
-                            onClick={() => window.open(file.url, "_blank")}
-                            className="text-xs"
-                          >
-                            <ExternalLink className="h-3 w-3 mr-1" />
-                            {file.name}
-                          </Button>
-                        ))}
-                      </div>
-                    )}
+                    ))}
                   </div>
                 </div>
 
