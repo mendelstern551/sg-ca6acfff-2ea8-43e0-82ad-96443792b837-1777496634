@@ -15,6 +15,7 @@ import { ReceiptLibrary } from "@/components/ReceiptLibrary";
 import { bookingService, type Booking as SupabaseBooking, type Payment as SupabasePayment } from "@/services/bookingService";
 import { expenseService, type Expense as SupabaseExpense } from "@/services/expenseService";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 import type { Booking, Expense, Payment, BookingType, PaymentStatus } from "@/types/booking";
 
 export default function HomePage() {
@@ -32,6 +33,47 @@ export default function HomePage() {
 
   useEffect(() => {
     loadAllData();
+
+    // Set up real-time subscriptions for cross-browser sync
+    const bookingsSubscription = supabase
+      .channel('bookings-changes')
+      .on('postgres_changes', 
+        { event: '*', schema: 'public', table: 'bookings' },
+        (payload) => {
+          console.log('Booking change received:', payload);
+          loadAllData(); // Reload all data when bookings change
+        }
+      )
+      .subscribe();
+
+    const expensesSubscription = supabase
+      .channel('expenses-changes')
+      .on('postgres_changes',
+        { event: '*', schema: 'public', table: 'expenses' },
+        (payload) => {
+          console.log('Expense change received:', payload);
+          loadAllData(); // Reload all data when expenses change
+        }
+      )
+      .subscribe();
+
+    const paymentsSubscription = supabase
+      .channel('payments-changes')
+      .on('postgres_changes',
+        { event: '*', schema: 'public', table: 'payments' },
+        (payload) => {
+          console.log('Payment change received:', payload);
+          loadAllData(); // Reload all data when payments change
+        }
+      )
+      .subscribe();
+
+    // Cleanup subscriptions on unmount
+    return () => {
+      bookingsSubscription.unsubscribe();
+      expensesSubscription.unsubscribe();
+      paymentsSubscription.unsubscribe();
+    };
   }, []);
 
   const loadAllData = async () => {
