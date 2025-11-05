@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Calendar, Users, DollarSign, FileText, Plus } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -20,6 +19,9 @@ import { supabase } from "@/integrations/supabase/client";
 import type { Booking, Expense, Payment, BookingType, PaymentStatus } from "@/types/booking";
 import { formatCurrency } from "@/lib/bookingCalculations";
 import { invoiceService } from "@/services/invoiceService";
+import type { Database } from "@/integrations/supabase/types";
+
+type Invoice = Database["public"]["Tables"]["invoices"]["Row"];
 
 export default function HomePage() {
   const [activeTab, setActiveTab] = useState("bookings");
@@ -32,6 +34,9 @@ export default function HomePage() {
   const [refreshKey, setRefreshKey] = useState(0);
   const [filteredBookingId, setFilteredBookingId] = useState<string | undefined>();
   const [loading, setLoading] = useState(true);
+  const [invoices, setInvoices] = useState<Invoice[]>([]);
+  const [selectedInvoiceBooking, setSelectedInvoiceBooking] = useState<Booking | undefined>();
+  const [invoiceDialogOpen, setInvoiceDialogOpen] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -81,9 +86,10 @@ export default function HomePage() {
   const loadAllData = async () => {
     try {
       setLoading(true);
-      const [bookingsData, expensesData] = await Promise.all([
+      const [bookingsData, expensesData, invoicesData] = await Promise.all([
         bookingService.getAllBookings(),
-        expenseService.getAllExpenses()
+        expenseService.getAllExpenses(),
+        invoiceService.getAllInvoices()
       ]);
 
       const mappedBookings: Booking[] = bookingsData.map((b: SupabaseBooking): Booking => {
@@ -146,6 +152,7 @@ export default function HomePage() {
 
       setBookings(mappedBookings);
       setExpenses(mappedExpenses);
+      setInvoices(invoicesData);
     } catch (error) {
       console.error("Error loading data:", error);
       toast({
@@ -598,46 +605,79 @@ export default function HomePage() {
                       Invoice Management
                     </CardTitle>
                     <CardDescription className="text-stone-600 dark:text-stone-400">
-                      View all invoices for your bookings
+                      View and manage all invoices for your bookings
                     </CardDescription>
                   </div>
-                  <Button 
-                    className="bg-orange-600 hover:bg-orange-700 text-white shadow-md hover:shadow-lg transition-all"
-                    onClick={() => window.location.href = "/invoices"}
-                  >
-                    <FileText className="h-4 w-4 mr-2" />
-                    View All Invoices
-                  </Button>
                 </div>
               </CardHeader>
               <CardContent>
-                <div className="text-center py-12">
-                  <FileText className="h-16 w-16 mx-auto mb-4 text-blue-300 dark:text-blue-700" />
-                  <h3 className="text-lg font-medium text-stone-900 dark:text-stone-100 mb-2">
-                    Invoice Management System
-                  </h3>
-                  <p className="text-stone-600 dark:text-stone-400 mb-6 max-w-md mx-auto">
-                    All invoices are automatically generated for each booking with detailed cost breakdowns. 
-                    Click the button above to view and manage all invoices, or use the "Open Invoice" button in any client details dialog.
-                  </p>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 max-w-2xl mx-auto mt-8">
-                    <div className="p-4 bg-blue-50 dark:bg-blue-950/30 rounded-lg">
-                      <FileText className="h-8 w-8 text-blue-600 mx-auto mb-2" />
-                      <h4 className="font-semibold text-stone-900 dark:text-stone-100 mb-1">Auto-Generated</h4>
-                      <p className="text-sm text-stone-600 dark:text-stone-400">Invoices created automatically for each booking</p>
-                    </div>
-                    <div className="p-4 bg-green-50 dark:bg-green-950/30 rounded-lg">
-                      <DollarSign className="h-8 w-8 text-green-600 mx-auto mb-2" />
-                      <h4 className="font-semibold text-stone-900 dark:text-stone-100 mb-1">Cost Breakdown</h4>
-                      <p className="text-sm text-stone-600 dark:text-stone-400">Detailed breakdown of all charges and payments</p>
-                    </div>
-                    <div className="p-4 bg-orange-50 dark:bg-orange-950/30 rounded-lg">
-                      <Calendar className="h-8 w-8 text-orange-600 mx-auto mb-2" />
-                      <h4 className="font-semibold text-stone-900 dark:text-stone-100 mb-1">Download PDF</h4>
-                      <p className="text-sm text-stone-600 dark:text-stone-400">Print or download invoices as PDF</p>
-                    </div>
+                {invoices.length === 0 ? (
+                  <div className="text-center py-12">
+                    <FileText className="h-16 w-16 mx-auto mb-4 text-blue-300 dark:text-blue-700" />
+                    <h3 className="text-lg font-medium text-stone-900 dark:text-stone-100 mb-2">
+                      No Invoices Yet
+                    </h3>
+                    <p className="text-stone-600 dark:text-stone-400 mb-6 max-w-md mx-auto">
+                      Invoices are automatically generated when you confirm a booking. 
+                      Create a confirmed booking to see your first invoice here.
+                    </p>
                   </div>
-                </div>
+                ) : (
+                  <div className="space-y-3">
+                    {invoices.map((invoice) => {
+                      const booking = bookings.find(b => b.id === invoice.booking_id);
+                      return (
+                        <div 
+                          key={invoice.id}
+                          className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 hover:border-blue-300 dark:hover:border-blue-600 transition-colors"
+                        >
+                          <div className="flex-1">
+                            <div className="flex items-center gap-3 mb-2">
+                              <span className="font-mono text-sm font-semibold text-blue-600 dark:text-blue-400">
+                                {invoice.invoice_number}
+                              </span>
+                              <Badge variant={invoice.balance_due > 0 ? "destructive" : "default"}>
+                                {invoice.balance_due > 0 ? "Outstanding" : "Paid"}
+                              </Badge>
+                            </div>
+                            <div className="text-sm text-stone-700 dark:text-stone-300">
+                              <p className="font-medium">{invoice.client_name}</p>
+                              <p className="text-xs text-stone-500 dark:text-stone-400 mt-1">
+                                {format(new Date(invoice.event_date_start), "MMM d")} - {format(new Date(invoice.event_date_end), "MMM d, yyyy")} • {invoice.number_of_guests} guests
+                              </p>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-4">
+                            <div className="text-right">
+                              <p className="text-lg font-bold text-stone-900 dark:text-stone-100">
+                                ${Number(invoice.total_amount).toFixed(2)}
+                              </p>
+                              {invoice.balance_due > 0 && (
+                                <p className="text-xs text-orange-600 dark:text-orange-400">
+                                  ${Number(invoice.balance_due).toFixed(2)} due
+                                </p>
+                              )}
+                            </div>
+                            <Button
+                              onClick={() => {
+                                if (booking) {
+                                  setSelectedInvoiceBooking(booking);
+                                  setInvoiceDialogOpen(true);
+                                }
+                              }}
+                              variant="outline"
+                              size="sm"
+                              className="flex items-center gap-2"
+                            >
+                              <FileText className="h-4 w-4" />
+                              View Invoice
+                            </Button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
               </CardContent>
             </Card>
           </TabsContent>
@@ -723,6 +763,14 @@ export default function HomePage() {
         expense={editingExpense}
         bookings={bookings}
       />
+
+      {selectedInvoiceBooking && (
+        <InvoiceDialog
+          open={invoiceDialogOpen}
+          onOpenChange={setInvoiceDialogOpen}
+          booking={selectedInvoiceBooking}
+        />
+      )}
     </div>
   );
 }
