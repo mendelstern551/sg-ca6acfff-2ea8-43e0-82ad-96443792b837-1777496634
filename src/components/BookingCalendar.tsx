@@ -6,7 +6,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Booking } from "@/types/booking";
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths, startOfWeek, endOfWeek } from "date-fns";
 import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, Star, Plus, Users, Clock } from "lucide-react";
-import { HDate, HebrewCalendar, flags } from "@hebcal/core";
+import { HDate, HebrewCalendar, flags, gematriya } from "@hebcal/core";
 
 interface BookingCalendarProps {
   bookings: Booking[];
@@ -176,11 +176,7 @@ export function BookingCalendar({ bookings, onDateClick, onBookingClick, onAddBo
       const yiddishMonth = monthNames[englishMonth] || englishMonth;
       
       // Get the year in Hebrew characters using gematriya
-      // The render method with 'he' locale returns the full date in Hebrew
-      // We need to use gematriya function to convert the year number
       const year = hDate.getFullYear();
-      // Import gematriya function from @hebcal/core
-      const { gematriya } = require("@hebcal/core");
       const hebrewYear = gematriya(year);
       
       return `${yiddishMonth} ${hebrewYear}`;
