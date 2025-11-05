@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Calendar, Users, DollarSign, FileText, Plus } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -42,7 +43,7 @@ export default function HomePage() {
         { event: '*', schema: 'public', table: 'bookings' },
         (payload) => {
           console.log('Booking change received:', payload);
-          loadAllData(); // Reload all data when bookings change
+          loadAllData();
         }
       )
       .subscribe();
@@ -53,7 +54,7 @@ export default function HomePage() {
         { event: '*', schema: 'public', table: 'expenses' },
         (payload) => {
           console.log('Expense change received:', payload);
-          loadAllData(); // Reload all data when expenses change
+          loadAllData();
         }
       )
       .subscribe();
@@ -64,12 +65,11 @@ export default function HomePage() {
         { event: '*', schema: 'public', table: 'payments' },
         (payload) => {
           console.log('Payment change received:', payload);
-          loadAllData(); // Reload all data when payments change
+          loadAllData();
         }
       )
       .subscribe();
 
-    // Cleanup subscriptions on unmount
     return () => {
       bookingsSubscription.unsubscribe();
       expensesSubscription.unsubscribe();
@@ -91,7 +91,7 @@ export default function HomePage() {
           bookingId: p.booking_id,
           amount: Number(p.amount),
           payment_date: p.payment_date,
-          payment_method: p.payment_method as any, // Cast for now
+          payment_method: p.payment_method as any,
           notes: p.notes,
           created_at: p.created_at,
           updated_at: p.updated_at,
@@ -158,13 +158,10 @@ export default function HomePage() {
 
   const handleSaveBooking = async (booking: Omit<Booking, "id" | "createdAt" | "updatedAt">) => {
     try {
-      // CRITICAL FIX: Calculate amountPaid from actual payment records, not from stored field
-      // This ensures that when custom pricing is applied, the balance is recalculated correctly
       const existingPayments = editingBooking?.payments || [];
       const amountPaid = existingPayments.reduce((sum, p) => sum + p.amount, 0);
       const balanceDue = booking.totalCost - amountPaid;
 
-      // Determine payment status based on balance
       let paymentStatus: "pending" | "partial" | "paid" = "pending";
       if (balanceDue <= 0) {
         paymentStatus = "paid";
@@ -187,9 +184,9 @@ export default function HomePage() {
         additional_cleaning_fee: booking.additionalCleaningFee,
         total_cost: booking.totalCost,
         deposit_amount: booking.depositAmount,
-        amount_paid: amountPaid, // Use calculated value from payments
-        balance_due: balanceDue, // Use recalculated balance
-        payment_status: paymentStatus, // Auto-update payment status
+        amount_paid: amountPaid,
+        balance_due: balanceDue,
+        payment_status: paymentStatus,
         confirmed: booking.confirmed,
         custom_price: booking.customPrice,
         discount_percent: booking.discountPercent,
@@ -380,7 +377,7 @@ export default function HomePage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-slate-50 dark:from-slate-950 dark:via-blue-950 dark:to-slate-50 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-slate-100 to-slate-200 dark:from-slate-950 dark:via-slate-900 dark:to-slate-800 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
           <p className="text-slate-600 dark:text-slate-400">Loading your data...</p>
@@ -390,15 +387,15 @@ export default function HomePage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-slate-50 dark:from-slate-950 dark:via-blue-950 dark:to-slate-50">
-      <header className="border-b bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm sticky top-0 z-50">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-slate-100 to-slate-200 dark:from-slate-950 dark:via-slate-900 dark:to-slate-800">
+      <header className="border-b border-slate-200 dark:border-slate-700 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md sticky top-0 z-50 shadow-sm">
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-2xl font-bold text-slate-900 dark:text-white">
+              <h1 className="text-2xl font-bold text-slate-900 dark:text-white bg-gradient-to-r from-blue-600 to-cyan-600 bg-clip-text text-transparent">
                 Trout Lake Resort
               </h1>
-              <p className="text-sm text-slate-600 dark:text-slate-400">
+              <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">
                 Booking Management System
               </p>
             </div>
@@ -409,58 +406,65 @@ export default function HomePage() {
 
       <main className="container mx-auto px-4 py-8">
         <div className="grid gap-6 md:grid-cols-4 mb-8">
-          {/* Summary Cards */}
-          <Card className="hover:shadow-lg transition-shadow">
+          <Card className="bg-gradient-to-br from-white to-slate-50 dark:from-slate-800 dark:to-slate-900 border-slate-200 dark:border-slate-700 hover:shadow-lg transition-all duration-300 hover:-translate-y-1">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Bookings</CardTitle>
-              <Calendar className="h-4 w-4 text-blue-600" />
+              <CardTitle className="text-sm font-medium text-slate-700 dark:text-slate-300">Total Bookings</CardTitle>
+              <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
+                <Calendar className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+              </div>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{bookings.length}</div>
-              <p className="text-xs text-slate-600 dark:text-slate-400">
+              <div className="text-2xl font-bold text-slate-900 dark:text-white">{bookings.length}</div>
+              <p className="text-xs text-slate-600 dark:text-slate-400 mt-1">
                 Active reservations
               </p>
             </CardContent>
           </Card>
 
-          <Card className="hover:shadow-lg transition-shadow">
+          <Card className="bg-gradient-to-br from-white to-emerald-50 dark:from-slate-800 dark:to-emerald-900/20 border-slate-200 dark:border-slate-700 hover:shadow-lg transition-all duration-300 hover:-translate-y-1">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Guests</CardTitle>
-              <Users className="h-4 w-4 text-green-600" />
+              <CardTitle className="text-sm font-medium text-slate-700 dark:text-slate-300">Total Guests</CardTitle>
+              <div className="p-2 bg-emerald-100 dark:bg-emerald-900/30 rounded-lg">
+                <Users className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+              </div>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{totalGuests}</div>
-              <p className="text-xs text-slate-600 dark:text-slate-400">
+              <div className="text-2xl font-bold text-slate-900 dark:text-white">{totalGuests}</div>
+              <p className="text-xs text-slate-600 dark:text-slate-400 mt-1">
                 Expected attendees
               </p>
             </CardContent>
           </Card>
 
-          <Card className="hover:shadow-lg transition-shadow">
+          <Card className="bg-gradient-to-br from-white to-green-50 dark:from-slate-800 dark:to-green-900/20 border-slate-200 dark:border-slate-700 hover:shadow-lg transition-all duration-300 hover:-translate-y-1">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
-              <DollarSign className="h-4 w-4 text-emerald-600" />
+              <CardTitle className="text-sm font-medium text-slate-700 dark:text-slate-300">Total Revenue</CardTitle>
+              <div className="p-2 bg-green-100 dark:bg-green-900/30 rounded-lg">
+                <DollarSign className="h-4 w-4 text-green-600 dark:text-green-400" />
+              </div>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-emerald-600">
+              <div className="text-2xl font-bold text-green-600 dark:text-green-400">
                 ${totalRevenue.toLocaleString()}
               </div>
-              <p className="text-xs text-slate-600 dark:text-slate-400">
+              <p className="text-xs text-slate-600 dark:text-slate-400 mt-1">
                 From all bookings
               </p>
             </CardContent>
           </Card>
 
-          <Card className="hover:shadow-lg transition-shadow">
+          <Card className={`bg-gradient-to-br ${netProfit >= 0 ? 'from-white to-cyan-50 dark:from-slate-800 dark:to-cyan-900/20' : 'from-white to-red-50 dark:from-slate-800 dark:to-red-900/20'} border-slate-200 dark:border-slate-700 hover:shadow-lg transition-all duration-300 hover:-translate-y-1`}>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Net Profit</CardTitle>
-              <FileText className="h-4 w-4 text-blue-600" />
+              <CardTitle className="text-sm font-medium text-slate-700 dark:text-slate-300">Net Profit</CardTitle>
+              <div className={`p-2 ${netProfit >= 0 ? 'bg-cyan-100 dark:bg-cyan-900/30' : 'bg-red-100 dark:bg-red-900/30'} rounded-lg`}>
+                <FileText className={`h-4 w-4 ${netProfit >= 0 ? 'text-cyan-600 dark:text-cyan-400' : 'text-red-600 dark:text-red-400'}`} />
+              </div>
             </CardHeader>
             <CardContent>
-              <div className={`text-2xl font-bold ${netProfit >= 0 ? "text-green-600" : "text-red-600"}`}>
+              <div className={`text-2xl font-bold ${netProfit >= 0 ? "text-cyan-600 dark:text-cyan-400" : "text-red-600 dark:text-red-400"}`}>
                 ${netProfit.toLocaleString()}
               </div>
-              <p className="text-xs text-slate-600 dark:text-slate-400">
+              <p className="text-xs text-slate-600 dark:text-slate-400 mt-1">
                 Revenue - Expenses
               </p>
             </CardContent>
@@ -473,27 +477,27 @@ export default function HomePage() {
             setFilteredBookingId(undefined);
           }
         }} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-6 lg:w-[900px]">
-            <TabsTrigger value="bookings">Bookings</TabsTrigger>
-            <TabsTrigger value="calendar">Calendar</TabsTrigger>
-            <TabsTrigger value="budget">Budget</TabsTrigger>
-            <TabsTrigger value="expenses">Expenses</TabsTrigger>
-            <TabsTrigger value="receipts">Receipts</TabsTrigger>
-            <TabsTrigger value="manager">Manager</TabsTrigger>
+          <TabsList className="grid w-full grid-cols-6 lg:w-[900px] bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-1">
+            <TabsTrigger value="bookings" className="data-[state=active]:bg-blue-100 dark:data-[state=active]:bg-blue-900/30 data-[state=active]:text-blue-700 dark:data-[state=active]:text-blue-300">Bookings</TabsTrigger>
+            <TabsTrigger value="calendar" className="data-[state=active]:bg-blue-100 dark:data-[state=active]:bg-blue-900/30 data-[state=active]:text-blue-700 dark:data-[state=active]:text-blue-300">Calendar</TabsTrigger>
+            <TabsTrigger value="budget" className="data-[state=active]:bg-blue-100 dark:data-[state=active]:bg-blue-900/30 data-[state=active]:text-blue-700 dark:data-[state=active]:text-blue-300">Budget</TabsTrigger>
+            <TabsTrigger value="expenses" className="data-[state=active]:bg-blue-100 dark:data-[state=active]:bg-blue-900/30 data-[state=active]:text-blue-700 dark:data-[state=active]:text-blue-300">Expenses</TabsTrigger>
+            <TabsTrigger value="receipts" className="data-[state=active]:bg-blue-100 dark:data-[state=active]:bg-blue-900/30 data-[state=active]:text-blue-700 dark:data-[state=active]:text-blue-300">Receipts</TabsTrigger>
+            <TabsTrigger value="manager" className="data-[state=active]:bg-blue-100 dark:data-[state=active]:bg-blue-900/30 data-[state=active]:text-blue-700 dark:data-[state=active]:text-blue-300">Manager</TabsTrigger>
           </TabsList>
 
           <TabsContent value="bookings" className="space-y-4">
-            <Card>
+            <Card className="bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700">
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <div>
-                    <CardTitle>All Bookings</CardTitle>
-                    <CardDescription>
+                    <CardTitle className="text-slate-900 dark:text-white">All Bookings</CardTitle>
+                    <CardDescription className="text-slate-600 dark:text-slate-400">
                       Manage your Yom Tov, Shabaton, and Night Event bookings
                     </CardDescription>
                   </div>
                   <Button
-                    className="bg-blue-600 hover:bg-blue-700"
+                    className="bg-blue-600 hover:bg-blue-700 text-white shadow-md hover:shadow-lg transition-all"
                     onClick={() => {
                       setEditingBooking(undefined);
                       setBookingDialogOpen(true);
@@ -543,17 +547,17 @@ export default function HomePage() {
           </TabsContent>
 
           <TabsContent value="expenses" className="space-y-4">
-            <Card>
+            <Card className="bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700">
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <div>
-                    <CardTitle>Expense Tracking</CardTitle>
-                    <CardDescription>
+                    <CardTitle className="text-slate-900 dark:text-white">Expense Tracking</CardTitle>
+                    <CardDescription className="text-slate-600 dark:text-slate-400">
                       Record expenses with receipts and payment proof
                     </CardDescription>
                   </div>
                   <Button 
-                    className="bg-blue-600 hover:bg-blue-700"
+                    className="bg-blue-600 hover:bg-blue-700 text-white shadow-md hover:shadow-lg transition-all"
                     onClick={() => {
                       setEditingExpense(undefined);
                       setExpenseDialogOpen(true);
@@ -589,10 +593,10 @@ export default function HomePage() {
           </TabsContent>
 
           <TabsContent value="manager" className="space-y-4">
-            <Card>
+            <Card className="bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700">
               <CardHeader>
-                <CardTitle>Manager Compensation</CardTitle>
-                <CardDescription>
+                <CardTitle className="text-slate-900 dark:text-white">Manager Compensation</CardTitle>
+                <CardDescription className="text-slate-600 dark:text-slate-400">
                   Track maintenance fees, commissions, and payments to manager
                 </CardDescription>
               </CardHeader>
