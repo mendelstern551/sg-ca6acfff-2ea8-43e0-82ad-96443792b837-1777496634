@@ -1,12 +1,13 @@
-
 import * as React from "react";
 import { DayPicker, DayPickerProps } from "react-day-picker";
 import { cn } from "@/lib/utils";
 import { buttonVariants } from "@/components/ui/button";
-import { ChevronLeft, ChevronRight, Star } from "lucide-react";
-import { HDate, HebrewCalendar, flags } from "@hebcal/core";
+import { ChevronLeft, ChevronRight } from "lucide-react";
+import { HDate, HebrewCalendar, flags, Sedra, months } from "@hebcal/core";
 
 export type EnhancedCalendarProps = DayPickerProps;
+
+const HEBREW_WEEKDAYS = ["יום ראשון", "יום שני", "יום שלישי", "יום רביעי", "יום חמישי", "יום שישי", "שבת"];
 
 function EnhancedCalendar({
   className,
@@ -34,6 +35,32 @@ function EnhancedCalendar({
     }
   };
 
+  const getParshaName = (date: Date): string => {
+    try {
+      if (!date || !(date instanceof Date) || isNaN(date.getTime())) {
+        return "";
+      }
+      const dayOfWeek = date.getDay();
+      if (dayOfWeek !== 6) return "";
+      
+      const hDate = new HDate(date);
+      const sedra = new Sedra(hDate.getFullYear(), false);
+      const parsha = sedra.lookup(hDate);
+      
+      if (parsha.chag) {
+        return "";
+      }
+      
+      if (parsha.parsha && parsha.parsha.length > 0) {
+        return parsha.parsha.map((p: string) => p).join("-");
+      }
+      
+      return "";
+    } catch (error) {
+      return "";
+    }
+  };
+
   const getHebrewDate = (date: Date): string => {
     try {
       if (!date || !(date instanceof Date) || isNaN(date.getTime())) {
@@ -49,10 +76,18 @@ function EnhancedCalendar({
     }
   };
 
+  const formatWeekday = (date: Date, options?: any): string => {
+    const dayIndex = date.getDay();
+    return HEBREW_WEEKDAYS[dayIndex];
+  };
+
   return (
     <DayPicker
       showOutsideDays={showOutsideDays}
       className={cn("p-3", className)}
+      formatters={{
+        formatWeekdayName: formatWeekday,
+      }}
       classNames={{
         months: "flex flex-col sm:flex-row space-y-4 sm:space-x-4 sm:space-y-0",
         month: "space-y-4",
@@ -67,7 +102,7 @@ function EnhancedCalendar({
         nav_button_next: "absolute right-1",
         table: "w-full border-collapse space-y-1",
         head_row: "flex",
-        head_cell: "text-slate-500 rounded-md w-9 font-normal text-[0.8rem] dark:text-slate-400",
+        head_cell: "text-slate-500 rounded-md w-9 font-normal text-[0.65rem] dark:text-slate-400",
         row: "flex w-full mt-2",
         cell: cn(
           "relative p-0 text-center text-sm focus-within:relative focus-within:z-20 [&:has([aria-selected])]:bg-slate-100 [&:has([aria-selected].day-outside)]:bg-slate-100/50 [&:has([aria-selected].day-range-end)]:rounded-r-md dark:[&:has([aria-selected])]:bg-slate-800 dark:[&:has([aria-selected].day-outside)]:bg-slate-800/50",
@@ -77,7 +112,7 @@ function EnhancedCalendar({
         ),
         day: cn(
           buttonVariants({ variant: "ghost" }),
-          "h-16 w-9 p-0 font-normal aria-selected:opacity-100 flex flex-col items-center justify-center"
+          "h-20 w-9 p-0 font-normal aria-selected:opacity-100 flex flex-col items-center justify-center"
         ),
         day_range_start: "day-range-start",
         day_range_end: "day-range-end",
@@ -105,19 +140,27 @@ function EnhancedCalendar({
 
           const holidays = getJewishHolidays(date);
           const hebrewDate = getHebrewDate(date);
-          const hasHoliday = holidays.length > 0;
+          const parshaName = getParshaName(date);
+          const isShabbos = date.getDay() === 6;
 
           return (
-            <div className="flex flex-col items-center justify-center w-full h-full relative">
-              {hasHoliday && (
-                <Star className="absolute -top-1 -right-1 h-3 w-3 text-yellow-500 fill-yellow-500" />
-              )}
+            <div className="flex flex-col items-center justify-center w-full h-full relative gap-0.5">
               <div className="text-base font-semibold">{date.getDate()}</div>
               {hebrewDate && (
-                <div className="text-[10px] text-slate-500 dark:text-slate-500 font-medium">
+                <div className="text-[10px] text-slate-500 dark:text-slate-400 font-medium leading-none">
                   {hebrewDate}
                 </div>
               )}
+              {parshaName && (
+                <div className="text-[8px] text-blue-600 dark:text-blue-400 font-semibold leading-none px-0.5 bg-blue-50 dark:bg-blue-950/30 rounded mt-0.5">
+                  {parshaName}
+                </div>
+              )}
+              {holidays.length > 0 && holidays.map((holiday: any, idx: number) => (
+                <div key={idx} className="text-[8px] text-amber-600 dark:text-amber-400 font-semibold leading-none px-0.5 bg-amber-50 dark:bg-amber-950/30 rounded mt-0.5">
+                  {holiday.render("he-x-NoNikud")}
+                </div>
+              ))}
             </div>
           );
         },
