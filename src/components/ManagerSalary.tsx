@@ -82,53 +82,41 @@ export function ManagerSalary({ bookings, onAddExpense, allExpenses, onExpensesU
     const today = new Date();
     const currentMonthStart = startOfMonth(today);
 
+    // Only process if we're within the season
+    if (isBefore(currentMonthStart, seasonStart) || isAfter(currentMonthStart, seasonEnd)) {
+      return;
+    }
+
     // Get all existing maintenance expenses
     const maintenanceExpenses = allExpenses.filter(exp => 
       exp.category === "Manager Salary" && 
       exp.description?.includes("Monthly Maintenance Fee")
     );
 
-    // Calculate which months need expenses
-    const monthsToCreate: Date[] = [];
-    let monthDate = startOfMonth(seasonStart);
-    
-    while (!isAfter(monthDate, currentMonthStart) && !isAfter(monthDate, seasonEnd)) {
-      // Check if expense already exists for this month
-      const monthStart = startOfMonth(monthDate);
-      const monthExists = maintenanceExpenses.some(exp => {
-        const expenseMonth = startOfMonth(new Date(exp.expense_date));
-        return expenseMonth.getTime() === monthStart.getTime();
-      });
+    // Check if current month already has a maintenance fee
+    const currentMonthExists = maintenanceExpenses.some(exp => {
+      const expenseMonth = startOfMonth(new Date(exp.expense_date));
+      return expenseMonth.getTime() === currentMonthStart.getTime();
+    });
 
-      if (!monthExists) {
-        monthsToCreate.push(new Date(monthDate));
-      }
-
-      // Move to next month
-      monthDate = new Date(monthDate.getFullYear(), monthDate.getMonth() + 1, 1);
-    }
-
-    // Create missing monthly maintenance expenses
-    if (monthsToCreate.length > 0) {
-      const createPromises = monthsToCreate.map(monthDate => {
-        const expense: ExpenseInsert = {
-          booking_id: null,
-          expense_date: monthDate.toISOString(),
-          amount: salaryData.maintenanceFeePerMonth,
-          category: "Manager Salary",
-          description: `Monthly Maintenance Fee - ${format(monthDate, "MMMM yyyy")}`,
-          payment_method: "pending",
-          vendor: "Manager",
-          notes: `Maintenance fee of $${salaryData.maintenanceFeePerMonth.toLocaleString()} - Automatically charged on 1st of every month`,
-          receipt_urls: [],
-          proof_urls: []
-        };
-        console.log(`Creating maintenance fee for ${format(monthDate, "MMMM yyyy")}`);
-        return onAddExpense(expense);
-      });
-
-      await Promise.all(createPromises);
-      console.log(`${createPromises.length} monthly maintenance fee expenses created.`);
+    // Only create expense for current month if it doesn't exist
+    if (!currentMonthExists) {
+      const expense: ExpenseInsert = {
+        booking_id: null,
+        expense_date: currentMonthStart.toISOString(),
+        amount: salaryData.maintenanceFeePerMonth,
+        category: "Manager Salary",
+        description: `Monthly Maintenance Fee - ${format(currentMonthStart, "MMMM yyyy")}`,
+        payment_method: "pending",
+        vendor: "Manager",
+        notes: `Maintenance fee of $${salaryData.maintenanceFeePerMonth.toLocaleString()} - Automatically charged on 1st of every month`,
+        receipt_urls: [],
+        proof_urls: []
+      };
+      
+      console.log(`Creating maintenance fee for ${format(currentMonthStart, "MMMM yyyy")}`);
+      await onAddExpense(expense);
+      console.log("Monthly maintenance fee expense created for current month.");
     }
   };
 
