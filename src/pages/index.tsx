@@ -23,6 +23,8 @@ import type { Database } from "@/integrations/supabase/types";
 import { Badge } from "@/components/ui/badge";
 import { InvoiceDialog } from "@/components/InvoiceDialog";
 import { format } from "date-fns";
+import { managerService } from "@/services/managerService";
+import type { ManagerCompensation } from "@/services/managerService";
 
 type InvoiceRow = Database["public"]["Tables"]["invoices"]["Row"];
 type ExpenseInsert = Database["public"]["Tables"]["expenses"]["Insert"];
@@ -33,6 +35,7 @@ export default function HomePage() {
   const [activeTab, setActiveTab] = useState("bookings");
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [expenses, setExpenses] = useState<Expense[]>([]);
+  const [managerCompensations, setManagerCompensations] = useState<ManagerCompensation[]>([]);
   const [bookingDialogOpen, setBookingDialogOpen] = useState(false);
   const [expenseDialogOpen, setExpenseDialogOpen] = useState(false);
   const [editingBooking, setEditingBooking] = useState<Booking | undefined>();
@@ -64,10 +67,11 @@ export default function HomePage() {
   const loadAllData = async () => {
     try {
       setLoading(true);
-      const [bookingsData, expensesData, invoicesData] = await Promise.all([
+      const [bookingsData, expensesData, invoicesData, managerData] = await Promise.all([
         bookingService.getAllBookings(),
         expenseService.getAllExpenses(),
-        invoiceService.getAllInvoices()
+        invoiceService.getAllInvoices(),
+        managerService.getAllCompensation()
       ]);
 
       const bookingsWithPayments = bookingsData.map(b => ({
@@ -78,6 +82,7 @@ export default function HomePage() {
       setBookings(bookingsWithPayments);
       setExpenses(expensesData);
       setInvoices(invoicesData);
+      setManagerCompensations(managerData);
 
     } catch (error) {
       console.error("Error loading data:", error);
@@ -220,9 +225,29 @@ export default function HomePage() {
     setActiveTab("expenses");
   };
 
+  // Convert manager compensation to expense format for display
+  const managerExpenses: Expense[] = managerCompensations.map(comp => ({
+    id: comp.id,
+    booking_id: comp.booking_id,
+    description: `Manager Commission - ${comp.manager_name}`,
+    amount: comp.amount,
+    category: "Manager Salary",
+    payment_method: "other",
+    vendor: "Manager",
+    expense_date: comp.due_date,
+    receipt_urls: [],
+    proof_urls: [],
+    notes: comp.notes || `15% commission (min $1,000) for ${comp.booking_type} booking`,
+    created_at: comp.created_at,
+    updated_at: comp.updated_at
+  }));
+
+  // Combine regular expenses with manager expenses
+  const allExpenses = [...expenses, ...managerExpenses];
+
   const totalGuests = bookings.reduce((sum, b) => sum + b.number_of_guests, 0);
   const totalRevenue = bookings.reduce((sum, b) => sum + b.total_cost, 0);
-  const totalExpenses = expenses.reduce((sum, e) => sum + Number(e.amount), 0);
+  const totalExpenses = allExpenses.reduce((sum, e) => sum + Number(e.amount), 0);
   const netProfit = totalRevenue - totalExpenses;
 
   if (loading) {
@@ -294,8 +319,8 @@ export default function HomePage() {
 
           <TabsContent value="expenses" className="space-y-4">
             <Card className="bg-white dark:bg-stone-900 border-stone-200 dark:border-stone-800">
-              <CardHeader><div className="flex items-center justify-between"><div><CardTitle className="text-stone-900 dark:text-stone-100">Expense Tracking</CardTitle><CardDescription className="text-stone-600 dark:text-stone-400">Record expenses with receipts and payment proof</CardDescription></div><Button className="bg-orange-600 hover:bg-orange-700 text-white shadow-md hover:shadow-lg transition-all" onClick={() => { setEditingExpense(undefined); setExpenseDialogOpen(true); }}><Plus className="h-4 w-4 mr-2" />Add Expense</Button></div></CardHeader>
-              <CardContent>{expenses.length === 0 ? <div className="text-center py-12 text-stone-500 dark:text-stone-400"><FileText className="h-12 w-12 mx-auto mb-4 opacity-50" /><p className="text-lg font-medium mb-2">No expenses recorded</p><p className="text-sm">Start tracking your expenses with receipts</p></div> : <ExpenseList expenses={expenses} bookings={bookings} onEdit={handleEditExpense} onDelete={handleDeleteExpense} filterBookingId={filteredBookingId} />}</CardContent>
+              <CardHeader><div className="flex items-center justify-between"><div><CardTitle className="text-stone-900 dark:text-stone-100">Expense Tracking</CardTitle><CardDescription className="text-stone-600 dark:text-stone-400">Record expenses with receipts and payment proof (includes manager compensation)</CardDescription></div><Button className="bg-orange-600 hover:bg-orange-700 text-white shadow-md hover:shadow-lg transition-all" onClick={() => { setEditingExpense(undefined); setExpenseDialogOpen(true); }}><Plus className="h-4 w-4 mr-2" />Add Expense</Button></div></CardHeader>
+              <CardContent>{allExpenses.length === 0 ? <div className="text-center py-12 text-stone-500 dark:text-stone-400"><FileText className="h-12 w-12 mx-auto mb-4 opacity-50" /><p className="text-lg font-medium mb-2">No expenses recorded</p><p className="text-sm">Start tracking your expenses with receipts</p></div> : <ExpenseList expenses={allExpenses} bookings={bookings} onEdit={handleEditExpense} onDelete={handleDeleteExpense} filterBookingId={filteredBookingId} />}</CardContent>
             </Card>
           </TabsContent>
 

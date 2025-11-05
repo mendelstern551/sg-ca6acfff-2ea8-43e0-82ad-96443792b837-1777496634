@@ -32,7 +32,17 @@ export function calculateBookingCost(
   }
 
   const baseRate = pricing.baseRate;
-  const perPersonRate = numberOfGuests > 75 ? pricing.perPersonRateOver75 : pricing.perPersonRate;
+  
+  // Special pricing tier: 48+ guests = $100 per person
+  let perPersonRate: number;
+  if (numberOfGuests >= 48) {
+    perPersonRate = 100;
+  } else if (numberOfGuests > 75) {
+    perPersonRate = pricing.perPersonRateOver75;
+  } else {
+    perPersonRate = pricing.perPersonRate;
+  }
+  
   const perPersonTotal = numberOfGuests * perPersonRate;
   
   // Use the MAXIMUM of base rate or per-person total
