@@ -1,4 +1,7 @@
-import { useState } from "react";
+"use client";
+
+import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { Clock, X, Check, AlertCircle, Calendar, Mail, Wrench, UserCheck, Bell } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -41,22 +44,42 @@ export function ReminderModal({
   onDismiss
 }: ReminderModalProps) {
   const [snoozeTime, setSnoozeTime] = useState("15");
+  const [mounted, setMounted] = useState(false);
+
   const CategoryIcon = categoryIcons[reminder.category as keyof typeof categoryIcons];
   const categoryColor = categoryColors[reminder.category as keyof typeof categoryColors];
 
-  return (
-    <>
-      {/* Backdrop */}
-      <div className="fixed inset-0 bg-black/80 z-[100] backdrop-blur-sm" />
+  useEffect(() => {
+    setMounted(true);
+    const originalOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = originalOverflow;
+    };
+  }, []);
+
+  if (!mounted) return null;
+
+  return createPortal(
+    <div
+      className="fixed inset-0 z-[9999] flex items-center justify-center pointer-events-auto"
+      role="dialog"
+      aria-modal="true"
+      onClick={(e) => e.stopPropagation()}
+      onMouseDown={(e) => e.stopPropagation()}
+      onTouchStart={(e) => e.stopPropagation()}
+    >
+      {/* Backdrop that captures clicks so nothing behind can be interacted with */}
+      <div className="absolute inset-0 bg-black/70 backdrop-blur-sm pointer-events-auto" />
 
       {/* Center Modal */}
-      <div className="fixed inset-0 z-[101] flex items-center justify-center p-4">
-        <Card className="w-full max-w-md bg-white dark:bg-stone-900 shadow-2xl border-4 border-orange-500 animate-in zoom-in-95">
+      <div className="relative z-[10000] p-4 w-full max-w-md" onClick={(e) => e.stopPropagation()}>
+        <Card className="w-full bg-white dark:bg-stone-900 shadow-2xl border-4 border-orange-500 animate-in zoom-in-95 rounded-lg overflow-hidden">
           {/* Header with Icon */}
-          <div className={`${categoryColor} text-white p-6 rounded-t-lg relative`}>
+          <div className={`${categoryColor} text-white p-6 relative`}>
             <div className="absolute -top-10 left-1/2 -translate-x-1/2">
               <div className="bg-white dark:bg-stone-900 rounded-full p-4 shadow-2xl border-4 border-orange-500">
-                <Bell className="h-12 w-12 text-orange-600 animate-bounce" />
+                <Bell className="h-12 w-12 text-orange-600" />
               </div>
             </div>
             <div className="mt-8 text-center">
@@ -113,7 +136,10 @@ export function ReminderModal({
             <div className="space-y-3">
               {/* Complete Button - Primary */}
               <Button
-                onClick={onComplete}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onComplete();
+                }}
                 className="w-full h-12 text-base font-semibold bg-green-600 hover:bg-green-700"
               >
                 <Check className="h-5 w-5 mr-2" />
@@ -122,7 +148,10 @@ export function ReminderModal({
 
               {/* Snooze Button - Secondary */}
               <Button
-                onClick={() => onSnooze(parseInt(snoozeTime))}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onSnooze(parseInt(snoozeTime));
+                }}
                 variant="outline"
                 className="w-full h-12 text-base font-semibold border-2"
               >
@@ -132,7 +161,10 @@ export function ReminderModal({
 
               {/* Snooze & Minimize Button - Secondary */}
               <Button
-                onClick={() => onSnoozeMinimize(parseInt(snoozeTime))}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onSnoozeMinimize(parseInt(snoozeTime));
+                }}
                 variant="outline"
                 className="w-full h-12 text-base font-semibold border-2 border-blue-300 text-blue-700 hover:bg-blue-50"
               >
@@ -142,7 +174,10 @@ export function ReminderModal({
 
               {/* Dismiss Button - Danger */}
               <Button
-                onClick={onDismiss}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onDismiss();
+                }}
                 variant="ghost"
                 className="w-full h-10 text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/20"
               >
@@ -153,6 +188,7 @@ export function ReminderModal({
           </div>
         </Card>
       </div>
-    </>
+    </div>,
+    document.body
   );
 }
