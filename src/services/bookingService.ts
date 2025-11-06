@@ -14,180 +14,337 @@ const normalizeBooking = (booking: any): Booking => {
   };
 };
 
+// Retry helper function with exponential backoff
+async function retryWithBackoff<T>(
+  fn: () => Promise<T>,
+  maxRetries: number = 3,
+  initialDelay: number = 1000
+): Promise<T> {
+  let lastError: any;
+  
+  for (let i = 0; i < maxRetries; i++) {
+    try {
+      return await fn();
+    } catch (error: any) {
+      lastError = error;
+      console.warn(`Attempt ${i + 1} failed:`, error.message);
+      
+      // Don't retry on auth errors
+      if (error.code === '401' || error.code === '403' || error.message?.includes('JWT')) {
+        throw error;
+      }
+      
+      if (i < maxRetries - 1) {
+        const delay = initialDelay * Math.pow(2, i);
+        console.log(`Retrying in ${delay}ms...`);
+        await new Promise(resolve => setTimeout(resolve, delay));
+      }
+    }
+  }
+  
+  throw lastError;
+}
+
 export const bookingService = {
   async getAllBookings(): Promise<Booking[]> {
-    // Get bookings first
-    const { data: bookingsData, error: bookingsError } = await supabase
-      .from("bookings")
-      .select("*")
-      .order("start_date", { ascending: false });
+    try {
+      // Get bookings first with retry logic
+      const { data: bookingsData, error: bookingsError } = await retryWithBackoff(async () => {
+        const result = await supabase
+          .from("bookings")
+          .select("*")
+          .order("start_date", { ascending: false });
+        
+        if (result.error) throw result.error;
+        return result;
+      });
 
-    if (bookingsError) throw bookingsError;
-    if (!bookingsData) return [];
+      if (bookingsError) throw bookingsError;
+      if (!bookingsData) return [];
 
-    // Get payments separately
-    const { data: paymentsData, error: paymentsError } = await supabase
-      .from("payments")
-      .select("*");
+      // Get payments separately with retry logic
+      try {
+        const { data: paymentsData, error: paymentsError } = await retryWithBackoff(async () => {
+          const result = await supabase
+            .from("payments")
+            .select("*");
+          
+          if (result.error) throw result.error;
+          return result;
+        });
 
-    if (paymentsError) {
-      console.warn("Error fetching payments:", paymentsError);
-      // Return bookings without payments if payments fetch fails
-      return bookingsData.map(booking => normalizeBooking({ ...booking, payments: [] }));
+        if (paymentsError) {
+          console.warn("Error fetching payments:", paymentsError);
+          // Return bookings without payments if payments fetch fails
+          return bookingsData.map(booking => normalizeBooking({ ...booking, payments: [] }));
+        }
+
+        // Manually join payments to bookings
+        const bookingsWithPayments = bookingsData.map(booking => ({
+          ...booking,
+          payments: (paymentsData || []).filter(payment => payment.booking_id === booking.id)
+        }));
+
+        return bookingsWithPayments.map(normalizeBooking);
+      } catch (paymentsError) {
+        console.error("Failed to fetch payments after retries:", paymentsError);
+        // Return bookings without payments if all retries fail
+        return bookingsData.map(booking => normalizeBooking({ ...booking, payments: [] }));
+      }
+    } catch (error) {
+      console.error("Error fetching bookings:", error);
+      throw error;
     }
-
-    // Manually join payments to bookings
-    const bookingsWithPayments = bookingsData.map(booking => ({
-      ...booking,
-      payments: (paymentsData || []).filter(payment => payment.booking_id === booking.id)
-    }));
-
-    return bookingsWithPayments.map(normalizeBooking);
   },
 
   async getBookingById(id: string): Promise<Booking | null> {
-    // Get booking first
-    const { data: bookingData, error: bookingError } = await supabase
-      .from("bookings")
-      .select("*")
-      .eq("id", id)
-      .single();
+    try {
+      // Get booking first with retry logic
+      const { data: bookingData, error: bookingError } = await retryWithBackoff(async () => {
+        const result = await supabase
+          .from("bookings")
+          .select("*")
+          .eq("id", id)
+          .single();
+        
+        if (result.error) throw result.error;
+        return result;
+      });
 
-    if (bookingError) throw bookingError;
-    if (!bookingData) return null;
+      if (bookingError) throw bookingError;
+      if (!bookingData) return null;
 
-    // Get payments for this booking
-    const { data: paymentsData, error: paymentsError } = await supabase
-      .from("payments")
-      .select("*")
-      .eq("booking_id", id);
+      // Get payments for this booking with retry logic
+      try {
+        const { data: paymentsData, error: paymentsError } = await retryWithBackoff(async () => {
+          const result = await supabase
+            .from("payments")
+            .select("*")
+            .eq("booking_id", id);
+          
+          if (result.error) throw result.error;
+          return result;
+        });
 
-    if (paymentsError) {
-      console.warn("Error fetching payments:", paymentsError);
-      return normalizeBooking({ ...bookingData, payments: [] });
+        if (paymentsError) {
+          console.warn("Error fetching payments:", paymentsError);
+          return normalizeBooking({ ...bookingData, payments: [] });
+        }
+
+        return normalizeBooking({ 
+          ...bookingData, 
+          payments: paymentsData || [] 
+        });
+      } catch (paymentsError) {
+        console.error("Failed to fetch payments after retries:", paymentsError);
+        return normalizeBooking({ ...bookingData, payments: [] });
+      }
+    } catch (error) {
+      console.error("Error fetching booking by ID:", error);
+      throw error;
     }
-
-    return normalizeBooking({ 
-      ...bookingData, 
-      payments: paymentsData || [] 
-    });
   },
 
   async createBooking(booking: Omit<BookingInsert, "id" | "created_at" | "updated_at">): Promise<Booking> {
-    const { data, error } = await supabase
-      .from("bookings")
-      .insert([booking])
-      .select()
-      .single();
+    const { data, error } = await retryWithBackoff(async () => {
+      const result = await supabase
+        .from("bookings")
+        .insert([booking])
+        .select()
+        .single();
+      
+      if (result.error) throw result.error;
+      return result;
+    });
 
     if (error) throw error;
     return normalizeBooking({ ...data, payments: [] });
   },
 
   async updateBooking(id: string, updates: BookingUpdate): Promise<Booking> {
-    const { data, error } = await supabase
-      .from("bookings")
-      .update({ ...updates, updated_at: new Date().toISOString() })
-      .eq("id", id)
-      .select()
-      .single();
+    const { data, error } = await retryWithBackoff(async () => {
+      const result = await supabase
+        .from("bookings")
+        .update({ ...updates, updated_at: new Date().toISOString() })
+        .eq("id", id)
+        .select()
+        .single();
+      
+      if (result.error) throw result.error;
+      return result;
+    });
 
     if (error) throw error;
 
-    // Get payments for the updated booking
-    const { data: paymentsData } = await supabase
-      .from("payments")
-      .select("*")
-      .eq("booking_id", id);
+    // Get payments for the updated booking with retry logic
+    try {
+      const { data: paymentsData } = await retryWithBackoff(async () => {
+        const result = await supabase
+          .from("payments")
+          .select("*")
+          .eq("booking_id", id);
+        
+        if (result.error) throw result.error;
+        return result;
+      });
 
-    return normalizeBooking({ 
-      ...data, 
-      payments: paymentsData || [] 
-    });
+      return normalizeBooking({ 
+        ...data, 
+        payments: paymentsData || [] 
+      });
+    } catch (paymentsError) {
+      console.error("Failed to fetch payments after retries:", paymentsError);
+      return normalizeBooking({ ...data, payments: [] });
+    }
   },
 
   async deleteBooking(id: string): Promise<void> {
-    const { error } = await supabase
-      .from("bookings")
-      .delete()
-      .eq("id", id);
+    const { error } = await retryWithBackoff(async () => {
+      const result = await supabase
+        .from("bookings")
+        .delete()
+        .eq("id", id);
+      
+      if (result.error) throw result.error;
+      return result;
+    });
 
     if (error) throw error;
   },
 
   async getBookingsByDateRange(startDate: string, endDate: string): Promise<Booking[]> {
-    // Get bookings in date range
-    const { data: bookingsData, error: bookingsError } = await supabase
-      .from("bookings")
-      .select("*")
-      .gte("start_date", startDate)
-      .lte("end_date", endDate)
-      .order("start_date", { ascending: true });
+    try {
+      // Get bookings in date range with retry logic
+      const { data: bookingsData, error: bookingsError } = await retryWithBackoff(async () => {
+        const result = await supabase
+          .from("bookings")
+          .select("*")
+          .gte("start_date", startDate)
+          .lte("end_date", endDate)
+          .order("start_date", { ascending: true });
+        
+        if (result.error) throw result.error;
+        return result;
+      });
 
-    if (bookingsError) throw bookingsError;
-    if (!bookingsData) return [];
+      if (bookingsError) throw bookingsError;
+      if (!bookingsData) return [];
 
-    // Get all payments
-    const { data: paymentsData } = await supabase
-      .from("payments")
-      .select("*");
+      // Get all payments with retry logic
+      try {
+        const { data: paymentsData } = await retryWithBackoff(async () => {
+          const result = await supabase
+            .from("payments")
+            .select("*");
+          
+          if (result.error) throw result.error;
+          return result;
+        });
 
-    // Manually join payments to bookings
-    const bookingsWithPayments = bookingsData.map(booking => ({
-      ...booking,
-      payments: (paymentsData || []).filter(payment => payment.booking_id === booking.id)
-    }));
+        // Manually join payments to bookings
+        const bookingsWithPayments = bookingsData.map(booking => ({
+          ...booking,
+          payments: (paymentsData || []).filter(payment => payment.booking_id === booking.id)
+        }));
 
-    return bookingsWithPayments.map(normalizeBooking);
+        return bookingsWithPayments.map(normalizeBooking);
+      } catch (paymentsError) {
+        console.error("Failed to fetch payments after retries:", paymentsError);
+        return bookingsData.map(booking => normalizeBooking({ ...booking, payments: [] }));
+      }
+    } catch (error) {
+      console.error("Error fetching bookings by date range:", error);
+      throw error;
+    }
   },
 
   async getConfirmedBookings(): Promise<Booking[]> {
-    // Get confirmed bookings
-    const { data: bookingsData, error: bookingsError } = await supabase
-      .from("bookings")
-      .select("*")
-      .eq("confirmed", true)
-      .order("start_date", { ascending: true });
+    try {
+      // Get confirmed bookings with retry logic
+      const { data: bookingsData, error: bookingsError } = await retryWithBackoff(async () => {
+        const result = await supabase
+          .from("bookings")
+          .select("*")
+          .eq("confirmed", true)
+          .order("start_date", { ascending: true });
+        
+        if (result.error) throw result.error;
+        return result;
+      });
 
-    if (bookingsError) throw bookingsError;
-    if (!bookingsData) return [];
+      if (bookingsError) throw bookingsError;
+      if (!bookingsData) return [];
 
-    // Get all payments
-    const { data: paymentsData } = await supabase
-      .from("payments")
-      .select("*");
+      // Get all payments with retry logic
+      try {
+        const { data: paymentsData } = await retryWithBackoff(async () => {
+          const result = await supabase
+            .from("payments")
+            .select("*");
+          
+          if (result.error) throw result.error;
+          return result;
+        });
 
-    // Manually join payments to bookings
-    const bookingsWithPayments = bookingsData.map(booking => ({
-      ...booking,
-      payments: (paymentsData || []).filter(payment => payment.booking_id === booking.id)
-    }));
+        // Manually join payments to bookings
+        const bookingsWithPayments = bookingsData.map(booking => ({
+          ...booking,
+          payments: (paymentsData || []).filter(payment => payment.booking_id === booking.id)
+        }));
 
-    return bookingsWithPayments.map(normalizeBooking);
+        return bookingsWithPayments.map(normalizeBooking);
+      } catch (paymentsError) {
+        console.error("Failed to fetch payments after retries:", paymentsError);
+        return bookingsData.map(booking => normalizeBooking({ ...booking, payments: [] }));
+      }
+    } catch (error) {
+      console.error("Error fetching confirmed bookings:", error);
+      throw error;
+    }
   },
 
   async getPendingBookings(): Promise<Booking[]> {
-    // Get pending bookings
-    const { data: bookingsData, error: bookingsError } = await supabase
-      .from("bookings")
-      .select("*")
-      .eq("confirmed", false)
-      .order("start_date", { ascending: true });
+    try {
+      // Get pending bookings with retry logic
+      const { data: bookingsData, error: bookingsError } = await retryWithBackoff(async () => {
+        const result = await supabase
+          .from("bookings")
+          .select("*")
+          .eq("confirmed", false)
+          .order("start_date", { ascending: true });
+        
+        if (result.error) throw result.error;
+        return result;
+      });
 
-    if (bookingsError) throw bookingsError;
-    if (!bookingsData) return [];
+      if (bookingsError) throw bookingsError;
+      if (!bookingsData) return [];
 
-    // Get all payments
-    const { data: paymentsData } = await supabase
-      .from("payments")
-      .select("*");
+      // Get all payments with retry logic
+      try {
+        const { data: paymentsData } = await retryWithBackoff(async () => {
+          const result = await supabase
+            .from("payments")
+            .select("*");
+          
+          if (result.error) throw result.error;
+          return result;
+        });
 
-    // Manually join payments to bookings
-    const bookingsWithPayments = bookingsData.map(booking => ({
-      ...booking,
-      payments: (paymentsData || []).filter(payment => payment.booking_id === booking.id)
-    }));
+        // Manually join payments to bookings
+        const bookingsWithPayments = bookingsData.map(booking => ({
+          ...booking,
+          payments: (paymentsData || []).filter(payment => payment.booking_id === booking.id)
+        }));
 
-    return bookingsWithPayments.map(normalizeBooking);
+        return bookingsWithPayments.map(normalizeBooking);
+      } catch (paymentsError) {
+        console.error("Failed to fetch payments after retries:", paymentsError);
+        return bookingsData.map(booking => normalizeBooking({ ...booking, payments: [] }));
+      }
+    } catch (error) {
+      console.error("Error fetching pending bookings:", error);
+      throw error;
+    }
   }
 };
