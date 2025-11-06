@@ -29,8 +29,10 @@ async function retryWithBackoff<T>(
       lastError = error;
       console.warn(`Attempt ${i + 1} failed:`, error.message);
       
-      // Don't retry on auth errors
-      if (error.code === '401' || error.code === '403' || error.message?.includes('JWT')) {
+      // Don't retry on auth errors or schema errors
+      if (error.code === '401' || error.code === '403' || 
+          error.message?.includes('JWT') || 
+          error.message?.includes('schema cache')) {
         throw error;
       }
       
@@ -48,11 +50,37 @@ async function retryWithBackoff<T>(
 export const bookingService = {
   async getAllBookings(): Promise<Booking[]> {
     try {
-      // Get bookings first with retry logic
+      // Get bookings first with retry logic - select only booking columns
       const { data: bookingsData, error: bookingsError } = await retryWithBackoff(async () => {
         const result = await supabase
           .from("bookings")
-          .select("*")
+          .select(`
+            id,
+            name,
+            booking_type,
+            contact_name,
+            contact_email,
+            contact_phone,
+            start_date,
+            end_date,
+            number_of_guests,
+            number_of_rooms,
+            base_rate,
+            per_person_rate,
+            cleaning_fee,
+            additional_cleaning_fee,
+            total_cost,
+            deposit_amount,
+            amount_paid,
+            balance_due,
+            payment_status,
+            confirmed,
+            custom_price,
+            discount_percent,
+            notes,
+            created_at,
+            updated_at
+          `)
           .order("start_date", { ascending: false });
         
         if (result.error) throw result.error;
@@ -75,7 +103,6 @@ export const bookingService = {
 
         if (paymentsError) {
           console.warn("Error fetching payments:", paymentsError);
-          // Return bookings without payments if payments fetch fails
           return bookingsData.map(booking => normalizeBooking({ ...booking, payments: [] }));
         }
 
@@ -88,7 +115,6 @@ export const bookingService = {
         return bookingsWithPayments.map(normalizeBooking);
       } catch (paymentsError) {
         console.error("Failed to fetch payments after retries:", paymentsError);
-        // Return bookings without payments if all retries fail
         return bookingsData.map(booking => normalizeBooking({ ...booking, payments: [] }));
       }
     } catch (error) {
@@ -99,11 +125,37 @@ export const bookingService = {
 
   async getBookingById(id: string): Promise<Booking | null> {
     try {
-      // Get booking first with retry logic
+      // Get booking first with retry logic - select only booking columns
       const { data: bookingData, error: bookingError } = await retryWithBackoff(async () => {
         const result = await supabase
           .from("bookings")
-          .select("*")
+          .select(`
+            id,
+            name,
+            booking_type,
+            contact_name,
+            contact_email,
+            contact_phone,
+            start_date,
+            end_date,
+            number_of_guests,
+            number_of_rooms,
+            base_rate,
+            per_person_rate,
+            cleaning_fee,
+            additional_cleaning_fee,
+            total_cost,
+            deposit_amount,
+            amount_paid,
+            balance_due,
+            payment_status,
+            confirmed,
+            custom_price,
+            discount_percent,
+            notes,
+            created_at,
+            updated_at
+          `)
           .eq("id", id)
           .single();
         
@@ -150,7 +202,33 @@ export const bookingService = {
       const result = await supabase
         .from("bookings")
         .insert([booking])
-        .select()
+        .select(`
+          id,
+          name,
+          booking_type,
+          contact_name,
+          contact_email,
+          contact_phone,
+          start_date,
+          end_date,
+          number_of_guests,
+          number_of_rooms,
+          base_rate,
+          per_person_rate,
+          cleaning_fee,
+          additional_cleaning_fee,
+          total_cost,
+          deposit_amount,
+          amount_paid,
+          balance_due,
+          payment_status,
+          confirmed,
+          custom_price,
+          discount_percent,
+          notes,
+          created_at,
+          updated_at
+        `)
         .single();
       
       if (result.error) throw result.error;
@@ -162,12 +240,39 @@ export const bookingService = {
   },
 
   async updateBooking(id: string, updates: BookingUpdate): Promise<Booking> {
+    // CRITICAL FIX: Only select booking table columns, never include payments in the select
     const { data, error } = await retryWithBackoff(async () => {
       const result = await supabase
         .from("bookings")
         .update({ ...updates, updated_at: new Date().toISOString() })
         .eq("id", id)
-        .select()
+        .select(`
+          id,
+          name,
+          booking_type,
+          contact_name,
+          contact_email,
+          contact_phone,
+          start_date,
+          end_date,
+          number_of_guests,
+          number_of_rooms,
+          base_rate,
+          per_person_rate,
+          cleaning_fee,
+          additional_cleaning_fee,
+          total_cost,
+          deposit_amount,
+          amount_paid,
+          balance_due,
+          payment_status,
+          confirmed,
+          custom_price,
+          discount_percent,
+          notes,
+          created_at,
+          updated_at
+        `)
         .single();
       
       if (result.error) throw result.error;
@@ -176,7 +281,7 @@ export const bookingService = {
 
     if (error) throw error;
 
-    // Get payments for the updated booking with retry logic
+    // Get payments for the updated booking with retry logic (separate query)
     try {
       const { data: paymentsData } = await retryWithBackoff(async () => {
         const result = await supabase
@@ -214,11 +319,37 @@ export const bookingService = {
 
   async getBookingsByDateRange(startDate: string, endDate: string): Promise<Booking[]> {
     try {
-      // Get bookings in date range with retry logic
+      // Get bookings in date range with retry logic - select only booking columns
       const { data: bookingsData, error: bookingsError } = await retryWithBackoff(async () => {
         const result = await supabase
           .from("bookings")
-          .select("*")
+          .select(`
+            id,
+            name,
+            booking_type,
+            contact_name,
+            contact_email,
+            contact_phone,
+            start_date,
+            end_date,
+            number_of_guests,
+            number_of_rooms,
+            base_rate,
+            per_person_rate,
+            cleaning_fee,
+            additional_cleaning_fee,
+            total_cost,
+            deposit_amount,
+            amount_paid,
+            balance_due,
+            payment_status,
+            confirmed,
+            custom_price,
+            discount_percent,
+            notes,
+            created_at,
+            updated_at
+          `)
           .gte("start_date", startDate)
           .lte("end_date", endDate)
           .order("start_date", { ascending: true });
@@ -260,11 +391,37 @@ export const bookingService = {
 
   async getConfirmedBookings(): Promise<Booking[]> {
     try {
-      // Get confirmed bookings with retry logic
+      // Get confirmed bookings with retry logic - select only booking columns
       const { data: bookingsData, error: bookingsError } = await retryWithBackoff(async () => {
         const result = await supabase
           .from("bookings")
-          .select("*")
+          .select(`
+            id,
+            name,
+            booking_type,
+            contact_name,
+            contact_email,
+            contact_phone,
+            start_date,
+            end_date,
+            number_of_guests,
+            number_of_rooms,
+            base_rate,
+            per_person_rate,
+            cleaning_fee,
+            additional_cleaning_fee,
+            total_cost,
+            deposit_amount,
+            amount_paid,
+            balance_due,
+            payment_status,
+            confirmed,
+            custom_price,
+            discount_percent,
+            notes,
+            created_at,
+            updated_at
+          `)
           .eq("confirmed", true)
           .order("start_date", { ascending: true });
         
@@ -305,11 +462,37 @@ export const bookingService = {
 
   async getPendingBookings(): Promise<Booking[]> {
     try {
-      // Get pending bookings with retry logic
+      // Get pending bookings with retry logic - select only booking columns
       const { data: bookingsData, error: bookingsError } = await retryWithBackoff(async () => {
         const result = await supabase
           .from("bookings")
-          .select("*")
+          .select(`
+            id,
+            name,
+            booking_type,
+            contact_name,
+            contact_email,
+            contact_phone,
+            start_date,
+            end_date,
+            number_of_guests,
+            number_of_rooms,
+            base_rate,
+            per_person_rate,
+            cleaning_fee,
+            additional_cleaning_fee,
+            total_cost,
+            deposit_amount,
+            amount_paid,
+            balance_due,
+            payment_status,
+            confirmed,
+            custom_price,
+            discount_percent,
+            notes,
+            created_at,
+            updated_at
+          `)
           .eq("confirmed", false)
           .order("start_date", { ascending: true });
         
