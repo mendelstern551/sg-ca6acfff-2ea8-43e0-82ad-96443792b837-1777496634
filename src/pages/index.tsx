@@ -29,11 +29,14 @@ import { EmailHistory } from "@/components/EmailHistory";
 import { TaskSidebar } from "@/components/TaskSidebar";
 import { ReminderDialog } from "@/components/ReminderDialog";
 import { reminderService } from "@/services/reminderService";
+import { ReminderModal } from "@/components/ReminderModal";
+import { CornerNotifications } from "@/components/CornerNotifications";
 
 type InvoiceRow = Database["public"]["Tables"]["invoices"]["Row"];
 type ExpenseInsert = Database["public"]["Tables"]["expenses"]["Insert"];
 type BookingInsert = Database["public"]["Tables"]["bookings"]["Insert"];
 type BookingUpdate = Database["public"]["Tables"]["bookings"]["Update"];
+type Reminder = Database["public"]["Tables"]["reminders"]["Row"];
 
 export default function HomePage() {
   const [activeTab, setActiveTab] = useState("bookings");
@@ -54,6 +57,11 @@ export default function HomePage() {
 
   const [reminderDialogOpen, setReminderDialogOpen] = useState(false);
   const [reminderRefreshKey, setReminderRefreshKey] = useState(0);
+  
+  // 🔔 REMINDER SYSTEM STATE
+  const [dueReminders, setDueReminders] = useState<Reminder[]>([]);
+  const [minimizedReminders, setMinimizedReminders] = useState<Reminder[]>([]);
+  const [currentReminder, setCurrentReminder] = useState<Reminder | undefined>();
 
   const { toast } = useToast();
 
@@ -115,6 +123,36 @@ export default function HomePage() {
       invoicesChannel.unsubscribe();
     };
   }, []);
+
+  // 🔔 AUTO-CHECK FOR DUE REMINDERS (Every minute)
+  useEffect(() => {
+    const checkReminders = async () => {
+      try {
+        const [due, minimized] = await Promise.all([
+          reminderService.getDueReminders(),
+          reminderService.getMinimizedReminders()
+        ]);
+        
+        setDueReminders(due);
+        setMinimizedReminders(minimized);
+        
+        // Show center modal for first due reminder
+        if (due.length > 0 && !currentReminder) {
+          setCurrentReminder(due[0]);
+        }
+      } catch (error) {
+        console.error("Error checking reminders:", error);
+      }
+    };
+
+    // Initial check
+    checkReminders();
+    
+    // Check every minute
+    const interval = setInterval(checkReminders, 60000);
+    
+    return () => clearInterval(interval);
+  }, [reminderRefreshKey, currentReminder]);
 
   const loadAllData = async () => {
     try {
@@ -455,6 +493,25 @@ export default function HomePage() {
         refreshTrigger={reminderRefreshKey}
       />
 
+      {/* 🔔 CENTER MODAL - Stage 1: Urgent Attention */}
+      {currentReminder && (
+        <ReminderModal
+          reminder={currentReminder}
+          onComplete={handleCompleteReminder}
+          onSnooze={handleSnoozeReminder}
+          onSnoozeMinimize={handleSnoozeMinimize}
+          onDismiss={handleDismissReminder}
+        />
+      )}
+
+      {/* 📌 CORNER NOTIFICATIONS - Stage 2: Minimized View */}
+      <CornerNotifications
+        reminders={minimizedReminders}
+        onComplete={handleCompleteMinimized}
+        onDismiss={handleDismissMinimized}
+        onExpand={handleExpandMinimized}
+      />
+
       <ReminderDialog
         open={reminderDialogOpen}
         onOpenChange={setReminderDialogOpen}
@@ -468,3 +525,134 @@ export default function HomePage() {
     </div>
   );
 }
+
+// 🔔 REMINDER HANDLERS
+const handleCompleteReminder = async () => {
+  if (!currentReminder) return;
+  
+  try {
+    await reminderService.completeReminder(currentReminder.id);
+    toast({
+      title: "✅ Task Completed",
+      description: "Great job! Task marked as complete.",
+    });
+    
+    setCurrentReminder(undefined);
+    setReminderRefreshKey(prev => prev + 1);
+  } catch (error) {
+    console.error("Error completing reminder:", error);
+    toast({
+      title: "Error",
+      description: "Failed to complete task",
+      variant: "destructive"
+    });
+  }
+};
+
+const handleSnoozeReminder = async (minutes: number) => {
+  if (!currentReminder) return;
+  
+  try {
+    await reminderService.snoozeReminder(currentReminder.id, minutes);
+    toast({
+      title: "⏰ Task Snoozed",
+      description: `Reminder will reappear in ${minutes} minutes`,
+    });
+    
+    setCurrentReminder(undefined);
+    setReminderRefreshKey(prev => prev + 1);
+  } catch (error) {
+    console.error("Error snoozing reminder:", error);
+    toast({
+      title: "Error",
+      description: "Failed to snooze task",
+      variant: "destructive"
+    });
+  }
+};
+
+const handleSnoozeMinimize = async (minutes: number) => {
+  if (!currentReminder) return;
+  
+  try {
+    await reminderService.snoozeMinimize(currentReminder.id, minutes);
+    toast({
+      title: "📌 Task Minimized",
+      description: `Moved to corner. Will remind again in ${minutes} minutes.`,
+    });
+    
+    setCurrentReminder(undefined);
+    setReminderRefreshKey(prev => prev + 1);
+  } catch (error) {
+    console.error("Error snoozing and minimizing reminder:", error);
+    toast({
+      title: "Error",
+      description: "Failed to minimize task",
+      variant: "destructive"
+    });
+  }
+};
+
+const handleDismissReminder = async () => {
+  if (!currentReminder) return;
+  
+  try {
+    await reminderService.dismissReminder(currentReminder.id);
+    toast({
+      title: "Task Dismissed",
+      description: "Reminder has been dismissed",
+    });
+    
+    setCurrentReminder(undefined);
+    setReminderRefreshKey(prev => prev + 1);
+  } catch (error) {
+    console.error("Error dismissing reminder:", error);
+    toast({
+      title: "Error",
+      description: "Failed to dismiss task",
+      variant: "destructive"
+    });
+  }
+};
+
+// 🔔 CORNER NOTIFICATION HANDLERS
+const handleCompleteMinimized = async (reminderId: string) => {
+  try {
+    await reminderService.completeReminder(reminderId);
+    toast({
+      title: "✅ Task Completed",
+      description: "Task marked as complete",
+    });
+    setReminderRefreshKey(prev => prev + 1);
+  } catch (error) {
+    console.error("Error completing minimized reminder:", error);
+    toast({
+      title: "Error",
+      description: "Failed to complete task",
+      variant: "destructive"
+    });
+  }
+};
+
+const handleDismissMinimized = async (reminderId: string) => {
+  try {
+    await reminderService.dismissReminder(reminderId);
+    toast({
+      title: "Task Dismissed",
+      description: "Reminder dismissed",
+    });
+    setReminderRefreshKey(prev => prev + 1);
+  } catch (error) {
+    console.error("Error dismissing minimized reminder:", error);
+    toast({
+      title: "Error",
+      description: "Failed to dismiss task",
+      variant: "destructive"
+    });
+  }
+};
+
+const handleExpandMinimized = (reminder: Reminder) => {
+  // Move minimized reminder back to center modal
+  setCurrentReminder(reminder);
+};
