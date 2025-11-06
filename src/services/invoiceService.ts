@@ -234,7 +234,14 @@ export const invoiceService = {
     await retryWithBackoff(async () => {
       const { error } = await supabase
         .from("payment_reminders")
-        .insert([reminderData]);
+        .insert([{
+          booking_id: reminderData.bookingId,
+          invoice_id: reminderData.invoiceId,
+          reminder_type: reminderData.reminderType,
+          sent_to: reminderData.sentTo,
+          status: reminderData.status,
+          notes: reminderData.notes
+        }]);
 
       if (error) throw error;
     });
