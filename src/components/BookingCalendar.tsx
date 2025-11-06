@@ -177,13 +177,27 @@ export function BookingCalendar({ bookings, onDateClick, onBookingClick, onAddBo
               </CardDescription>
             </div>
             <div className="flex flex-col items-end gap-2">
-              <div className="flex items-center gap-2">
-                <Button variant="outline" size="sm" onClick={handlePreviousMonth}><ChevronLeft className="h-4 w-4" /></Button>
+              <div className="flex items-center gap-3">
+                <Button 
+                  variant="outline" 
+                  size="default" 
+                  onClick={handlePreviousMonth}
+                  className="h-10 w-10 p-0 hover:bg-blue-50 dark:hover:bg-blue-950"
+                >
+                  <ChevronLeft className="h-6 w-6" />
+                </Button>
                 <div className="text-sm font-medium min-w-[180px] text-center">
                   <div>{format(currentMonth, "MMMM yyyy")}</div>
                   <div className="text-xs text-slate-600 dark:text-slate-400 font-hebrew">{getHebrewMonthYear(currentMonth)}</div>
                 </div>
-                <Button variant="outline" size="sm" onClick={handleNextMonth}><ChevronRight className="h-4 w-4" /></Button>
+                <Button 
+                  variant="outline" 
+                  size="default" 
+                  onClick={handleNextMonth}
+                  className="h-10 w-10 p-0 hover:bg-blue-50 dark:hover:bg-blue-950"
+                >
+                  <ChevronRight className="h-6 w-6" />
+                </Button>
               </div>
             </div>
           </div>

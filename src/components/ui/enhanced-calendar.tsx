@@ -44,15 +44,14 @@ function EnhancedCalendar({
       if (dayOfWeek !== 6) return "";
       
       const hDate = new HDate(date);
-      const sedra = new Sedra(hDate.getFullYear(), false);
-      const parsha = sedra.lookup(hDate);
+      const events = HebrewCalendar.calendar({ start: hDate, end: hDate, sedrot: true, noHolidays: false });
+      const parshaEvent = events.find((event: any) => event.getDesc().startsWith("Parashat") || event.getDesc().includes("Torah"));
       
-      if (parsha.chag) {
-        return "";
-      }
-      
-      if (parsha.parsha && parsha.parsha.length > 0) {
-        return parsha.parsha.map((p: string) => p).join("-");
+      if (parshaEvent) {
+        let hebrewText = parshaEvent.render("he");
+        hebrewText = hebrewText.replace("פרשת ", "");
+        hebrewText = hebrewText.replace(/[\u0591-\u05C7]/g, "");
+        return hebrewText;
       }
       
       return "";
