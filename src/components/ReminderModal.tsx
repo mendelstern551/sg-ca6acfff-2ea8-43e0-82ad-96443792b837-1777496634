@@ -58,26 +58,39 @@ export function ReminderModal({
     };
   }, []);
 
+  const handleBackdropClick = (e: React.MouseEvent) => {
+    // Only close if clicking directly on backdrop, not on modal content
+    if (e.target === e.currentTarget) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+  };
+
   if (!mounted) return null;
 
   return createPortal(
     <div
-      className="fixed inset-0 z-[2147483647] flex items-center justify-center pointer-events-auto"
+      className="fixed inset-0 z-[9999] flex items-center justify-center"
+      style={{ pointerEvents: "auto" }}
       role="dialog"
       aria-modal="true"
-      onClick={(e) => { e.stopPropagation(); e.preventDefault(); }}
-      onMouseDown={(e) => { e.stopPropagation(); }}
-      onTouchStart={(e) => { e.stopPropagation(); }}
+      onClick={handleBackdropClick}
+      onMouseDown={handleBackdropClick}
     >
-      {/* Backdrop that blocks background clicks */}
-      <div
-        className="absolute inset-0 bg-black/70 backdrop-blur-sm pointer-events-auto z-[2147483645]"
-        onClick={(e) => { e.stopPropagation(); e.preventDefault(); }}
+      {/* Backdrop - captures all clicks */}
+      <div 
+        className="absolute inset-0 bg-black/70 backdrop-blur-sm" 
+        style={{ pointerEvents: "auto" }}
+        onClick={handleBackdropClick}
+        onMouseDown={handleBackdropClick}
       />
-      {/* Center Modal */}
-      <div
-        className="relative z-[2147483646] p-4 w-full max-w-md pointer-events-auto"
+
+      {/* Center Modal - positioned above backdrop */}
+      <div 
+        className="relative z-[10000] p-4 w-full max-w-md" 
+        style={{ pointerEvents: "auto" }}
         onClick={(e) => e.stopPropagation()}
+        onMouseDown={(e) => e.stopPropagation()}
       >
         <Card className="w-full bg-white dark:bg-stone-900 shadow-2xl border-4 border-orange-500 animate-in zoom-in-95 rounded-lg overflow-hidden">
           {/* Header with Icon */}
@@ -142,9 +155,11 @@ export function ReminderModal({
               {/* Complete Button - Primary */}
               <Button
                 onClick={(e) => {
+                  e.preventDefault();
                   e.stopPropagation();
                   onComplete();
                 }}
+                onMouseDown={(e) => e.stopPropagation()}
                 className="w-full h-12 text-base font-semibold bg-green-600 hover:bg-green-700"
               >
                 <Check className="h-5 w-5 mr-2" />
@@ -154,9 +169,11 @@ export function ReminderModal({
               {/* Snooze Button - Secondary */}
               <Button
                 onClick={(e) => {
+                  e.preventDefault();
                   e.stopPropagation();
                   onSnooze(parseInt(snoozeTime));
                 }}
+                onMouseDown={(e) => e.stopPropagation()}
                 variant="outline"
                 className="w-full h-12 text-base font-semibold border-2"
               >
@@ -167,9 +184,11 @@ export function ReminderModal({
               {/* Snooze & Minimize Button - Secondary */}
               <Button
                 onClick={(e) => {
+                  e.preventDefault();
                   e.stopPropagation();
                   onSnoozeMinimize(parseInt(snoozeTime));
                 }}
+                onMouseDown={(e) => e.stopPropagation()}
                 variant="outline"
                 className="w-full h-12 text-base font-semibold border-2 border-blue-300 text-blue-700 hover:bg-blue-50"
               >
@@ -180,9 +199,11 @@ export function ReminderModal({
               {/* Dismiss Button - Danger */}
               <Button
                 onClick={(e) => {
+                  e.preventDefault();
                   e.stopPropagation();
                   onDismiss();
                 }}
+                onMouseDown={(e) => e.stopPropagation()}
                 variant="ghost"
                 className="w-full h-10 text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/20"
               >
