@@ -31,9 +31,9 @@ export default async function handler(
   const SMTP_PORT = process.env.SMTP_PORT;
   const SMTP_USER = process.env.SMTP_AUTH_USER;
   const SMTP_PASS = process.env.SMTP_AUTH_PASS;
-  const FROM_EMAIL = process.env.FORM_SEND_FROM;
+  const FROM_EMAIL = process.env.INVOICE_FROM_EMAIL || "billing@troutlakeresort.ca";
 
-  if (!SMTP_HOST || !SMTP_PORT || !SMTP_USER || !SMTP_PASS || !FROM_EMAIL) {
+  if (!SMTP_HOST || !SMTP_PORT || !SMTP_USER || !SMTP_PASS) {
     console.error("SMTP configuration is incomplete");
     return res.status(500).json({
       error: "Email service not configured. Please contact support.",
@@ -118,7 +118,7 @@ export default async function handler(
     <div class="payment-instructions">
       <h3 style="margin-top: 0;">Payment Instructions</h3>
       <p style="margin: 5px 0;">Checks should be made payable to <strong>Cong Zera Kodesh</strong></p>
-      <p style="margin: 5px 0;">Or by e-transfer to <strong>thetroutlakeresort@gmail.com</strong></p>
+      <p style="margin: 5px 0;">Or by e-transfer to <strong>billing@troutlakeresort.ca</strong></p>
     </div>
 
     ${notes ? `<p><strong>Notes:</strong> ${notes}</p>` : ''}
@@ -134,7 +134,7 @@ export default async function handler(
 
     // Send email
     const info = await transporter.sendMail({
-      from: `"Trout Lake Resort" <${FROM_EMAIL}>`,
+      from: `"Trout Lake Resort - Billing" <${FROM_EMAIL}>`,
       to: to,
       subject: `Invoice ${invoiceNumber} - Trout Lake Resort`,
       html: emailHtml,

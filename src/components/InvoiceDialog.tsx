@@ -258,7 +258,7 @@ export function InvoiceDialog({ open, onOpenChange, booking }: InvoiceDialogProp
               <strong>Checks:</strong> Please make checks payable to <strong>Cong Zera Kodesh</strong>
             </p>
             <p style="color: #1e293b; font-size: 13px; line-height: 1.8;">
-              <strong>E-Transfer:</strong> Send to <strong>thetroutlakeresort@gmail.com</strong>
+              <strong>E-Transfer:</strong> Send to <strong>billing@troutlakeresort.ca</strong>
             </p>
           </div>
 
@@ -494,7 +494,7 @@ export function InvoiceDialog({ open, onOpenChange, booking }: InvoiceDialogProp
                 <strong>Checks:</strong> Please make checks payable to <strong>Cong Zera Kodesh</strong>
               </p>
               <p>
-                <strong>E-Transfer:</strong> Send to <strong>thetroutlakeresort@gmail.com</strong>
+                <strong>E-Transfer:</strong> Send to <strong>billing@troutlakeresort.ca</strong>
               </p>
             </div>
           </div>
