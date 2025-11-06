@@ -3,8 +3,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Button } from "@/components/ui/button";
 import { Booking } from "@/types/booking";
 import { invoiceService } from "@/services/invoiceService";
+import { emailService } from "@/services/emailService";
 import { format } from "date-fns";
-import { Download, Loader2, FileText, Mail, Phone } from "lucide-react";
+import { Download, Loader2, FileText, Mail, Phone, Send } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 import type { Database } from "@/integrations/supabase/types";
 
 type Invoice = Database["public"]["Tables"]["invoices"]["Row"];
@@ -19,6 +21,8 @@ export function InvoiceDialog({ open, onOpenChange, booking }: InvoiceDialogProp
   const [invoice, setInvoice] = useState<Invoice | null>(null);
   const [loading, setLoading] = useState(false);
   const [generating, setGenerating] = useState(false);
+  const [sendingEmail, setSendingEmail] = useState(false);
+  const { toast } = useToast();
 
   useEffect(() => {
     if (open && booking) {
@@ -62,6 +66,41 @@ export function InvoiceDialog({ open, onOpenChange, booking }: InvoiceDialogProp
     } finally {
       setLoading(false);
       setGenerating(false);
+    }
+  };
+
+  const handleSendEmail = async () => {
+    if (!invoice || !invoice.client_email) {
+      toast({
+        title: "No Email Address",
+        description: "This invoice doesn't have a client email address. Please add one in the booking details.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    try {
+      setSendingEmail(true);
+      
+      const result = await emailService.sendInvoiceEmail(invoice, booking);
+      
+      if (result.success) {
+        toast({
+          title: "Email Sent Successfully! ✓",
+          description: `Invoice sent to ${invoice.client_email}`,
+        });
+      } else {
+        throw new Error(result.error || "Failed to send email");
+      }
+    } catch (error: any) {
+      console.error("Error sending invoice email:", error);
+      toast({
+        title: "Failed to Send Email",
+        description: error.message || "Please check your email configuration and try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setSendingEmail(false);
     }
   };
 
@@ -296,10 +335,31 @@ export function InvoiceDialog({ open, onOpenChange, booking }: InvoiceDialogProp
               <FileText className="h-5 w-5" />
               Invoice {invoice.invoice_number}
             </span>
-            <Button onClick={handleDownloadPDF} variant="outline" size="sm">
-              <Download className="h-4 w-4 mr-2" />
-              Download PDF
-            </Button>
+            <div className="flex gap-2">
+              <Button 
+                onClick={handleSendEmail} 
+                variant="default"
+                size="sm"
+                disabled={sendingEmail || !invoice.client_email}
+                className="bg-blue-600 hover:bg-blue-700"
+              >
+                {sendingEmail ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Sending...
+                  </>
+                ) : (
+                  <>
+                    <Send className="h-4 w-4 mr-2" />
+                    Send by Email
+                  </>
+                )}
+              </Button>
+              <Button onClick={handleDownloadPDF} variant="outline" size="sm">
+                <Download className="h-4 w-4 mr-2" />
+                Download PDF
+              </Button>
+            </div>
           </DialogTitle>
         </DialogHeader>
 

@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -9,12 +8,14 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { EnhancedCalendar } from "@/components/ui/enhanced-calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { CalendarIcon, Calculator } from "lucide-react";
+import { CalendarIcon, Calculator, Mail } from "lucide-react";
 import { format, differenceInDays } from "date-fns";
 import { Booking, BookingType, Payment, DEFAULT_PRICING, PricingConfig } from "@/types/booking";
 import { formatCurrency, calculateBookingCost } from "@/lib/bookingCalculations";
 import { Card, CardContent } from "@/components/ui/card";
 import { DateRange } from "react-day-picker";
+import { emailService } from "@/services/emailService";
+import { useToast } from "@/hooks/use-toast";
 
 type BookingInsert = Omit<Booking, "id" | "created_at" | "updated_at" | "payments">;
 
@@ -41,12 +42,14 @@ export function BookingDialog({ open, onOpenChange, onSave, booking: editingBook
   const [totalCost, setTotalCost] = useState(0);
   const [depositAmount, setDepositAmount] = useState(0);
   const [confirmed, setConfirmed] = useState(false);
+  const [sendConfirmationEmail, setSendConfirmationEmail] = useState(false);
   const [customPrice, setCustomPrice] = useState<number | null>(null);
   const [discountPercent, setDiscountPercent] = useState<number | null>(null);
   const [notes, setNotes] = useState("");
   const [payments, setPayments] = useState<Payment[]>([]);
 
   const [pricingConfig] = useState<PricingConfig>(DEFAULT_PRICING);
+  const { toast } = useToast();
 
   useEffect(() => {
     if (editingBooking) {
@@ -96,6 +99,7 @@ export function BookingDialog({ open, onOpenChange, onSave, booking: editingBook
     setTotalCost(0);
     setDepositAmount(0);
     setConfirmed(false);
+    setSendConfirmationEmail(false);
     setCustomPrice(null);
     setDiscountPercent(null);
     setNotes("");
@@ -122,7 +126,7 @@ export function BookingDialog({ open, onOpenChange, onSave, booking: editingBook
   
   useEffect(recalculateRates, [bookingType, numberOfGuests, customPrice, discountPercent, pricingConfig]);
 
-  const handleSave = (e: React.FormEvent) => {
+  const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!contactName || !dateRange?.from || !dateRange?.to || numberOfGuests === "") return;
 
@@ -153,8 +157,45 @@ export function BookingDialog({ open, onOpenChange, onSave, booking: editingBook
       discount_percent: discountPercent,
       notes: notes,
     };
+    
     onSave(bookingData);
     onOpenChange(false);
+
+    // Send confirmation email if checkbox was checked and booking is confirmed
+    if (confirmed && sendConfirmationEmail && contactEmail) {
+      try {
+        const fullBookingData: Booking = {
+          ...bookingData,
+          id: editingBooking?.id || "temp-id",
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+          payments: []
+        };
+        
+        const result = await emailService.sendBookingConfirmation(fullBookingData);
+        
+        if (result.success) {
+          toast({
+            title: "Confirmation Email Sent! ✓",
+            description: `Booking confirmation sent to ${contactEmail}`,
+          });
+        } else {
+          toast({
+            title: "Email Not Sent",
+            description: result.error || "Failed to send confirmation email",
+            variant: "destructive"
+          });
+        }
+      } catch (error) {
+        console.error("Error sending confirmation email:", error);
+      }
+    } else if (confirmed && sendConfirmationEmail && !contactEmail) {
+      toast({
+        title: "No Email Address",
+        description: "Please provide a client email address to send confirmation",
+        variant: "destructive"
+      });
+    }
   };
   
   const handleBookingTypeChange = (value: string) => {
@@ -199,6 +240,24 @@ export function BookingDialog({ open, onOpenChange, onSave, booking: editingBook
                   <span className="text-xs font-normal text-slate-600 dark:text-slate-400">(Check to mark as confirmed)</span>
                 </Label>
               </div>
+
+              {confirmed && (
+                <div className="flex items-center space-x-3 p-4 bg-green-50 dark:bg-green-950/30 rounded-lg border-2 border-green-200 dark:border-green-800">
+                  <Checkbox 
+                    id="sendConfirmation" 
+                    checked={sendConfirmationEmail} 
+                    onCheckedChange={(checked) => setSendConfirmationEmail(Boolean(checked))}
+                    disabled={!contactEmail}
+                  />
+                  <Label htmlFor="sendConfirmation" className="text-sm font-semibold cursor-pointer flex items-center gap-2">
+                    <Mail className="h-4 w-4 text-green-600" />
+                    <span className="text-green-700 dark:text-green-300">Send Confirmation Email</span>
+                    {!contactEmail && (
+                      <span className="text-xs font-normal text-orange-600 dark:text-orange-400">(Email required)</span>
+                    )}
+                  </Label>
+                </div>
+              )}
 
               <div className="space-y-2">
                 <Label htmlFor="name">Event Name</Label>
