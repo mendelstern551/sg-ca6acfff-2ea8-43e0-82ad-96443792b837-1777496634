@@ -59,8 +59,15 @@ export default function HomePage() {
       })
       .subscribe();
     
+    // Set up automatic refresh every 30 seconds
+    const refreshInterval = setInterval(() => {
+      console.log('Auto-refreshing data...');
+      loadAllData();
+    }, 30000); // 30 seconds
+    
     return () => {
       subscription.unsubscribe();
+      clearInterval(refreshInterval);
     };
   }, []);
 
