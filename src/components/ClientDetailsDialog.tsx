@@ -14,6 +14,7 @@ import { InvoiceDialog } from "./InvoiceDialog";
 import { useState } from "react";
 import { paymentService } from "@/services/paymentService";
 import { bookingService } from "@/services/bookingService";
+import { invoiceService } from "@/services/invoiceService";
 import { useToast } from "@/hooks/use-toast";
 
 interface ClientDetailsDialogProps {
