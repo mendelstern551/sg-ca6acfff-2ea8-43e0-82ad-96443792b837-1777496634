@@ -176,30 +176,10 @@ export function BookingCalendar({ bookings, onDateClick, onBookingClick, onAddBo
                 English & Hebrew dates with Jewish holidays • Click dates to add or view bookings
               </CardDescription>
             </div>
-            <div className="flex flex-col items-end gap-2">
-              <div className="flex items-center gap-3">
-                <Button 
-                  variant="outline" 
-                  size="default" 
-                  onClick={handlePreviousMonth}
-                  className="h-10 w-10 p-0 hover:bg-blue-50 dark:hover:bg-blue-950"
-                >
-                  <ChevronLeft className="h-6 w-6" />
-                </Button>
-                <div className="text-sm font-medium min-w-[180px] text-center">
-                  <div>{format(currentMonth, "MMMM yyyy")}</div>
-                  <div className="text-xs text-slate-600 dark:text-slate-400 font-hebrew">{getHebrewMonthYear(currentMonth)}</div>
-                </div>
-                <Button 
-                  variant="outline" 
-                  size="default" 
-                  onClick={handleNextMonth}
-                  className="h-10 w-10 p-0 hover:bg-blue-50 dark:hover:bg-blue-950"
-                >
-                  <ChevronRight className="h-6 w-6" />
-                </Button>
-              </div>
-            </div>
+          </div>
+          <div className="text-center mt-4">
+            <div className="text-sm font-medium">{format(currentMonth, "MMMM yyyy")}</div>
+            <div className="text-xs text-slate-600 dark:text-slate-400 font-hebrew">{getHebrewMonthYear(currentMonth)}</div>
           </div>
           <div className="flex items-center gap-4 mt-4 text-xs flex-wrap">
             <div className="flex items-center gap-2"><Star className="h-3 w-3 text-yellow-500 fill-yellow-500" /><span className="text-slate-600 dark:text-slate-400">Holiday</span></div>
@@ -209,115 +189,137 @@ export function BookingCalendar({ bookings, onDateClick, onBookingClick, onAddBo
             <div className="flex items-center gap-2"><div className="w-3 h-3 rounded bg-orange-400 border border-orange-500" /><span className="text-slate-600 dark:text-slate-400">Pending</span></div>
           </div>
         </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-7 gap-2 mb-2">
-            {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((day, i) => (
-              <div key={day} className="text-center py-2">
-                <div className="text-sm font-medium text-slate-600 dark:text-slate-400">{day}</div>
-                <div className="text-xs text-slate-500 dark:text-slate-500 font-hebrew">{["ראשון","שני","שלישי","רביעי","חמישי","שישי","שבת"][i]}</div>
-              </div>
-            ))}
-          </div>
+        <CardContent className="relative">
+          <div className="flex items-center gap-4">
+            <Button 
+              variant="outline" 
+              size="default" 
+              onClick={handlePreviousMonth}
+              className="absolute left-0 top-1/2 -translate-y-1/2 z-10 h-12 w-12 rounded-full shadow-lg hover:shadow-xl bg-white dark:bg-slate-800 hover:bg-blue-50 dark:hover:bg-blue-950 border-2"
+            >
+              <ChevronLeft className="h-7 w-7" />
+            </Button>
 
-          <div className="grid grid-cols-7 gap-2">
-            {days.map((day) => {
-              const dayKey = format(day, "yyyy-MM-dd");
-              const dayBookings = bookingsByDate[dayKey] || [];
-              const holidays = getJewishHolidays(day);
-              const isCurrentMonth = isSameMonth(day, currentMonth);
-              const isSelected = selectedDate && isSameDay(day, selectedDate);
-              const isToday = isSameDay(day, new Date());
-              const hebrewDate = getHebrewDate(day);
-              const hasHoliday = holidays.length > 0;
-              const hasBookings = dayBookings.length > 0;
-              const parshaName = getParshaName(day);
-              const isShabbat = day.getDay() === 6;
-
-              let dateBackgroundColor = "", borderColor = "", textColor = "";
-              const inlineStyle: React.CSSProperties = {};
-              
-              if (hasBookings) {
-                const hasPending = dayBookings.some(b => !b.confirmed);
-                const hasConfirmed = dayBookings.some(b => b.confirmed);
-                const confirmedBooking = dayBookings.find(b => b.confirmed);
-                
-                if (hasPending && !hasConfirmed) {
-                  dateBackgroundColor = "bg-orange-300 dark:bg-orange-800/80";
-                  borderColor = "border-orange-500 dark:border-orange-600 border-4";
-                  textColor = "text-orange-900 dark:text-orange-100";
-                } else if (hasConfirmed && !hasPending && confirmedBooking) {
-                  if (confirmedBooking.booking_type === "yom_tov") { dateBackgroundColor = "bg-blue-300 dark:bg-blue-800/80"; borderColor = "border-blue-500 dark:border-blue-600 border-4"; textColor = "text-blue-900 dark:text-blue-100"; }
-                  else if (confirmedBooking.booking_type === "shabaton") { dateBackgroundColor = "bg-green-300 dark:bg-green-800/80"; borderColor = "border-green-500 dark:border-green-600 border-4"; textColor = "text-green-900 dark:text-green-100"; }
-                  else if (confirmedBooking.booking_type === "night_event") { dateBackgroundColor = "bg-purple-300 dark:bg-purple-800/80"; borderColor = "border-purple-500 dark:border-purple-600 border-4"; textColor = "text-purple-900 dark:text-purple-100"; }
-                } else {
-                  dateBackgroundColor = "bg-orange-300 dark:bg-orange-800/80";
-                  borderColor = "border-orange-500 dark:border-orange-600 border-4";
-                  textColor = "text-orange-900 dark:text-orange-100";
-                }
-              }
-
-              return (
-                <button
-                  key={day.toString()}
-                  onClick={() => handleDateClick(day)}
-                  style={isCurrentMonth && hasBookings ? inlineStyle : undefined}
-                  className={`relative min-h-[120px] p-2 rounded-lg border-2 transition-all flex flex-col
-                    ${!isCurrentMonth ? "bg-slate-50 dark:bg-slate-800/50 opacity-40" : ""}
-                    ${isCurrentMonth && !hasBookings && !hasHoliday && !isToday ? "bg-white dark:bg-slate-900" : ""}
-                    ${isCurrentMonth && !hasBookings && hasHoliday ? "bg-yellow-50 dark:bg-yellow-950/20" : ""}
-                    ${isCurrentMonth && !hasBookings && isToday ? "bg-blue-50 dark:bg-blue-950" : ""}
-                    ${isCurrentMonth && hasBookings ? dateBackgroundColor : ""}
-                    ${isSelected ? "ring-2 ring-blue-500 border-blue-500" : ""}
-                    ${!isSelected && hasBookings ? borderColor : ""}
-                    ${!isSelected && !hasBookings && isToday ? "border-blue-400" : ""}
-                    ${!isSelected && !hasBookings && hasHoliday ? "border-yellow-300 dark:border-yellow-700" : ""}
-                    ${!isSelected && !hasBookings && !hasHoliday && !isToday ? "border-slate-200 dark:border-slate-700" : ""}
-                    hover:border-slate-300 dark:hover:border-slate-600 cursor-pointer`}
-                >
-                  <div className="flex justify-between items-start mb-1">
-                    <div className="text-left">
-                      <div className={`text-base font-semibold ${hasBookings ? textColor : ""}`}>{format(day, "d")}</div>
-                      <div className="text-[10px] text-slate-600 dark:text-slate-400 leading-tight">{hebrewDate}</div>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      {hasHoliday && (<Star className="w-3 h-3 text-yellow-500 fill-yellow-500" />)}
-                      {isToday && (<div className="w-2 h-2 rounded-full bg-blue-500" />)}
-                    </div>
+            <div className="flex-1 px-16">
+              <div className="grid grid-cols-7 gap-2 mb-2">
+                {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((day, i) => (
+                  <div key={day} className="text-center py-2">
+                    <div className="text-sm font-medium text-slate-600 dark:text-slate-400">{day}</div>
+                    <div className="text-xs text-slate-500 dark:text-slate-500 font-hebrew">{["ראשון","שני","שלישי","רביעי","חמישי","שישי","שבת"][i]}</div>
                   </div>
+                ))}
+              </div>
 
-                  {isShabbat && parshaName && (<div className="mb-2 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-md px-2 py-1.5 text-[11px] font-bold text-center shadow-sm border border-blue-600 font-hebrew">{parshaName}</div>)}
-                  {hasHoliday && (<div className="text-[9px] text-yellow-700 dark:text-yellow-400 font-medium mb-1 line-clamp-1 font-hebrew">{holidays[0].hebrewName}</div>)}
+              <div className="grid grid-cols-7 gap-2">
+                {days.map((day) => {
+                  const dayKey = format(day, "yyyy-MM-dd");
+                  const dayBookings = bookingsByDate[dayKey] || [];
+                  const holidays = getJewishHolidays(day);
+                  const isCurrentMonth = isSameMonth(day, currentMonth);
+                  const isSelected = selectedDate && isSameDay(day, selectedDate);
+                  const isToday = isSameDay(day, new Date());
+                  const hebrewDate = getHebrewDate(day);
+                  const hasHoliday = holidays.length > 0;
+                  const hasBookings = dayBookings.length > 0;
+                  const parshaName = getParshaName(day);
+                  const isShabbat = day.getDay() === 6;
 
-                  {hasBookings && (
-                    <div className="space-y-1 mt-auto flex-1 overflow-hidden">
-                      {dayBookings.slice(0, 2).map((booking) => {
-                        const colors = bookingTypeColors[booking.booking_type] || bookingTypeColors.yom_tov;
-                        const colorClass = booking.confirmed ? colors.confirmed : colors.pending;
-                        
-                        return (
-                          <div
-                            key={booking.id}
-                            className={`${colorClass} text-white rounded px-1.5 py-0.5 text-[9px] leading-tight border cursor-pointer hover:opacity-80 transition-opacity`}
-                            onClick={(e) => { e.stopPropagation(); onBookingClick?.(booking); }}
-                            title={`${booking.name} - ${booking.number_of_guests} guests`}
-                          >
-                            <div className="font-semibold truncate flex items-center gap-1">
-                              {!booking.confirmed && <Clock className="h-2 w-2 inline" />}
-                              {booking.contact_name}
-                            </div>
-                            <div className="flex items-center gap-1 opacity-90">
-                              <Users className="h-2 w-2" />
-                              {booking.number_of_guests}
-                            </div>
-                          </div>
-                        );
-                      })}
-                      {dayBookings.length > 2 && (<div className="text-[9px] text-slate-600 dark:text-slate-400 text-center font-medium">+{dayBookings.length - 2} more</div>)}
-                    </div>
-                  )}
-                </button>
-              );
-            })}
+                  let dateBackgroundColor = "", borderColor = "", textColor = "";
+                  const inlineStyle: React.CSSProperties = {};
+                  
+                  if (hasBookings) {
+                    const hasPending = dayBookings.some(b => !b.confirmed);
+                    const hasConfirmed = dayBookings.some(b => b.confirmed);
+                    const confirmedBooking = dayBookings.find(b => b.confirmed);
+                    
+                    if (hasPending && !hasConfirmed) {
+                      dateBackgroundColor = "bg-orange-300 dark:bg-orange-800/80";
+                      borderColor = "border-orange-500 dark:border-orange-600 border-4";
+                      textColor = "text-orange-900 dark:text-orange-100";
+                    } else if (hasConfirmed && !hasPending && confirmedBooking) {
+                      if (confirmedBooking.booking_type === "yom_tov") { dateBackgroundColor = "bg-blue-300 dark:bg-blue-800/80"; borderColor = "border-blue-500 dark:border-blue-600 border-4"; textColor = "text-blue-900 dark:text-blue-100"; }
+                      else if (confirmedBooking.booking_type === "shabaton") { dateBackgroundColor = "bg-green-300 dark:bg-green-800/80"; borderColor = "border-green-500 dark:border-green-600 border-4"; textColor = "text-green-900 dark:text-green-100"; }
+                      else if (confirmedBooking.booking_type === "night_event") { dateBackgroundColor = "bg-purple-300 dark:bg-purple-800/80"; borderColor = "border-purple-500 dark:border-purple-600 border-4"; textColor = "text-purple-900 dark:text-purple-100"; }
+                    } else {
+                      dateBackgroundColor = "bg-orange-300 dark:bg-orange-800/80";
+                      borderColor = "border-orange-500 dark:border-orange-600 border-4";
+                      textColor = "text-orange-900 dark:text-orange-100";
+                    }
+                  }
+
+                  return (
+                    <button
+                      key={day.toString()}
+                      onClick={() => handleDateClick(day)}
+                      style={isCurrentMonth && hasBookings ? inlineStyle : undefined}
+                      className={`relative min-h-[120px] p-2 rounded-lg border-2 transition-all flex flex-col
+                        ${!isCurrentMonth ? "bg-slate-50 dark:bg-slate-800/50 opacity-40" : ""}
+                        ${isCurrentMonth && !hasBookings && !hasHoliday && !isToday ? "bg-white dark:bg-slate-900" : ""}
+                        ${isCurrentMonth && !hasBookings && hasHoliday ? "bg-yellow-50 dark:bg-yellow-950/20" : ""}
+                        ${isCurrentMonth && !hasBookings && isToday ? "bg-blue-50 dark:bg-blue-950" : ""}
+                        ${isCurrentMonth && hasBookings ? dateBackgroundColor : ""}
+                        ${isSelected ? "ring-2 ring-blue-500 border-blue-500" : ""}
+                        ${!isSelected && hasBookings ? borderColor : ""}
+                        ${!isSelected && !hasBookings && isToday ? "border-blue-400" : ""}
+                        ${!isSelected && !hasBookings && hasHoliday ? "border-yellow-300 dark:border-yellow-700" : ""}
+                        ${!isSelected && !hasBookings && !hasHoliday && !isToday ? "border-slate-200 dark:border-slate-700" : ""}
+                        hover:border-slate-300 dark:hover:border-slate-600 cursor-pointer`}
+                    >
+                      <div className="flex justify-between items-start mb-1">
+                        <div className="text-left">
+                          <div className={`text-base font-semibold ${hasBookings ? textColor : ""}`}>{format(day, "d")}</div>
+                          <div className="text-[10px] text-slate-600 dark:text-slate-400 leading-tight">{hebrewDate}</div>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          {hasHoliday && (<Star className="w-3 h-3 text-yellow-500 fill-yellow-500" />)}
+                          {isToday && (<div className="w-2 h-2 rounded-full bg-blue-500" />)}
+                        </div>
+                      </div>
+
+                      {isShabbat && parshaName && (<div className="mb-2 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-md px-2 py-1.5 text-[11px] font-bold text-center shadow-sm border border-blue-600 font-hebrew">{parshaName}</div>)}
+                      {hasHoliday && (<div className="text-[9px] text-yellow-700 dark:text-yellow-400 font-medium mb-1 line-clamp-1 font-hebrew">{holidays[0].hebrewName}</div>)}
+
+                      {hasBookings && (
+                        <div className="space-y-1 mt-auto flex-1 overflow-hidden">
+                          {dayBookings.slice(0, 2).map((booking) => {
+                            const colors = bookingTypeColors[booking.booking_type] || bookingTypeColors.yom_tov;
+                            const colorClass = booking.confirmed ? colors.confirmed : colors.pending;
+                            
+                            return (
+                              <div
+                                key={booking.id}
+                                className={`${colorClass} text-white rounded px-1.5 py-0.5 text-[9px] leading-tight border cursor-pointer hover:opacity-80 transition-opacity`}
+                                onClick={(e) => { e.stopPropagation(); onBookingClick?.(booking); }}
+                                title={`${booking.name} - ${booking.number_of_guests} guests`}
+                              >
+                                <div className="font-semibold truncate flex items-center gap-1">
+                                  {!booking.confirmed && <Clock className="h-2 w-2 inline" />}
+                                  {booking.contact_name}
+                                </div>
+                                <div className="flex items-center gap-1 opacity-90">
+                                  <Users className="h-2 w-2" />
+                                  {booking.number_of_guests}
+                                </div>
+                              </div>
+                            );
+                          })}
+                          {dayBookings.length > 2 && (<div className="text-[9px] text-slate-600 dark:text-slate-400 text-center font-medium">+{dayBookings.length - 2} more</div>)}
+                        </div>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            <Button 
+              variant="outline" 
+              size="default" 
+              onClick={handleNextMonth}
+              className="absolute right-0 top-1/2 -translate-y-1/2 z-10 h-12 w-12 rounded-full shadow-lg hover:shadow-xl bg-white dark:bg-slate-800 hover:bg-blue-50 dark:hover:bg-blue-950 border-2"
+            >
+              <ChevronRight className="h-7 w-7" />
+            </Button>
           </div>
         </CardContent>
       </Card>
