@@ -29,6 +29,9 @@ export default async function handler(
     });
   }
 
+  let emailSubject = "Payment Reminder";
+  let emailContent = "";
+
   try {
     const transporter = nodemailer.createTransport({
       host: SMTP_HOST,
@@ -41,9 +44,6 @@ export default async function handler(
     });
 
     await transporter.verify();
-
-    let emailSubject = "";
-    let emailContent = "";
 
     const balanceDue = invoice?.balance_due || booking.balance_due;
     const eventDate = format(new Date(booking.start_date), "MMMM dd, yyyy");
@@ -179,7 +179,7 @@ export default async function handler(
         email_type: "payment_reminder",
         recipient_email: booking.contact_email,
         recipient_name: booking.contact_name,
-        subject: emailSubject || "Payment Reminder",
+        subject: emailSubject,
         status: "failed",
         error_message: error.message,
         metadata: {
