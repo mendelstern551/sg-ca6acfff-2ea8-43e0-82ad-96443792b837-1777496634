@@ -52,20 +52,59 @@ export default function HomePage() {
   useEffect(() => {
     loadAllData();
     
-    // Set up Supabase real-time subscriptions for backend-driven updates
-    const channel = supabase.channel('db-changes');
-    const subscription = channel
-      .on('postgres_changes', { event: '*', schema: 'public' }, payload => {
-        console.log('Database change received:', payload);
+    // ✅ DEBOUNCED SUBSCRIPTION: Only listen to critical tables + prevent rapid reloads
+    let reloadTimeout: NodeJS.Timeout | null = null;
+    
+    const debouncedReload = () => {
+      if (reloadTimeout) clearTimeout(reloadTimeout);
+      reloadTimeout = setTimeout(() => {
         loadAllData();
-      })
+      }, 500); // Wait 500ms after last change before reloading
+    };
+    
+    // ✅ SPECIFIC SUBSCRIPTIONS: Only listen to bookings, payments, expenses, invoices
+    const bookingsChannel = supabase
+      .channel('bookings-changes')
+      .on('postgres_changes', { 
+        event: '*', 
+        schema: 'public', 
+        table: 'bookings' 
+      }, debouncedReload)
       .subscribe();
     
-    // ✅ REMOVED: Fixed 30-second interval that interrupted user input
-    // Now relying solely on Supabase real-time subscriptions for instant, backend-driven updates
+    const paymentsChannel = supabase
+      .channel('payments-changes')
+      .on('postgres_changes', { 
+        event: '*', 
+        schema: 'public', 
+        table: 'payments' 
+      }, debouncedReload)
+      .subscribe();
+    
+    const expensesChannel = supabase
+      .channel('expenses-changes')
+      .on('postgres_changes', { 
+        event: '*', 
+        schema: 'public', 
+        table: 'expenses' 
+      }, debouncedReload)
+      .subscribe();
+    
+    const invoicesChannel = supabase
+      .channel('invoices-changes')
+      .on('postgres_changes', { 
+        event: '*', 
+        schema: 'public', 
+        table: 'invoices' 
+      }, debouncedReload)
+      .subscribe();
     
     return () => {
-      subscription.unsubscribe();
+      if (reloadTimeout) clearTimeout(reloadTimeout);
+      bookingsChannel.unsubscribe();
+      paymentsChannel.unsubscribe();
+      expensesChannel.unsubscribe();
+      invoicesChannel.unsubscribe();
     };
   }, []);
 

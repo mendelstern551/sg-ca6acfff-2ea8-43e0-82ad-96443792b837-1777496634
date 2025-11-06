@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Expense, Booking } from "@/types/booking";
 import { formatCurrency } from "@/lib/bookingCalculations";
 import { format } from "date-fns";
-import { DollarSign, TrendingUp, TrendingDown, Receipt, Calendar, Users, FileText, Plus, StickyNote } from "lucide-react";
+import { DollarSign, TrendingUp, TrendingDown, Receipt, Calendar, Users, FileText, Plus, StickyNote, Pencil } from "lucide-react";
 import { InvoiceDialog } from "./InvoiceDialog";
 import { useState } from "react";
 import { paymentService } from "@/services/paymentService";
@@ -34,6 +34,7 @@ export function ClientDetailsDialog({
   const [invoiceOpen, setInvoiceOpen] = useState(false);
   const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
   const [noteDialogOpen, setNoteDialogOpen] = useState(false);
+  const [customerEditDialogOpen, setCustomerEditDialogOpen] = useState(false);
   const [localBooking, setLocalBooking] = useState(booking);
   
   const [paymentAmount, setPaymentAmount] = useState("");
@@ -43,6 +44,9 @@ export function ClientDetailsDialog({
   const [submitting, setSubmitting] = useState(false);
   
   const [noteText, setNoteText] = useState(booking.notes || "");
+  const [customerName, setCustomerName] = useState(booking.contact_name);
+  const [customerEmail, setCustomerEmail] = useState(booking.contact_email || "");
+  const [customerPhone, setCustomerPhone] = useState(booking.contact_phone || "");
   
   const { toast } = useToast();
 
@@ -146,6 +150,64 @@ export function ClientDetailsDialog({
     }
   };
 
+  const handleUpdateCustomerInfo = async () => {
+    if (!customerName.trim()) {
+      toast({
+        title: "Name Required",
+        description: "Customer name cannot be empty.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    try {
+      setSubmitting(true);
+      
+      // Update booking customer info
+      await bookingService.updateBooking(localBooking.id, {
+        contact_name: customerName,
+        contact_email: customerEmail || null,
+        contact_phone: customerPhone || null
+      });
+
+      // ✅ SYNC: Update invoice customer info automatically
+      try {
+        await invoiceService.updateInvoiceCustomerInfo(localBooking.id, {
+          clientName: customerName,
+          clientEmail: customerEmail || null,
+          clientPhone: customerPhone || null
+        });
+      } catch (invoiceError) {
+        console.warn("Could not update invoice (may not exist yet):", invoiceError);
+      }
+
+      // Refresh booking data
+      const refreshedBooking = await bookingService.getBookingById(localBooking.id);
+      if (refreshedBooking) {
+        setLocalBooking(refreshedBooking);
+        setCustomerName(refreshedBooking.contact_name);
+        setCustomerEmail(refreshedBooking.contact_email || "");
+        setCustomerPhone(refreshedBooking.contact_phone || "");
+      }
+
+      toast({
+        title: "Customer Info Updated",
+        description: "Customer information and invoice have been updated successfully."
+      });
+
+      setCustomerEditDialogOpen(false);
+    } catch (error) {
+      console.error("Error updating customer info:", error);
+      toast({
+        title: "Error",
+        description: "Failed to update customer information. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   const getCategoryColor = (category: string) => {
     const colors: Record<string, string> = {
       food: "bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300",
@@ -171,6 +233,15 @@ export function ClientDetailsDialog({
                 Client Details - {localBooking.contact_name}
               </DialogTitle>
               <div className="flex gap-2">
+                <Button 
+                  onClick={() => setCustomerEditDialogOpen(true)}
+                  variant="outline"
+                  size="sm"
+                  className="flex items-center gap-2"
+                >
+                  <Pencil className="h-4 w-4" />
+                  Edit Info
+                </Button>
                 <Button 
                   onClick={() => setPaymentDialogOpen(true)}
                   variant="default"
@@ -438,6 +509,61 @@ export function ClientDetailsDialog({
                 </div>
               </CardContent>
             </Card>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={customerEditDialogOpen} onOpenChange={setCustomerEditDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Pencil className="h-5 w-5 text-blue-600" />
+              Edit Customer Information
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="customer-name">Customer Name *</Label>
+              <Input
+                id="customer-name"
+                placeholder="Full name"
+                value={customerName}
+                onChange={(e) => setCustomerName(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="customer-email">Email Address</Label>
+              <Input
+                id="customer-email"
+                type="email"
+                placeholder="email@example.com"
+                value={customerEmail}
+                onChange={(e) => setCustomerEmail(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="customer-phone">Phone Number</Label>
+              <Input
+                id="customer-phone"
+                type="tel"
+                placeholder="(555) 123-4567"
+                value={customerPhone}
+                onChange={(e) => setCustomerPhone(e.target.value)}
+              />
+            </div>
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+              <p className="text-xs text-blue-700">
+                ℹ️ Updating customer info will automatically sync to any existing invoices for this booking.
+              </p>
+            </div>
+          </div>
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" onClick={() => setCustomerEditDialogOpen(false)} disabled={submitting}>
+              Cancel
+            </Button>
+            <Button onClick={handleUpdateCustomerInfo} disabled={submitting} className="bg-blue-600 hover:bg-blue-700">
+              {submitting ? "Updating..." : "Save Changes"}
+            </Button>
           </div>
         </DialogContent>
       </Dialog>

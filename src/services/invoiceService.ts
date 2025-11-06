@@ -172,6 +172,26 @@ export const invoiceService = {
     });
   },
 
+  async updateInvoiceCustomerInfo(bookingId: string, customerData: {
+    clientName: string;
+    clientEmail?: string | null;
+    clientPhone?: string | null;
+  }): Promise<void> {
+    await retryWithBackoff(async () => {
+      const { error } = await supabase
+        .from("invoices")
+        .update({
+          client_name: customerData.clientName,
+          client_email: customerData.clientEmail || null,
+          client_phone: customerData.clientPhone || null,
+          updated_at: new Date().toISOString()
+        })
+        .eq("booking_id", bookingId);
+
+      if (error) throw error;
+    });
+  },
+
   async deleteInvoice(invoiceId: string): Promise<void> {
     await retryWithBackoff(async () => {
       const { error } = await supabase
