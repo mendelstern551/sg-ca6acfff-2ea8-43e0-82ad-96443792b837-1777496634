@@ -75,10 +75,9 @@ export default function HomePage() {
       if (reloadTimeout) clearTimeout(reloadTimeout);
       reloadTimeout = setTimeout(() => {
         loadAllData();
-      }, 500); // Wait 500ms after last change before reloading
+      }, 500);
     };
     
-    // ✅ SPECIFIC SUBSCRIPTIONS: Only listen to bookings, payments, expenses, invoices
     const bookingsChannel = supabase
       .channel('bookings-changes')
       .on('postgres_changes', { 
@@ -145,12 +144,8 @@ export default function HomePage() {
       }
     };
 
-    // Initial check
     checkReminders();
-    
-    // Check every minute
     const interval = setInterval(checkReminders, 60000);
-    
     return () => clearInterval(interval);
   }, [reminderRefreshKey, currentReminder]);
 
@@ -158,7 +153,6 @@ export default function HomePage() {
     try {
       setLoading(true);
       
-      // Load data with individual error handling for each service
       const results = await Promise.allSettled([
         bookingService.getAllBookings(),
         expenseService.getAllExpenses(),
@@ -166,13 +160,11 @@ export default function HomePage() {
         managerService.getAllCompensation()
       ]);
 
-      // Extract successful results
       const bookingsData = results[0].status === 'fulfilled' ? results[0].value : [];
       const expensesData = results[1].status === 'fulfilled' ? results[1].value : [];
       const invoicesData = results[2].status === 'fulfilled' ? results[2].value : [];
       const managerData = results[3].status === 'fulfilled' ? results[3].value : [];
 
-      // Log any failures
       results.forEach((result, index) => {
         if (result.status === 'rejected') {
           const serviceName = ['Bookings', 'Expenses', 'Invoices', 'Manager'][index];
@@ -190,7 +182,6 @@ export default function HomePage() {
       setInvoices(invoicesData);
       setManagerCompensations(managerData);
 
-      // Only show error toast if critical services failed (bookings/expenses)
       if (results[0].status === 'rejected' || results[1].status === 'rejected') {
         toast({
           title: "Partial Load Failure",
@@ -209,6 +200,135 @@ export default function HomePage() {
     } finally {
       setLoading(false);
     }
+  };
+
+  // 🔔 REMINDER HANDLER FUNCTIONS (Inside component)
+  const handleCompleteReminder = async () => {
+    if (!currentReminder) return;
+    
+    try {
+      await reminderService.completeReminder(currentReminder.id);
+      toast({
+        title: "✅ Task Completed",
+        description: "Great job! Task marked as complete.",
+      });
+      
+      setCurrentReminder(undefined);
+      setReminderRefreshKey(prev => prev + 1);
+    } catch (error) {
+      console.error("Error completing reminder:", error);
+      toast({
+        title: "Error",
+        description: "Failed to complete task",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleSnoozeReminder = async (minutes: number) => {
+    if (!currentReminder) return;
+    
+    try {
+      await reminderService.snoozeReminder(currentReminder.id, minutes);
+      toast({
+        title: "⏰ Task Snoozed",
+        description: `Reminder will reappear in ${minutes} minutes`,
+      });
+      
+      setCurrentReminder(undefined);
+      setReminderRefreshKey(prev => prev + 1);
+    } catch (error) {
+      console.error("Error snoozing reminder:", error);
+      toast({
+        title: "Error",
+        description: "Failed to snooze task",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleSnoozeMinimize = async (minutes: number) => {
+    if (!currentReminder) return;
+    
+    try {
+      await reminderService.snoozeMinimize(currentReminder.id, minutes);
+      toast({
+        title: "📌 Task Minimized",
+        description: `Moved to corner. Will remind again in ${minutes} minutes.`,
+      });
+      
+      setCurrentReminder(undefined);
+      setReminderRefreshKey(prev => prev + 1);
+    } catch (error) {
+      console.error("Error snoozing and minimizing reminder:", error);
+      toast({
+        title: "Error",
+        description: "Failed to minimize task",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleDismissReminder = async () => {
+    if (!currentReminder) return;
+    
+    try {
+      await reminderService.dismissReminder(currentReminder.id);
+      toast({
+        title: "Task Dismissed",
+        description: "Reminder has been dismissed",
+      });
+      
+      setCurrentReminder(undefined);
+      setReminderRefreshKey(prev => prev + 1);
+    } catch (error) {
+      console.error("Error dismissing reminder:", error);
+      toast({
+        title: "Error",
+        description: "Failed to dismiss task",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleCompleteMinimized = async (reminderId: string) => {
+    try {
+      await reminderService.completeReminder(reminderId);
+      toast({
+        title: "✅ Task Completed",
+        description: "Task marked as complete",
+      });
+      setReminderRefreshKey(prev => prev + 1);
+    } catch (error) {
+      console.error("Error completing minimized reminder:", error);
+      toast({
+        title: "Error",
+        description: "Failed to complete task",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleDismissMinimized = async (reminderId: string) => {
+    try {
+      await reminderService.dismissReminder(reminderId);
+      toast({
+        title: "Task Dismissed",
+        description: "Reminder dismissed",
+      });
+      setReminderRefreshKey(prev => prev + 1);
+    } catch (error) {
+      console.error("Error dismissing minimized reminder:", error);
+      toast({
+        title: "Error",
+        description: "Failed to dismiss task",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleExpandMinimized = (reminder: Reminder) => {
+    setCurrentReminder(reminder);
   };
 
   const handleSaveBooking = async (bookingData: Omit<Booking, "id" | "created_at" | "updated_at" | "payments">) => {
@@ -380,7 +500,6 @@ export default function HomePage() {
     setActiveTab("expenses");
   };
 
-  // Combine regular expenses with manager expenses
   const allExpenses = [...expenses];
 
   const totalGuests = bookings.reduce((sum, b) => sum + b.number_of_guests, 0);
@@ -430,7 +549,7 @@ export default function HomePage() {
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2"><CardTitle className="text-sm font-medium text-stone-700 dark:text-stone-300">Total Revenue</CardTitle><div className="p-2 bg-green-100 dark:bg-green-900/30 rounded-lg"><DollarSign className="h-4 w-4 text-green-600 dark:text-green-400" /></div></CardHeader>
             <CardContent><div className="text-2xl font-bold text-green-600 dark:text-green-400">${totalRevenue.toLocaleString()}</div><p className="text-xs text-stone-600 dark:text-stone-400 mt-1">From all bookings</p></CardContent>
           </Card>
-          <Card className={`bg-white dark:bg-stone-900 border-stone-200 dark:border-stone-800 hover:shadow-lg transition-all duration-300`}>
+          <Card className="bg-white dark:bg-stone-900 border-stone-200 dark:border-stone-800 hover:shadow-lg transition-all duration-300">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2"><CardTitle className="text-sm font-medium text-stone-700 dark:text-stone-300">Net Profit</CardTitle><div className={`p-2 ${netProfit >= 0 ? 'bg-cyan-100 dark:bg-cyan-900/30' : 'bg-red-100 dark:bg-red-900/30'} rounded-lg`}><FileText className={`h-4 w-4 ${netProfit >= 0 ? 'text-cyan-600 dark:text-cyan-400' : 'text-red-600 dark:text-red-400'}`} /></div></CardHeader>
             <CardContent><div className={`text-2xl font-bold ${netProfit >= 0 ? "text-cyan-600 dark:text-cyan-400" : "text-red-600 dark:text-red-400"}`}>${netProfit.toLocaleString()}</div><p className="text-xs text-stone-600 dark:text-stone-400 mt-1">Revenue - Expenses</p></CardContent>
           </Card>
@@ -438,14 +557,14 @@ export default function HomePage() {
 
         <Tabs value={activeTab} onValueChange={(value) => { setActiveTab(value); if (value !== "expenses") setFilteredBookingId(undefined); }} className="space-y-6">
           <TabsList className="grid w-full grid-cols-7 lg:w-[1050px] bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 p-1">
-            <TabsTrigger value="bookings" className="data-[state=active]:bg-amber-100 dark:data-[state=active]:bg-amber-900/30 data-[state=active]:text-amber-900 dark:data-[state=active]:text-amber-100">Bookings</TabsTrigger>
-            <TabsTrigger value="calendar" className="data-[state=active]:bg-amber-100 dark:data-[state=active]:bg-amber-900/30 data-[state=active]:text-amber-900 dark:data-[state=active]:text-amber-100">Calendar</TabsTrigger>
-            <TabsTrigger value="invoices" className="data-[state=active]:bg-amber-100 dark:data-[state=active]:bg-amber-900/30 data-[state=active]:text-amber-900 dark:data-[state=active]:text-amber-100">Invoices</TabsTrigger>
-            <TabsTrigger value="budget" className="data-[state=active]:bg-amber-100 dark:data-[state=active]:bg-amber-900/30 data-[state=active]:text-amber-900 dark:data-[state=active]:text-amber-100">Budget</TabsTrigger>
-            <TabsTrigger value="expenses" className="data-[state=active]:bg-amber-100 dark:data-[state=active]:bg-amber-900/30 data-[state=active]:text-amber-900 dark:data-[state=active]:text-amber-100">Expenses</TabsTrigger>
-            <TabsTrigger value="receipts" className="data-[state=active]:bg-amber-100 dark:data-[state=active]:bg-amber-900/30 data-[state=active]:text-amber-900 dark:data-[state=active]:text-amber-100">Receipts</TabsTrigger>
-            <TabsTrigger value="manager" className="data-[state=active]:bg-amber-100 dark:data-[state=active]:bg-amber-900/30 data-[state=active]:text-amber-900 dark:data-[state=active]:text-amber-100">Manager</TabsTrigger>
-            <TabsTrigger value="emails" className="data-[state=active]:bg-amber-100 dark:data-[state=active]:bg-amber-900/30 data-[state=active]:text-amber-900 dark:data-[state=active]:text-amber-100">Email History</TabsTrigger>
+            <TabsTrigger value="bookings">Bookings</TabsTrigger>
+            <TabsTrigger value="calendar">Calendar</TabsTrigger>
+            <TabsTrigger value="invoices">Invoices</TabsTrigger>
+            <TabsTrigger value="budget">Budget</TabsTrigger>
+            <TabsTrigger value="expenses">Expenses</TabsTrigger>
+            <TabsTrigger value="receipts">Receipts</TabsTrigger>
+            <TabsTrigger value="manager">Manager</TabsTrigger>
+            <TabsTrigger value="emails">Email History</TabsTrigger>
           </TabsList>
 
           <TabsContent value="bookings" className="space-y-4">
@@ -460,40 +579,34 @@ export default function HomePage() {
           <TabsContent value="invoices" className="space-y-4">
             <Card className="bg-white dark:bg-stone-900 border-stone-200 dark:border-stone-800">
               <CardHeader><div className="flex items-center justify-between"><div><CardTitle className="text-stone-900 dark:text-stone-100 flex items-center gap-2"><FileText className="h-5 w-5 text-blue-600" />Invoice Management</CardTitle><CardDescription className="text-stone-600 dark:text-stone-400">View and manage all invoices for your bookings</CardDescription></div></div></CardHeader>
-              <CardContent>{invoices.length === 0 ? <div className="text-center py-12"><FileText className="h-16 w-16 mx-auto mb-4 text-blue-300 dark:text-blue-700" /><h3 className="text-lg font-medium text-stone-900 dark:text-stone-100 mb-2">No Invoices Yet</h3><p className="text-stone-600 dark:text-stone-400 mb-6 max-w-md mx-auto">Invoices are automatically generated when you confirm a booking. Create a confirmed booking to see your first invoice here.</p></div> : <div className="space-y-3">{invoices.map((invoice) => { const booking = bookings.find(b => b.id === invoice.booking_id); return (<div key={invoice.id} className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 hover:border-blue-300 dark:hover:border-blue-600 transition-colors"><div className="flex-1"><div className="flex items-center gap-3 mb-2"><span className="font-mono text-sm font-semibold text-blue-600 dark:text-blue-400">{invoice.invoice_number}</span><Badge variant={invoice.balance_due > 0 ? "destructive" : "default"}>{invoice.balance_due > 0 ? "Outstanding" : "Paid"}</Badge></div><div className="text-sm text-stone-700 dark:text-stone-300"><p className="font-medium">{invoice.client_name}</p><p className="text-xs text-stone-500 dark:text-stone-400 mt-1">{format(new Date(invoice.event_date_start), "MMM d")} - {format(new Date(invoice.event_date_end), "MMM d, yyyy")} • {invoice.number_of_guests} guests</p></div></div><div className="flex items-center gap-4"><div className="text-right"><p className="text-lg font-bold text-stone-900 dark:text-stone-100">${Number(invoice.total_amount).toFixed(2)}</p>{invoice.balance_due > 0 && (<p className="text-xs text-orange-600 dark:text-orange-400">${Number(invoice.balance_due).toFixed(2)} due</p>)}</div><Button onClick={() => { if (booking) { setSelectedInvoiceBooking(booking); setInvoiceDialogOpen(true); } }} variant="outline" size="sm" className="flex items-center gap-2"><FileText className="h-4 w-4" />View Invoice</Button></div></div>); })}</div>}</CardContent>
+              <CardContent>{invoices.length === 0 ? <div className="text-center py-12"><FileText className="h-16 w-16 mx-auto mb-4 text-blue-300 dark:text-blue-700" /><h3 className="text-lg font-medium text-stone-900 dark:text-stone-100 mb-2">No Invoices Yet</h3><p className="text-stone-600 dark:text-stone-400 mb-6 max-w-md mx-auto">Invoices are automatically generated when you confirm a booking.</p></div> : <div className="space-y-3">{invoices.map((invoice) => { const booking = bookings.find(b => b.id === invoice.booking_id); return (<div key={invoice.id} className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 hover:border-blue-300 dark:hover:border-blue-600 transition-colors"><div className="flex-1"><div className="flex items-center gap-3 mb-2"><span className="font-mono text-sm font-semibold text-blue-600 dark:text-blue-400">{invoice.invoice_number}</span><Badge variant={invoice.balance_due > 0 ? "destructive" : "default"}>{invoice.balance_due > 0 ? "Outstanding" : "Paid"}</Badge></div><div className="text-sm text-stone-700 dark:text-stone-300"><p className="font-medium">{invoice.client_name}</p><p className="text-xs text-stone-500 dark:text-stone-400 mt-1">{format(new Date(invoice.event_date_start), "MMM d")} - {format(new Date(invoice.event_date_end), "MMM d, yyyy")} • {invoice.number_of_guests} guests</p></div></div><div className="flex items-center gap-4"><div className="text-right"><p className="text-lg font-bold text-stone-900 dark:text-stone-100">${Number(invoice.total_amount).toFixed(2)}</p>{invoice.balance_due > 0 && (<p className="text-xs text-orange-600 dark:text-orange-400">${Number(invoice.balance_due).toFixed(2)} due</p>)}</div><Button onClick={() => { if (booking) { setSelectedInvoiceBooking(booking); setInvoiceDialogOpen(true); } }} variant="outline" size="sm"><FileText className="h-4 w-4 mr-2" />View</Button></div></div>); })}</div>}</CardContent>
             </Card>
           </TabsContent>
 
-          <TabsContent value="budget" className="space-y-4"><BudgetDashboard bookings={bookings} expenses={expenses} /></TabsContent>
+          <TabsContent value="budget"><BudgetDashboard bookings={bookings} expenses={expenses} /></TabsContent>
 
           <TabsContent value="expenses" className="space-y-4">
             <Card className="bg-white dark:bg-stone-900 border-stone-200 dark:border-stone-800">
-              <CardHeader><div className="flex items-center justify-between"><div><CardTitle className="text-stone-900 dark:text-stone-100">Expense Tracking</CardTitle><CardDescription className="text-stone-600 dark:text-stone-400">Record expenses with receipts and payment proof (includes manager compensation)</CardDescription></div><Button className="bg-orange-600 hover:bg-orange-700 text-white shadow-md hover:shadow-lg transition-all" onClick={() => { setEditingExpense(undefined); setExpenseDialogOpen(true); }}><Plus className="h-4 w-4 mr-2" />Add Expense</Button></div></CardHeader>
-              <CardContent>{allExpenses.length === 0 ? <div className="text-center py-12 text-stone-500 dark:text-stone-400"><FileText className="h-12 w-12 mx-auto mb-4 opacity-50" /><p className="text-lg font-medium mb-2">No expenses recorded</p><p className="text-sm">Start tracking your expenses with receipts</p></div> : <ExpenseList expenses={allExpenses} bookings={bookings} onEdit={handleEditExpense} onDelete={handleDeleteExpense} filterBookingId={filteredBookingId} />}</CardContent>
+              <CardHeader><div className="flex items-center justify-between"><div><CardTitle className="text-stone-900 dark:text-stone-100">Expense Tracking</CardTitle><CardDescription className="text-stone-600 dark:text-stone-400">Record expenses with receipts</CardDescription></div><Button className="bg-orange-600 hover:bg-orange-700" onClick={() => { setEditingExpense(undefined); setExpenseDialogOpen(true); }}><Plus className="h-4 w-4 mr-2" />Add Expense</Button></div></CardHeader>
+              <CardContent>{allExpenses.length === 0 ? <div className="text-center py-12"><FileText className="h-12 w-12 mx-auto mb-4 opacity-50" /><p className="text-lg font-medium mb-2">No expenses</p></div> : <ExpenseList expenses={allExpenses} bookings={bookings} onEdit={handleEditExpense} onDelete={handleDeleteExpense} filterBookingId={filteredBookingId} />}</CardContent>
             </Card>
           </TabsContent>
 
-          <TabsContent value="receipts" className="space-y-4"><ReceiptLibrary expenses={expenses} bookings={bookings} /></TabsContent>
+          <TabsContent value="receipts"><ReceiptLibrary expenses={expenses} bookings={bookings} /></TabsContent>
 
-          <TabsContent value="manager" className="space-y-4">
+          <TabsContent value="manager">
             <Card className="bg-white dark:bg-stone-900 border-stone-200 dark:border-stone-800">
-              <CardHeader><CardTitle className="text-stone-900 dark:text-stone-100">Manager Compensation</CardTitle><CardDescription className="text-stone-600 dark:text-stone-400">Track maintenance fees, commissions, and payments to manager</CardDescription></CardHeader>
+              <CardHeader><CardTitle>Manager Compensation</CardTitle></CardHeader>
               <CardContent><ManagerSalary bookings={bookings} onAddExpense={handleAddExpense} allExpenses={expenses} onExpensesUpdate={loadAllData} /></CardContent>
             </Card>
           </TabsContent>
 
-          <TabsContent value="emails" className="space-y-4">
-            <EmailHistory bookings={bookings.map(b => ({ id: b.id, name: b.name, contact_name: b.contact_name }))} />
-          </TabsContent>
+          <TabsContent value="emails"><EmailHistory bookings={bookings.map(b => ({ id: b.id, name: b.name, contact_name: b.contact_name }))} /></TabsContent>
         </Tabs>
       </main>
 
-      <TaskSidebar 
-        onCreateReminder={() => setReminderDialogOpen(true)} 
-        refreshTrigger={reminderRefreshKey}
-      />
+      <TaskSidebar onCreateReminder={() => setReminderDialogOpen(true)} refreshTrigger={reminderRefreshKey} />
 
-      {/* 🔔 CENTER MODAL - Stage 1: Urgent Attention */}
       {currentReminder && (
         <ReminderModal
           reminder={currentReminder}
@@ -504,7 +617,6 @@ export default function HomePage() {
         />
       )}
 
-      {/* 📌 CORNER NOTIFICATIONS - Stage 2: Minimized View */}
       <CornerNotifications
         reminders={minimizedReminders}
         onComplete={handleCompleteMinimized}
@@ -525,134 +637,3 @@ export default function HomePage() {
     </div>
   );
 }
-
-// 🔔 REMINDER HANDLERS
-const handleCompleteReminder = async () => {
-  if (!currentReminder) return;
-  
-  try {
-    await reminderService.completeReminder(currentReminder.id);
-    toast({
-      title: "✅ Task Completed",
-      description: "Great job! Task marked as complete.",
-    });
-    
-    setCurrentReminder(undefined);
-    setReminderRefreshKey(prev => prev + 1);
-  } catch (error) {
-    console.error("Error completing reminder:", error);
-    toast({
-      title: "Error",
-      description: "Failed to complete task",
-      variant: "destructive"
-    });
-  }
-};
-
-const handleSnoozeReminder = async (minutes: number) => {
-  if (!currentReminder) return;
-  
-  try {
-    await reminderService.snoozeReminder(currentReminder.id, minutes);
-    toast({
-      title: "⏰ Task Snoozed",
-      description: `Reminder will reappear in ${minutes} minutes`,
-    });
-    
-    setCurrentReminder(undefined);
-    setReminderRefreshKey(prev => prev + 1);
-  } catch (error) {
-    console.error("Error snoozing reminder:", error);
-    toast({
-      title: "Error",
-      description: "Failed to snooze task",
-      variant: "destructive"
-    });
-  }
-};
-
-const handleSnoozeMinimize = async (minutes: number) => {
-  if (!currentReminder) return;
-  
-  try {
-    await reminderService.snoozeMinimize(currentReminder.id, minutes);
-    toast({
-      title: "📌 Task Minimized",
-      description: `Moved to corner. Will remind again in ${minutes} minutes.`,
-    });
-    
-    setCurrentReminder(undefined);
-    setReminderRefreshKey(prev => prev + 1);
-  } catch (error) {
-    console.error("Error snoozing and minimizing reminder:", error);
-    toast({
-      title: "Error",
-      description: "Failed to minimize task",
-      variant: "destructive"
-    });
-  }
-};
-
-const handleDismissReminder = async () => {
-  if (!currentReminder) return;
-  
-  try {
-    await reminderService.dismissReminder(currentReminder.id);
-    toast({
-      title: "Task Dismissed",
-      description: "Reminder has been dismissed",
-    });
-    
-    setCurrentReminder(undefined);
-    setReminderRefreshKey(prev => prev + 1);
-  } catch (error) {
-    console.error("Error dismissing reminder:", error);
-    toast({
-      title: "Error",
-      description: "Failed to dismiss task",
-      variant: "destructive"
-    });
-  }
-};
-
-// 🔔 CORNER NOTIFICATION HANDLERS
-const handleCompleteMinimized = async (reminderId: string) => {
-  try {
-    await reminderService.completeReminder(reminderId);
-    toast({
-      title: "✅ Task Completed",
-      description: "Task marked as complete",
-    });
-    setReminderRefreshKey(prev => prev + 1);
-  } catch (error) {
-    console.error("Error completing minimized reminder:", error);
-    toast({
-      title: "Error",
-      description: "Failed to complete task",
-      variant: "destructive"
-    });
-  }
-};
-
-const handleDismissMinimized = async (reminderId: string) => {
-  try {
-    await reminderService.dismissReminder(reminderId);
-    toast({
-      title: "Task Dismissed",
-      description: "Reminder dismissed",
-    });
-    setReminderRefreshKey(prev => prev + 1);
-  } catch (error) {
-    console.error("Error dismissing minimized reminder:", error);
-    toast({
-      title: "Error",
-      description: "Failed to dismiss task",
-      variant: "destructive"
-    });
-  }
-};
-
-const handleExpandMinimized = (reminder: Reminder) => {
-  // Move minimized reminder back to center modal
-  setCurrentReminder(reminder);
-};
