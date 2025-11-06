@@ -26,7 +26,7 @@ export function CornerNotifications({
   if (reminders.length === 0) return null;
 
   return (
-    <div className="fixed bottom-20 left-6 z-30 pointer-events-auto space-y-2 max-w-sm">
+    <div className="fixed bottom-20 left-6 z-[2147483600] pointer-events-auto space-y-2 max-w-sm">
       {/* Collapse/Expand Toggle */}
       {reminders.length > 1 && (
         <Button

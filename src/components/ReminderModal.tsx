@@ -62,18 +62,23 @@ export function ReminderModal({
 
   return createPortal(
     <div
-      className="fixed inset-0 z-[9999] flex items-center justify-center pointer-events-auto"
+      className="fixed inset-0 z-[2147483647] flex items-center justify-center pointer-events-auto"
       role="dialog"
       aria-modal="true"
-      onClick={(e) => e.stopPropagation()}
-      onMouseDown={(e) => e.stopPropagation()}
-      onTouchStart={(e) => e.stopPropagation()}
+      onClick={(e) => { e.stopPropagation(); e.preventDefault(); }}
+      onMouseDown={(e) => { e.stopPropagation(); }}
+      onTouchStart={(e) => { e.stopPropagation(); }}
     >
-      {/* Backdrop that captures clicks so nothing behind can be interacted with */}
-      <div className="absolute inset-0 bg-black/70 backdrop-blur-sm pointer-events-auto" />
-
+      {/* Backdrop that blocks background clicks */}
+      <div
+        className="absolute inset-0 bg-black/70 backdrop-blur-sm pointer-events-auto z-[2147483645]"
+        onClick={(e) => { e.stopPropagation(); e.preventDefault(); }}
+      />
       {/* Center Modal */}
-      <div className="relative z-[10000] p-4 w-full max-w-md" onClick={(e) => e.stopPropagation()}>
+      <div
+        className="relative z-[2147483646] p-4 w-full max-w-md pointer-events-auto"
+        onClick={(e) => e.stopPropagation()}
+      >
         <Card className="w-full bg-white dark:bg-stone-900 shadow-2xl border-4 border-orange-500 animate-in zoom-in-95 rounded-lg overflow-hidden">
           {/* Header with Icon */}
           <div className={`${categoryColor} text-white p-6 relative`}>

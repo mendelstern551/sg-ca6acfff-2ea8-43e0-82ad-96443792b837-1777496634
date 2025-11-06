@@ -205,14 +205,12 @@ export default function HomePage() {
   // 🔔 REMINDER HANDLER FUNCTIONS (Inside component)
   const handleCompleteReminder = async () => {
     if (!currentReminder) return;
-    
     try {
       await reminderService.completeReminder(currentReminder.id);
-      toast({
-        title: "✅ Task Completed",
-        description: "Great job! Task marked as complete.",
-      });
-      
+      toast({ title: "✅ Task Completed", description: "Great job! Task marked as complete." });
+      // Optimistic UI: remove from corner and due lists
+      setMinimizedReminders(prev => prev.filter(r => r.id !== currentReminder.id));
+      setDueReminders(prev => prev.filter(r => r.id !== currentReminder.id));
       setCurrentReminder(undefined);
       setReminderRefreshKey(prev => prev + 1);
     } catch (error) {
@@ -227,14 +225,11 @@ export default function HomePage() {
 
   const handleSnoozeReminder = async (minutes: number) => {
     if (!currentReminder) return;
-    
     try {
       await reminderService.snoozeReminder(currentReminder.id, minutes);
-      toast({
-        title: "⏰ Task Snoozed",
-        description: `Reminder will reappear in ${minutes} minutes`,
-      });
-      
+      toast({ title: "⏰ Task Snoozed", description: `Reminder will reappear in ${minutes} minutes` });
+      // Optimistic: remove from due list (keep corner unchanged)
+      setDueReminders(prev => prev.filter(r => r.id !== currentReminder.id));
       setCurrentReminder(undefined);
       setReminderRefreshKey(prev => prev + 1);
     } catch (error) {
@@ -249,14 +244,16 @@ export default function HomePage() {
 
   const handleSnoozeMinimize = async (minutes: number) => {
     if (!currentReminder) return;
-    
     try {
       await reminderService.snoozeMinimize(currentReminder.id, minutes);
-      toast({
-        title: "📌 Task Minimized",
-        description: `Moved to corner. Will remind again in ${minutes} minutes.`,
+      toast({ title: "📌 Task Minimized", description: `Moved to corner. Will remind again in ${minutes} minutes.` });
+      // Optimistic: move current to corner list
+      setMinimizedReminders(prev => {
+        const exists = prev.some(r => r.id === currentReminder.id);
+        if (exists) return prev;
+        return [...prev, { ...currentReminder, status: "snoozed", snoozed_until: new Date(Date.now() + minutes * 60000).toISOString(), metadata: { minimized: true } as any }];
       });
-      
+      setDueReminders(prev => prev.filter(r => r.id !== currentReminder.id));
       setCurrentReminder(undefined);
       setReminderRefreshKey(prev => prev + 1);
     } catch (error) {
@@ -271,14 +268,12 @@ export default function HomePage() {
 
   const handleDismissReminder = async () => {
     if (!currentReminder) return;
-    
     try {
       await reminderService.dismissReminder(currentReminder.id);
-      toast({
-        title: "Task Dismissed",
-        description: "Reminder has been dismissed",
-      });
-      
+      toast({ title: "Task Dismissed", description: "Reminder has been dismissed" });
+      // Optimistic: remove from both lists
+      setMinimizedReminders(prev => prev.filter(r => r.id !== currentReminder.id));
+      setDueReminders(prev => prev.filter(r => r.id !== currentReminder.id));
       setCurrentReminder(undefined);
       setReminderRefreshKey(prev => prev + 1);
     } catch (error) {
@@ -294,10 +289,9 @@ export default function HomePage() {
   const handleCompleteMinimized = async (reminderId: string) => {
     try {
       await reminderService.completeReminder(reminderId);
-      toast({
-        title: "✅ Task Completed",
-        description: "Task marked as complete",
-      });
+      toast({ title: "✅ Task Completed", description: "Task marked as complete" });
+      setMinimizedReminders(prev => prev.filter(r => r.id !== reminderId));
+      setDueReminders(prev => prev.filter(r => r.id !== reminderId));
       setReminderRefreshKey(prev => prev + 1);
     } catch (error) {
       console.error("Error completing minimized reminder:", error);
@@ -312,10 +306,9 @@ export default function HomePage() {
   const handleDismissMinimized = async (reminderId: string) => {
     try {
       await reminderService.dismissReminder(reminderId);
-      toast({
-        title: "Task Dismissed",
-        description: "Reminder dismissed",
-      });
+      toast({ title: "Task Dismissed", description: "Reminder dismissed" });
+      setMinimizedReminders(prev => prev.filter(r => r.id !== reminderId));
+      setDueReminders(prev => prev.filter(r => r.id !== reminderId));
       setReminderRefreshKey(prev => prev + 1);
     } catch (error) {
       console.error("Error dismissing minimized reminder:", error);
