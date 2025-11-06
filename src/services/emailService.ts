@@ -1,5 +1,6 @@
 import type { Booking } from "@/types/booking";
 import type { Database } from "@/integrations/supabase/types";
+import { invoiceService } from "@/services/invoiceService";
 
 type Invoice = Database["public"]["Tables"]["invoices"]["Row"];
 
