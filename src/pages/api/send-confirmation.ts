@@ -33,8 +33,22 @@ export default async function handler(
   const SMTP_PASS = process.env.SMTP_AUTH_PASS;
   const FROM_EMAIL = process.env.BOOKING_FROM_EMAIL || "booking@troutlakeresort.ca";
 
+  // Log configuration (without password) for debugging
+  console.log("Email Configuration:", {
+    host: SMTP_HOST,
+    port: SMTP_PORT,
+    user: SMTP_USER,
+    from: FROM_EMAIL,
+    to: to,
+  });
+
   if (!SMTP_HOST || !SMTP_PORT || !SMTP_USER || !SMTP_PASS) {
-    console.error("SMTP configuration is incomplete");
+    console.error("SMTP configuration is incomplete:", {
+      hasHost: !!SMTP_HOST,
+      hasPort: !!SMTP_PORT,
+      hasUser: !!SMTP_USER,
+      hasPass: !!SMTP_PASS,
+    });
     return res.status(500).json({
       error: "Email service not configured. Please contact support.",
     });
@@ -45,12 +59,19 @@ export default async function handler(
     const transporter = nodemailer.createTransport({
       host: SMTP_HOST,
       port: parseInt(SMTP_PORT),
-      secure: false, // true for 465, false for other ports
+      secure: false,
       auth: {
         user: SMTP_USER,
         pass: SMTP_PASS,
       },
+      debug: true, // Enable debug output
+      logger: true, // Log information to console
     });
+
+    // Verify connection
+    console.log("Verifying SMTP connection...");
+    await transporter.verify();
+    console.log("SMTP connection verified successfully");
 
     const bookingTypeFormatted = bookingType.replace(/_/g, " ").toUpperCase();
     
@@ -150,6 +171,7 @@ export default async function handler(
     `;
 
     // Send email
+    console.log("Attempting to send email...");
     const info = await transporter.sendMail({
       from: `"Trout Lake Resort - Bookings" <${FROM_EMAIL}>`,
       to: to,
@@ -157,15 +179,38 @@ export default async function handler(
       html: emailHtml,
     });
 
+    console.log("Email sent successfully:", info.messageId);
+
     return res.status(200).json({
       success: true,
       message: "Confirmation sent successfully",
       emailId: info.messageId,
     });
   } catch (error: any) {
-    console.error("Error sending confirmation email:", error);
+    console.error("Detailed error sending confirmation email:", {
+      message: error.message,
+      code: error.code,
+      command: error.command,
+      response: error.response,
+      stack: error.stack,
+    });
+    
+    // Provide more specific error messages
+    let errorMessage = error.message || "Failed to send confirmation email";
+    
+    if (error.code === "EAUTH") {
+      errorMessage = "Authentication failed. Please check your SMTP credentials.";
+    } else if (error.code === "ETIMEDOUT") {
+      errorMessage = "Connection timed out. Please check your SMTP server settings.";
+    } else if (error.code === "ECONNREFUSED") {
+      errorMessage = "Connection refused. Please verify SMTP host and port.";
+    } else if (error.responseCode === 550) {
+      errorMessage = "Email rejected. The 'from' address may need to be verified in SMTP.com.";
+    }
+    
     return res.status(500).json({
-      error: error.message || "Failed to send confirmation email",
+      error: errorMessage,
+      details: error.message,
     });
   }
 }
