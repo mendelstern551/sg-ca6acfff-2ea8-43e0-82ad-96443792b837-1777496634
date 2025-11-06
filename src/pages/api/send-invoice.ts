@@ -1,7 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import nodemailer from "nodemailer";
 import React from "react";
-import ReactPDF from "@react-pdf/renderer";
+import { renderToBuffer } from "@react-pdf/renderer";
 import { Document, Page, Text, View, StyleSheet, Image } from "@react-pdf/renderer";
 
 const styles = StyleSheet.create({
@@ -207,151 +207,6 @@ const styles = StyleSheet.create({
   }
 });
 
-const InvoiceDocument = ({ data }: { data: any }) => {
-  const spacer = () => React.createElement(View, { style: { flex: 1 } });
-  
-  return React.createElement(
-    Document,
-    null,
-    React.createElement(
-      Page,
-      { size: "A4", style: styles.page },
-      React.createElement(
-        View,
-        { style: styles.logoContainer },
-        React.createElement(Image, {
-          src: "https://3000-ca6acfff-2ea8-43e0-82ad-96443792b837.softgen.dev/ChatGPT_Image_Nov_5_2025_03_58_44_PM.png",
-          style: styles.logo
-        }),
-        React.createElement(Text, { style: styles.logoText }, "Sainte-Agathe-des-Monts • Canada")
-      ),
-      React.createElement(
-        View,
-        { style: styles.header },
-        spacer(),
-        React.createElement(
-          View,
-          { style: styles.invoiceMeta },
-          React.createElement(Text, { style: styles.invoiceTitle }, "INVOICE"),
-          React.createElement(Text, { style: styles.invoiceNumber }, `#${data.invoiceNumber}`),
-          React.createElement(Text, { style: styles.invoiceDate }, `Issue Date: ${new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })}`)
-        )
-      ),
-      React.createElement(
-        View,
-        { style: styles.billingSection },
-        React.createElement(
-          View,
-          { style: styles.billingBox },
-          React.createElement(Text, { style: styles.billingTitle }, "Bill To"),
-          React.createElement(Text, { style: styles.billingName }, data.clientName)
-        ),
-        React.createElement(
-          View,
-          { style: styles.billingBox },
-          React.createElement(Text, { style: styles.billingTitle }, "Event Information"),
-          React.createElement(Text, { style: styles.billingName }, `${data.numberOfGuests} Guests`),
-          React.createElement(Text, { style: styles.billingDetail }, new Date(data.eventDateStart).toLocaleDateString("en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric" })),
-          React.createElement(Text, { style: { fontSize: 9, color: "#64748b", marginVertical: 2 } }, "through"),
-          React.createElement(Text, { style: styles.billingDetail }, new Date(data.eventDateEnd).toLocaleDateString("en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric" }))
-        )
-      ),
-      React.createElement(
-        View,
-        { style: styles.table },
-        React.createElement(
-          View,
-          { style: styles.tableHeader },
-          React.createElement(Text, { style: [styles.tableHeaderText, { flex: 7 }] }, "Description"),
-          React.createElement(Text, { style: [styles.tableHeaderText, { flex: 3, textAlign: "right" }] }, "Amount")
-        ),
-        React.createElement(
-          View,
-          { style: styles.tableRow },
-          React.createElement(
-            View,
-            { style: { flex: 7 } },
-            React.createElement(Text, { style: styles.itemTitle }, "Event Venue Rental"),
-            React.createElement(Text, { style: styles.itemSubtitle }, `${data.numberOfGuests} guests`),
-            React.createElement(Text, { style: styles.itemSubtitle }, `${new Date(data.eventDateStart).toLocaleDateString("en-US", { month: "short", day: "numeric" })} - ${new Date(data.eventDateEnd).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}`)
-          ),
-          React.createElement(
-            View,
-            { style: { flex: 3, alignItems: "flex-end" } },
-            React.createElement(Text, { style: styles.amountText }, `$${Number(data.totalAmount).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`)
-          )
-        )
-      ),
-      React.createElement(
-        View,
-        { style: styles.totalsSection },
-        React.createElement(
-          View,
-          { style: styles.totalRow },
-          React.createElement(Text, { style: { color: "#64748b" } }, "Subtotal"),
-          React.createElement(Text, { style: { fontFamily: "Helvetica-Bold" } }, `$${Number(data.totalAmount).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`)
-        ),
-        data.hasPayments && React.createElement(
-          View,
-          { style: styles.totalRow },
-          React.createElement(Text, { style: { color: "#059669", fontFamily: "Helvetica-Bold" } }, "Amount Paid"),
-          React.createElement(Text, { style: { color: "#059669", fontFamily: "Helvetica-Bold" } }, `-$${Number(data.depositAmount).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`)
-        ),
-        data.hasPayments && React.createElement(
-          View,
-          { style: styles.totalRow },
-          React.createElement(Text, { style: { color: "#ea580c", fontFamily: "Helvetica-Bold" } }, "Balance Due"),
-          React.createElement(Text, { style: { color: "#ea580c", fontFamily: "Helvetica-Bold" } }, `$${Number(data.actualBalanceDue).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`)
-        ),
-        React.createElement(
-          View,
-          { style: styles.grandTotal },
-          React.createElement(Text, { style: styles.grandTotalText }, "Total Amount"),
-          React.createElement(Text, { style: styles.grandTotalText }, `$${Number(data.totalAmount).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`)
-        )
-      ),
-      React.createElement(
-        View,
-        { style: styles.paymentInstructions },
-        React.createElement(Text, { style: styles.paymentTitle }, "Payment Instructions"),
-        React.createElement(Text, { style: styles.paymentText }, "Checks: Please make checks payable to Cong Zera Kodesh"),
-        React.createElement(Text, { style: styles.paymentText }, "E-Transfer: Send to billing@troutlakeresort.ca")
-      ),
-      data.hasPayments && data.actualBalanceDue > 0 && React.createElement(
-        View,
-        { style: [styles.statusBox, { backgroundColor: "#fef3c7", borderLeft: "4 solid #f59e0b" }] },
-        React.createElement(Text, { style: [styles.statusTitle, { color: "#92400e" }] }, "⚠ Payment Required"),
-        React.createElement(Text, { style: [styles.statusText, { color: "#78350f" }] }, `A balance of $${Number(data.actualBalanceDue).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} remains outstanding. Please remit payment by the agreed due date to maintain your reservation.`)
-      ),
-      data.hasPayments && data.actualBalanceDue <= 0 && React.createElement(
-        View,
-        { style: [styles.statusBox, { backgroundColor: "#d1fae5", borderLeft: "4 solid #059669" }] },
-        React.createElement(Text, { style: [styles.statusTitle, { color: "#065f46" }] }, "✓ Paid in Full"),
-        React.createElement(Text, { style: [styles.statusText, { color: "#047857" }] }, "Thank you! Your payment has been received and your reservation is confirmed.")
-      ),
-      !data.hasPayments && React.createElement(
-        View,
-        { style: [styles.statusBox, { backgroundColor: "#fef3c7", borderLeft: "4 solid #f59e0b" }] },
-        React.createElement(Text, { style: [styles.statusTitle, { color: "#92400e" }] }, "⚠ Payment Required"),
-        React.createElement(Text, { style: [styles.statusText, { color: "#78350f" }] }, `Full payment of $${Number(data.totalAmount).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} is required. Please remit payment by the agreed due date to maintain your reservation.`)
-      ),
-      data.notes && React.createElement(
-        View,
-        { style: styles.notesBox },
-        React.createElement(Text, { style: styles.notesTitle }, "Additional Notes"),
-        React.createElement(Text, { style: styles.notesText }, data.notes)
-      ),
-      React.createElement(
-        View,
-        { style: styles.footer },
-        React.createElement(Text, { style: [styles.footerText, { fontFamily: "Helvetica-Bold", color: "#1e293b" }] }, "Thank you for choosing Trout Lake Resort!"),
-        React.createElement(Text, { style: styles.footerText }, "For questions regarding this invoice, please contact our billing office at billing@troutlakeresort.ca"),
-        React.createElement(Text, { style: [styles.footerText, { fontSize: 9, marginTop: 10 }] }, "This is a computer-generated invoice.")
-      )
-    )
-  );
-};
-
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
@@ -488,23 +343,216 @@ export default async function handler(
     `;
 
     console.log("Generating PDF invoice...");
-    const pdfData = {
-      invoiceNumber,
-      clientName,
-      eventDateStart,
-      eventDateEnd,
-      numberOfGuests,
-      totalAmount,
-      depositAmount,
-      hasPayments,
-      actualBalanceDue,
-      notes
-    };
-
-    const pdfBuffer = await ReactPDF.renderToBuffer(
-      React.createElement(InvoiceDocument, { data: pdfData })
-    );
     
+    // Create PDF Document
+    const InvoicePDF = React.createElement(
+      Document,
+      null,
+      React.createElement(
+        Page,
+        { size: "A4", style: styles.page },
+        React.createElement(
+          View,
+          { style: styles.logoContainer },
+          React.createElement(Image, {
+            src: "https://3000-ca6acfff-2ea8-43e0-82ad-96443792b837.softgen.dev/ChatGPT_Image_Nov_5_2025_03_58_44_PM.png",
+            style: styles.logo
+          }),
+          React.createElement(Text, { style: styles.logoText }, "Sainte-Agathe-des-Monts • Canada")
+        ),
+        React.createElement(
+          View,
+          { style: styles.header },
+          React.createElement(View, { style: { flex: 1 } }),
+          React.createElement(
+            View,
+            { style: styles.invoiceMeta },
+            React.createElement(Text, { style: styles.invoiceTitle }, "INVOICE"),
+            React.createElement(Text, { style: styles.invoiceNumber }, `#${invoiceNumber}`),
+            React.createElement(
+              Text,
+              { style: styles.invoiceDate },
+              `Issue Date: ${new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })}`
+            )
+          )
+        ),
+        React.createElement(
+          View,
+          { style: styles.billingSection },
+          React.createElement(
+            View,
+            { style: styles.billingBox },
+            React.createElement(Text, { style: styles.billingTitle }, "Bill To"),
+            React.createElement(Text, { style: styles.billingName }, clientName)
+          ),
+          React.createElement(
+            View,
+            { style: styles.billingBox },
+            React.createElement(Text, { style: styles.billingTitle }, "Event Information"),
+            React.createElement(Text, { style: styles.billingName }, `${numberOfGuests} Guests`),
+            React.createElement(
+              Text,
+              { style: styles.billingDetail },
+              new Date(eventDateStart).toLocaleDateString("en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric" })
+            ),
+            React.createElement(Text, { style: { fontSize: 9, color: "#64748b", marginVertical: 2 } }, "through"),
+            React.createElement(
+              Text,
+              { style: styles.billingDetail },
+              new Date(eventDateEnd).toLocaleDateString("en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric" })
+            )
+          )
+        ),
+        React.createElement(
+          View,
+          { style: styles.table },
+          React.createElement(
+            View,
+            { style: styles.tableHeader },
+            React.createElement(Text, { style: [styles.tableHeaderText, { flex: 7 }] }, "Description"),
+            React.createElement(Text, { style: [styles.tableHeaderText, { flex: 3, textAlign: "right" }] }, "Amount")
+          ),
+          React.createElement(
+            View,
+            { style: styles.tableRow },
+            React.createElement(
+              View,
+              { style: { flex: 7 } },
+              React.createElement(Text, { style: styles.itemTitle }, "Event Venue Rental"),
+              React.createElement(Text, { style: styles.itemSubtitle }, `${numberOfGuests} guests`),
+              React.createElement(
+                Text,
+                { style: styles.itemSubtitle },
+                `${new Date(eventDateStart).toLocaleDateString("en-US", { month: "short", day: "numeric" })} - ${new Date(eventDateEnd).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}`
+              )
+            ),
+            React.createElement(
+              View,
+              { style: { flex: 3, alignItems: "flex-end" } },
+              React.createElement(
+                Text,
+                { style: styles.amountText },
+                `$${Number(totalAmount).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+              )
+            )
+          )
+        ),
+        React.createElement(
+          View,
+          { style: styles.totalsSection },
+          React.createElement(
+            View,
+            { style: styles.totalRow },
+            React.createElement(Text, { style: { color: "#64748b" } }, "Subtotal"),
+            React.createElement(
+              Text,
+              { style: { fontFamily: "Helvetica-Bold" } },
+              `$${Number(totalAmount).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+            )
+          ),
+          hasPayments &&
+            React.createElement(
+              View,
+              { style: styles.totalRow },
+              React.createElement(Text, { style: { color: "#059669", fontFamily: "Helvetica-Bold" } }, "Amount Paid"),
+              React.createElement(
+                Text,
+                { style: { color: "#059669", fontFamily: "Helvetica-Bold" } },
+                `-$${Number(depositAmount).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+              )
+            ),
+          hasPayments &&
+            React.createElement(
+              View,
+              { style: styles.totalRow },
+              React.createElement(Text, { style: { color: "#ea580c", fontFamily: "Helvetica-Bold" } }, "Balance Due"),
+              React.createElement(
+                Text,
+                { style: { color: "#ea580c", fontFamily: "Helvetica-Bold" } },
+                `$${Number(actualBalanceDue).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+              )
+            ),
+          React.createElement(
+            View,
+            { style: styles.grandTotal },
+            React.createElement(Text, { style: styles.grandTotalText }, "Total Amount"),
+            React.createElement(
+              Text,
+              { style: styles.grandTotalText },
+              `$${Number(totalAmount).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+            )
+          )
+        ),
+        React.createElement(
+          View,
+          { style: styles.paymentInstructions },
+          React.createElement(Text, { style: styles.paymentTitle }, "Payment Instructions"),
+          React.createElement(Text, { style: styles.paymentText }, "Checks: Please make checks payable to Cong Zera Kodesh"),
+          React.createElement(Text, { style: styles.paymentText }, "E-Transfer: Send to billing@troutlakeresort.ca")
+        ),
+        hasPayments && actualBalanceDue > 0 &&
+          React.createElement(
+            View,
+            { style: [styles.statusBox, { backgroundColor: "#fef3c7", borderLeft: "4 solid #f59e0b" }] },
+            React.createElement(Text, { style: [styles.statusTitle, { color: "#92400e" }] }, "⚠ Payment Required"),
+            React.createElement(
+              Text,
+              { style: [styles.statusText, { color: "#78350f" }] },
+              `A balance of $${Number(actualBalanceDue).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} remains outstanding. Please remit payment by the agreed due date to maintain your reservation.`
+            )
+          ),
+        hasPayments && actualBalanceDue <= 0 &&
+          React.createElement(
+            View,
+            { style: [styles.statusBox, { backgroundColor: "#d1fae5", borderLeft: "4 solid #059669" }] },
+            React.createElement(Text, { style: [styles.statusTitle, { color: "#065f46" }] }, "✓ Paid in Full"),
+            React.createElement(
+              Text,
+              { style: [styles.statusText, { color: "#047857" }] },
+              "Thank you! Your payment has been received and your reservation is confirmed."
+            )
+          ),
+        !hasPayments &&
+          React.createElement(
+            View,
+            { style: [styles.statusBox, { backgroundColor: "#fef3c7", borderLeft: "4 solid #f59e0b" }] },
+            React.createElement(Text, { style: [styles.statusTitle, { color: "#92400e" }] }, "⚠ Payment Required"),
+            React.createElement(
+              Text,
+              { style: [styles.statusText, { color: "#78350f" }] },
+              `Full payment of $${Number(totalAmount).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} is required. Please remit payment by the agreed due date to maintain your reservation.`
+            )
+          ),
+        notes &&
+          React.createElement(
+            View,
+            { style: styles.notesBox },
+            React.createElement(Text, { style: styles.notesTitle }, "Additional Notes"),
+            React.createElement(Text, { style: styles.notesText }, notes)
+          ),
+        React.createElement(
+          View,
+          { style: styles.footer },
+          React.createElement(
+            Text,
+            { style: [styles.footerText, { fontFamily: "Helvetica-Bold", color: "#1e293b" }] },
+            "Thank you for choosing Trout Lake Resort!"
+          ),
+          React.createElement(
+            Text,
+            { style: styles.footerText },
+            "For questions regarding this invoice, please contact our billing office at billing@troutlakeresort.ca"
+          ),
+          React.createElement(
+            Text,
+            { style: [styles.footerText, { fontSize: 9, marginTop: 10 }] },
+            "This is a computer-generated invoice."
+          )
+        )
+      )
+    );
+
+    const pdfBuffer = await renderToBuffer(InvoicePDF);
     console.log("PDF generated successfully, size:", pdfBuffer.length, "bytes");
 
     console.log("Attempting to send email with PDF attachment...");
