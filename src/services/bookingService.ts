@@ -16,30 +16,61 @@ const normalizeBooking = (booking: any): Booking => {
 
 export const bookingService = {
   async getAllBookings(): Promise<Booking[]> {
-    const { data, error } = await supabase
+    // Get bookings first
+    const { data: bookingsData, error: bookingsError } = await supabase
       .from("bookings")
-      .select(`
-        *,
-        payments (*)
-      `)
+      .select("*")
       .order("start_date", { ascending: false });
 
-    if (error) throw error;
-    return (data || []).map(normalizeBooking);
+    if (bookingsError) throw bookingsError;
+    if (!bookingsData) return [];
+
+    // Get payments separately
+    const { data: paymentsData, error: paymentsError } = await supabase
+      .from("payments")
+      .select("*");
+
+    if (paymentsError) {
+      console.warn("Error fetching payments:", paymentsError);
+      // Return bookings without payments if payments fetch fails
+      return bookingsData.map(booking => normalizeBooking({ ...booking, payments: [] }));
+    }
+
+    // Manually join payments to bookings
+    const bookingsWithPayments = bookingsData.map(booking => ({
+      ...booking,
+      payments: (paymentsData || []).filter(payment => payment.booking_id === booking.id)
+    }));
+
+    return bookingsWithPayments.map(normalizeBooking);
   },
 
   async getBookingById(id: string): Promise<Booking | null> {
-    const { data, error } = await supabase
+    // Get booking first
+    const { data: bookingData, error: bookingError } = await supabase
       .from("bookings")
-      .select(`
-        *,
-        payments (*)
-      `)
+      .select("*")
       .eq("id", id)
       .single();
 
-    if (error) throw error;
-    return data ? normalizeBooking(data) : null;
+    if (bookingError) throw bookingError;
+    if (!bookingData) return null;
+
+    // Get payments for this booking
+    const { data: paymentsData, error: paymentsError } = await supabase
+      .from("payments")
+      .select("*")
+      .eq("booking_id", id);
+
+    if (paymentsError) {
+      console.warn("Error fetching payments:", paymentsError);
+      return normalizeBooking({ ...bookingData, payments: [] });
+    }
+
+    return normalizeBooking({ 
+      ...bookingData, 
+      payments: paymentsData || [] 
+    });
   },
 
   async createBooking(booking: Omit<BookingInsert, "id" | "created_at" | "updated_at">): Promise<Booking> {
@@ -50,7 +81,7 @@ export const bookingService = {
       .single();
 
     if (error) throw error;
-    return normalizeBooking(data);
+    return normalizeBooking({ ...data, payments: [] });
   },
 
   async updateBooking(id: string, updates: BookingUpdate): Promise<Booking> {
@@ -58,14 +89,21 @@ export const bookingService = {
       .from("bookings")
       .update({ ...updates, updated_at: new Date().toISOString() })
       .eq("id", id)
-      .select(`
-        *,
-        payments (*)
-      `)
+      .select()
       .single();
 
     if (error) throw error;
-    return normalizeBooking(data);
+
+    // Get payments for the updated booking
+    const { data: paymentsData } = await supabase
+      .from("payments")
+      .select("*")
+      .eq("booking_id", id);
+
+    return normalizeBooking({ 
+      ...data, 
+      payments: paymentsData || [] 
+    });
   },
 
   async deleteBooking(id: string): Promise<void> {
@@ -78,45 +116,78 @@ export const bookingService = {
   },
 
   async getBookingsByDateRange(startDate: string, endDate: string): Promise<Booking[]> {
-    const { data, error } = await supabase
+    // Get bookings in date range
+    const { data: bookingsData, error: bookingsError } = await supabase
       .from("bookings")
-      .select(`
-        *,
-        payments (*)
-      `)
+      .select("*")
       .gte("start_date", startDate)
       .lte("end_date", endDate)
       .order("start_date", { ascending: true });
 
-    if (error) throw error;
-    return (data || []).map(normalizeBooking);
+    if (bookingsError) throw bookingsError;
+    if (!bookingsData) return [];
+
+    // Get all payments
+    const { data: paymentsData } = await supabase
+      .from("payments")
+      .select("*");
+
+    // Manually join payments to bookings
+    const bookingsWithPayments = bookingsData.map(booking => ({
+      ...booking,
+      payments: (paymentsData || []).filter(payment => payment.booking_id === booking.id)
+    }));
+
+    return bookingsWithPayments.map(normalizeBooking);
   },
 
   async getConfirmedBookings(): Promise<Booking[]> {
-    const { data, error } = await supabase
+    // Get confirmed bookings
+    const { data: bookingsData, error: bookingsError } = await supabase
       .from("bookings")
-      .select(`
-        *,
-        payments (*)
-      `)
+      .select("*")
       .eq("confirmed", true)
       .order("start_date", { ascending: true });
 
-    if (error) throw error;
-    return (data || []).map(normalizeBooking);
+    if (bookingsError) throw bookingsError;
+    if (!bookingsData) return [];
+
+    // Get all payments
+    const { data: paymentsData } = await supabase
+      .from("payments")
+      .select("*");
+
+    // Manually join payments to bookings
+    const bookingsWithPayments = bookingsData.map(booking => ({
+      ...booking,
+      payments: (paymentsData || []).filter(payment => payment.booking_id === booking.id)
+    }));
+
+    return bookingsWithPayments.map(normalizeBooking);
   },
 
   async getPendingBookings(): Promise<Booking[]> {
-    const { data, error } = await supabase
+    // Get pending bookings
+    const { data: bookingsData, error: bookingsError } = await supabase
       .from("bookings")
-      .select(`
-        *,
-        payments (*)
-      `)
+      .select("*")
       .eq("confirmed", false)
       .order("start_date", { ascending: true });
 
-    if (error) throw error;
-    return (data || []).map(normalizeBooking);
+    if (bookingsError) throw bookingsError;
+    if (!bookingsData) return [];
+
+    // Get all payments
+    const { data: paymentsData } = await supabase
+      .from("payments")
+      .select("*");
+
+    // Manually join payments to bookings
+    const bookingsWithPayments = bookingsData.map(booking => ({
+      ...booking,
+      payments: (paymentsData || []).filter(payment => payment.booking_id === booking.id)
+    }));
+
+    return bookingsWithPayments.map(normalizeBooking);
   }
 };
