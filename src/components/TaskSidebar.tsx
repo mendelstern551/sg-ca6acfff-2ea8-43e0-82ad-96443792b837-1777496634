@@ -40,7 +40,9 @@ const priorityColors = {
 
 export function TaskSidebar({ onCreateReminder, refreshTrigger = 0 }: TaskSidebarProps) {
   const [isOpen, setIsOpen] = useState(false);
-  const [reminders, setReminders] = useState<Reminder[]>([]);
+  const [activeTab, setActiveTab] = useState<"today" | "future">("today");
+  const [todayReminders, setTodayReminders] = useState<Reminder[]>([]);
+  const [futureReminders, setFutureReminders] = useState<Reminder[]>([]);
   const [loading, setLoading] = useState(false);
   const [urgentCount, setUrgentCount] = useState(0);
   const { toast } = useToast();
@@ -53,19 +55,21 @@ export function TaskSidebar({ onCreateReminder, refreshTrigger = 0 }: TaskSideba
     // Check for urgent tasks every minute
     const interval = setInterval(checkUrgentTasks, 60000);
     return () => clearInterval(interval);
-  }, [reminders]);
+  }, [todayReminders]);
 
   const loadReminders = async () => {
     try {
       setLoading(true);
-      const [today, overdue] = await Promise.all([
+      const [today, overdue, future] = await Promise.all([
         reminderService.getTodayReminders(),
-        reminderService.getOverdueReminders()
+        reminderService.getOverdueReminders(),
+        reminderService.getFutureReminders()
       ]);
 
-      const allReminders = [...overdue, ...today];
-      setReminders(allReminders);
-      setUrgentCount(allReminders.filter(r => r.priority === "high" || isPast(new Date(r.due_date))).length);
+      const todayTasks = [...overdue, ...today];
+      setTodayReminders(todayTasks);
+      setFutureReminders(future);
+      setUrgentCount(todayTasks.filter(r => r.priority === "high" || isPast(new Date(r.due_date))).length);
     } catch (error) {
       console.error("Error loading reminders:", error);
     } finally {
@@ -74,7 +78,7 @@ export function TaskSidebar({ onCreateReminder, refreshTrigger = 0 }: TaskSideba
   };
 
   const checkUrgentTasks = () => {
-    const urgent = reminders.filter(r => 
+    const urgent = todayReminders.filter(r => 
       r.priority === "high" || isPast(new Date(r.due_date))
     ).length;
     setUrgentCount(urgent);
@@ -135,6 +139,8 @@ export function TaskSidebar({ onCreateReminder, refreshTrigger = 0 }: TaskSideba
     }
   };
 
+  const displayReminders = activeTab === "today" ? todayReminders : futureReminders;
+
   return (
     <>
       {/* Floating Bell Icon */}
@@ -177,10 +183,36 @@ export function TaskSidebar({ onCreateReminder, refreshTrigger = 0 }: TaskSideba
               </Button>
             </div>
             <p className="text-orange-100">
-              {reminders.length === 0
-                ? "No tasks for today! 🎉"
-                : `${reminders.length} task${reminders.length === 1 ? "" : "s"} to complete`}
+              {activeTab === "today"
+                ? todayReminders.length === 0
+                  ? "No tasks for today! 🎉"
+                  : `${todayReminders.length} task${todayReminders.length === 1 ? "" : "s"} to complete`
+                : `${futureReminders.length} upcoming task${futureReminders.length === 1 ? "" : "s"}`}
             </p>
+          </div>
+
+          {/* Tabs */}
+          <div className="flex border-b border-stone-200 dark:border-stone-800">
+            <button
+              onClick={() => setActiveTab("today")}
+              className={`flex-1 py-3 px-4 text-sm font-medium transition-colors ${
+                activeTab === "today"
+                  ? "text-orange-600 border-b-2 border-orange-600 bg-orange-50 dark:bg-orange-950/20"
+                  : "text-stone-600 dark:text-stone-400 hover:text-stone-900 dark:hover:text-stone-100"
+              }`}
+            >
+              Today ({todayReminders.length})
+            </button>
+            <button
+              onClick={() => setActiveTab("future")}
+              className={`flex-1 py-3 px-4 text-sm font-medium transition-colors ${
+                activeTab === "future"
+                  ? "text-orange-600 border-b-2 border-orange-600 bg-orange-50 dark:bg-orange-950/20"
+                  : "text-stone-600 dark:text-stone-400 hover:text-stone-900 dark:hover:text-stone-100"
+              }`}
+            >
+              Future ({futureReminders.length})
+            </button>
           </div>
 
           {/* Add New Task Button */}
@@ -201,18 +233,20 @@ export function TaskSidebar({ onCreateReminder, refreshTrigger = 0 }: TaskSideba
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-600 mx-auto mb-4"></div>
                 <p className="text-stone-600 dark:text-stone-400">Loading tasks...</p>
               </div>
-            ) : reminders.length === 0 ? (
+            ) : displayReminders.length === 0 ? (
               <div className="text-center py-12">
                 <Bell className="h-16 w-16 mx-auto mb-4 text-stone-300 dark:text-stone-700" />
                 <h3 className="text-lg font-medium text-stone-900 dark:text-stone-100 mb-2">
-                  All Clear!
+                  {activeTab === "today" ? "All Clear!" : "No Future Tasks"}
                 </h3>
                 <p className="text-stone-600 dark:text-stone-400">
-                  No tasks due today. Create custom reminders to stay organized.
+                  {activeTab === "today"
+                    ? "No tasks due today. Create custom reminders to stay organized."
+                    : "No upcoming tasks scheduled. All caught up!"}
                 </p>
               </div>
             ) : (
-              reminders.map((reminder) => {
+              displayReminders.map((reminder) => {
                 const CategoryIcon = categoryIcons[reminder.category as keyof typeof categoryIcons];
                 const categoryColor = categoryColors[reminder.category as keyof typeof categoryColors];
                 const priorityColor = priorityColors[reminder.priority as keyof typeof priorityColors];

@@ -94,6 +94,79 @@ export const reminderService = {
   },
 
   /**
+   * Get future reminders (beyond today)
+   */
+  async getFutureReminders(): Promise<Reminder[]> {
+    try {
+      const tomorrow = addDays(startOfDay(new Date()), 1);
+
+      const { data, error } = await supabase
+        .from("reminders")
+        .select("*")
+        .in("status", ["pending", "snoozed"])
+        .gte("due_date", tomorrow.toISOString())
+        .order("due_date", { ascending: true });
+
+      if (error) throw error;
+      return data || [];
+    } catch (error) {
+      console.error("Error fetching future reminders:", error);
+      return [];
+    }
+  },
+
+  /**
+   * Get reminders that should appear in center modal (due now)
+   */
+  async getDueReminders(): Promise<Reminder[]> {
+    try {
+      const now = new Date();
+
+      const { data, error } = await supabase
+        .from("reminders")
+        .select("*")
+        .eq("status", "pending")
+        .lte("due_date", now.toISOString())
+        .order("due_date", { ascending: true });
+
+      if (error) throw error;
+      return data || [];
+    } catch (error) {
+      console.error("Error fetching due reminders:", error);
+      return [];
+    }
+  },
+
+  /**
+   * Get minimized reminders (snoozed and marked as minimized)
+   */
+  async getMinimizedReminders(): Promise<Reminder[]> {
+    try {
+      const now = new Date();
+
+      const { data, error } = await supabase
+        .from("reminders")
+        .select("*")
+        .eq("status", "snoozed")
+        .not("metadata->>minimized", "is", null)
+        .order("snoozed_until", { ascending: true });
+
+      if (error) throw error;
+
+      // Filter to only show minimized reminders that are still snoozed
+      return (data || []).filter(reminder => {
+        if (reminder.snoozed_until) {
+          return isAfter(now, new Date(reminder.snoozed_until));
+        }
+        return false;
+      });
+    } catch (error) {
+      console.error("Error fetching minimized reminders:", error);
+      return [];
+    }
+  },
+
+  /**
    * Create a new reminder
    */
   async createReminder(reminderData: CreateReminderData): Promise<Reminder> {
@@ -167,6 +240,32 @@ export const reminderService = {
       return data;
     } catch (error) {
       console.error("Error snoozing reminder:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Snooze and minimize a reminder (move to corner)
+   */
+  async snoozeMinimize(id: string, minutes: number): Promise<Reminder> {
+    try {
+      const snoozeUntil = addMinutes(new Date(), minutes);
+
+      const { data, error } = await supabase
+        .from("reminders")
+        .update({
+          status: "snoozed",
+          snoozed_until: snoozeUntil.toISOString(),
+          metadata: { minimized: true }
+        })
+        .eq("id", id)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    } catch (error) {
+      console.error("Error snoozing and minimizing reminder:", error);
       throw error;
     }
   },
