@@ -77,7 +77,7 @@ export function ReminderDialog({ open, onOpenChange, onSuccess, bookings = [] }:
         category,
         priority,
         dueDate,
-        bookingId: bookingId || undefined,
+        bookingId: bookingId && bookingId !== "none" ? bookingId : undefined,
         recurring,
         recurringInterval: recurring ? recurringInterval : undefined
       };
@@ -181,7 +181,7 @@ export function ReminderDialog({ open, onOpenChange, onSuccess, bookings = [] }:
                     <SelectValue placeholder="Select a booking (optional)" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">No booking</SelectItem>
+                    <SelectItem value="none">No booking</SelectItem>
                     {bookings.map((booking) => (
                       <SelectItem key={booking.id} value={booking.id}>
                         {booking.name} - {booking.contact_name}
