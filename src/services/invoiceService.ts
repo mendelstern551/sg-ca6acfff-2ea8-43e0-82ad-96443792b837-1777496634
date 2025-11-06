@@ -1,31 +1,71 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
 
 type Invoice = Database["public"]["Tables"]["invoices"]["Row"];
 type InvoiceInsert = Database["public"]["Tables"]["invoices"]["Insert"];
 
+// Retry helper function
+async function retryWithBackoff<T>(
+  fn: () => Promise<T>,
+  maxRetries: number = 2,
+  initialDelay: number = 1000
+): Promise<T> {
+  let lastError: any;
+  
+  for (let i = 0; i < maxRetries; i++) {
+    try {
+      return await fn();
+    } catch (error: any) {
+      lastError = error;
+      console.warn(`Attempt ${i + 1} failed:`, error.message);
+      
+      // Don't retry on specific errors
+      if (error.code === '401' || error.code === '403' || error.message?.includes('JWT')) {
+        throw error;
+      }
+      
+      if (i < maxRetries - 1) {
+        const delay = initialDelay * Math.pow(2, i);
+        console.log(`Retrying in ${delay}ms...`);
+        await new Promise(resolve => setTimeout(resolve, delay));
+      }
+    }
+  }
+  
+  throw lastError;
+}
+
 export const invoiceService = {
   async generateInvoiceNumber(): Promise<string> {
-    const { data, error } = await supabase
-      .from("invoices")
-      .select("invoice_number")
-      .order("created_at", { ascending: false })
-      .limit(1);
+    try {
+      const { data, error } = await retryWithBackoff(async () => {
+        const result = await supabase
+          .from("invoices")
+          .select("invoice_number")
+          .order("created_at", { ascending: false })
+          .limit(1);
+        
+        if (result.error) throw result.error;
+        return result;
+      });
 
-    if (error) throw error;
+      if (!data || data.length === 0) {
+        return "INV-2025-0001";
+      }
 
-    if (!data || data.length === 0) {
-      return "INV-2025-0001";
+      const lastNumber = data[0].invoice_number;
+      const parts = lastNumber.split("-");
+      const year = new Date().getFullYear().toString();
+      const lastNum = parseInt(parts[2]) || 0;
+      const newNum = (lastNum + 1).toString().padStart(4, "0");
+
+      return `INV-${year}-${newNum}`;
+    } catch (error) {
+      console.error("Error generating invoice number:", error);
+      // Fallback: generate based on timestamp
+      const timestamp = Date.now().toString().slice(-4);
+      return `INV-${new Date().getFullYear()}-${timestamp}`;
     }
-
-    const lastNumber = data[0].invoice_number;
-    const parts = lastNumber.split("-");
-    const year = new Date().getFullYear().toString();
-    const lastNum = parseInt(parts[2]) || 0;
-    const newNum = (lastNum + 1).toString().padStart(4, "0");
-
-    return `INV-${year}-${newNum}`;
   },
 
   async createInvoice(bookingId: string, bookingData: {
@@ -62,61 +102,84 @@ export const invoiceService = {
       notes: bookingData.notes
     };
 
-    const { data, error } = await supabase
-      .from("invoices")
-      .insert([invoiceData])
-      .select();
+    const { data, error } = await retryWithBackoff(async () => {
+      const result = await supabase
+        .from("invoices")
+        .insert([invoiceData])
+        .select();
+      
+      if (result.error) throw result.error;
+      return result;
+    });
 
-    if (error) throw error;
     if (!data || data.length === 0) throw new Error("Failed to create invoice");
     return data[0];
   },
 
   async getInvoiceByBookingId(bookingId: string): Promise<Invoice | null> {
-    const { data, error } = await supabase
-      .from("invoices")
-      .select("*")
-      .eq("booking_id", bookingId)
-      .order("created_at", { ascending: false })
-      .limit(1);
-
-    if (error) {
-      console.error("Error fetching invoice:", error);
-      throw error;
+    try {
+      const { data, error } = await retryWithBackoff(async () => {
+        const result = await supabase
+          .from("invoices")
+          .select("*")
+          .eq("booking_id", bookingId)
+          .order("created_at", { ascending: false })
+          .limit(1);
+        
+        if (result.error) throw result.error;
+        return result;
+      });
+      
+      if (!data || data.length === 0) {
+        return null;
+      }
+      
+      return data[0];
+    } catch (error) {
+      console.error("Error fetching invoice by booking ID:", error);
+      return null; // Return null on error to prevent blocking UI
     }
-    
-    if (!data || data.length === 0) {
-      return null;
-    }
-    
-    return data[0];
   },
 
   async getAllInvoices(): Promise<Invoice[]> {
-    const { data, error } = await supabase
-      .from("invoices")
-      .select("*")
-      .order("created_at", { ascending: false });
+    try {
+      const { data, error } = await retryWithBackoff(async () => {
+        const result = await supabase
+          .from("invoices")
+          .select("*")
+          .order("created_at", { ascending: false });
+        
+        if (result.error) throw result.error;
+        return result;
+      });
 
-    if (error) throw error;
-    return data || [];
+      return data || [];
+    } catch (error) {
+      console.error("Error fetching all invoices:", error);
+      // Return empty array on error to prevent UI crash
+      return [];
+    }
   },
 
   async updateInvoiceStatus(invoiceId: string, status: string): Promise<void> {
-    const { error } = await supabase
-      .from("invoices")
-      .update({ status, updated_at: new Date().toISOString() })
-      .eq("id", invoiceId);
+    await retryWithBackoff(async () => {
+      const { error } = await supabase
+        .from("invoices")
+        .update({ status, updated_at: new Date().toISOString() })
+        .eq("id", invoiceId);
 
-    if (error) throw error;
+      if (error) throw error;
+    });
   },
 
   async deleteInvoice(invoiceId: string): Promise<void> {
-    const { error } = await supabase
-      .from("invoices")
-      .delete()
-      .eq("id", invoiceId);
+    await retryWithBackoff(async () => {
+      const { error } = await supabase
+        .from("invoices")
+        .delete()
+        .eq("id", invoiceId);
 
-    if (error) throw error;
+      if (error) throw error;
+    });
   }
 };

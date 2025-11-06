@@ -74,12 +74,28 @@ export default function HomePage() {
   const loadAllData = async () => {
     try {
       setLoading(true);
-      const [bookingsData, expensesData, invoicesData, managerData] = await Promise.all([
+      
+      // Load data with individual error handling for each service
+      const results = await Promise.allSettled([
         bookingService.getAllBookings(),
         expenseService.getAllExpenses(),
         invoiceService.getAllInvoices(),
         managerService.getAllCompensation()
       ]);
+
+      // Extract successful results
+      const bookingsData = results[0].status === 'fulfilled' ? results[0].value : [];
+      const expensesData = results[1].status === 'fulfilled' ? results[1].value : [];
+      const invoicesData = results[2].status === 'fulfilled' ? results[2].value : [];
+      const managerData = results[3].status === 'fulfilled' ? results[3].value : [];
+
+      // Log any failures
+      results.forEach((result, index) => {
+        if (result.status === 'rejected') {
+          const serviceName = ['Bookings', 'Expenses', 'Invoices', 'Manager'][index];
+          console.error(`${serviceName} service error:`, result.reason);
+        }
+      });
 
       const bookingsWithPayments = bookingsData.map(b => ({
         ...b,
@@ -91,11 +107,20 @@ export default function HomePage() {
       setInvoices(invoicesData);
       setManagerCompensations(managerData);
 
+      // Only show error toast if critical services failed (bookings/expenses)
+      if (results[0].status === 'rejected' || results[1].status === 'rejected') {
+        toast({
+          title: "Partial Load Failure",
+          description: "Some data couldn't be loaded. Retrying automatically...",
+          variant: "destructive"
+        });
+      }
+
     } catch (error) {
       console.error("Error loading data:", error);
       toast({
         title: "Error Loading Data",
-        description: "Failed to load bookings and expenses from the database.",
+        description: "Failed to load data. The app will retry automatically every 30 seconds.",
         variant: "destructive"
       });
     } finally {
