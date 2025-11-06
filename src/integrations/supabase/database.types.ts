@@ -1,4 +1,4 @@
- 
+/* eslint-disable @typescript-eslint/no-empty-object-type */
 export type Json =
   | string
   | number
@@ -165,13 +165,18 @@ export type Database = {
           client_phone: string | null
           created_at: string | null
           deposit_amount: number
+          email_sent_at: string | null
+          email_sent_to: string | null
+          email_status: string | null
           event_date_end: string
           event_date_start: string
           id: string
           invoice_number: string
+          last_reminder_sent_at: string | null
           notes: string | null
           number_of_guests: number
           number_of_rooms: number
+          reminder_count: number | null
           status: string
           total_amount: number
           updated_at: string | null
@@ -185,13 +190,18 @@ export type Database = {
           client_phone?: string | null
           created_at?: string | null
           deposit_amount: number
+          email_sent_at?: string | null
+          email_sent_to?: string | null
+          email_status?: string | null
           event_date_end: string
           event_date_start: string
           id?: string
           invoice_number: string
+          last_reminder_sent_at?: string | null
           notes?: string | null
           number_of_guests: number
           number_of_rooms: number
+          reminder_count?: number | null
           status?: string
           total_amount: number
           updated_at?: string | null
@@ -205,13 +215,18 @@ export type Database = {
           client_phone?: string | null
           created_at?: string | null
           deposit_amount?: number
+          email_sent_at?: string | null
+          email_sent_to?: string | null
+          email_status?: string | null
           event_date_end?: string
           event_date_start?: string
           id?: string
           invoice_number?: string
+          last_reminder_sent_at?: string | null
           notes?: string | null
           number_of_guests?: number
           number_of_rooms?: number
+          reminder_count?: number | null
           status?: string
           total_amount?: number
           updated_at?: string | null
@@ -310,6 +325,57 @@ export type Database = {
             columns: ["compensation_id"]
             isOneToOne: false
             referencedRelation: "manager_compensation"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      payment_reminders: {
+        Row: {
+          booking_id: string
+          created_at: string | null
+          id: string
+          invoice_id: string | null
+          notes: string | null
+          reminder_type: string
+          sent_at: string | null
+          sent_to: string
+          status: string
+        }
+        Insert: {
+          booking_id: string
+          created_at?: string | null
+          id?: string
+          invoice_id?: string | null
+          notes?: string | null
+          reminder_type: string
+          sent_at?: string | null
+          sent_to: string
+          status?: string
+        }
+        Update: {
+          booking_id?: string
+          created_at?: string | null
+          id?: string
+          invoice_id?: string | null
+          notes?: string | null
+          reminder_type?: string
+          sent_at?: string | null
+          sent_to?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_reminders_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payment_reminders_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "invoices"
             referencedColumns: ["id"]
           },
         ]

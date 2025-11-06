@@ -1,4 +1,3 @@
-
 import type { Booking } from "@/types/booking";
 import type { Database } from "@/integrations/supabase/types";
 
@@ -55,6 +54,56 @@ export const emailService = {
         message: "Failed to send invoice",
         error: error.message,
       };
+    }
+  },
+
+  async sendPaymentReminder(
+    booking: any,
+    invoice: any,
+    reminderType: '30_day' | '7_day' | 'payment_received'
+  ): Promise<{ success: boolean; error?: string }> {
+    try {
+      const response = await fetch("/api/send-payment-reminder", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ booking, invoice, reminderType })
+      });
+
+      const result = await response.json();
+
+      if (response.ok && result.success) {
+        // Record reminder in database
+        await invoiceService.recordPaymentReminder({
+          bookingId: booking.id,
+          invoiceId: invoice?.id,
+          reminderType,
+          sentTo: booking.contact_email,
+          status: 'sent'
+        });
+
+        // Update invoice reminder tracking
+        if (invoice) {
+          await invoiceService.updateEmailStatus(invoice.id, {
+            lastReminderSentAt: new Date().toISOString(),
+            reminderCount: (invoice.reminder_count || 0) + 1
+          });
+        }
+
+        return { success: true };
+      } else {
+        await invoiceService.recordPaymentReminder({
+          bookingId: booking.id,
+          invoiceId: invoice?.id,
+          reminderType,
+          sentTo: booking.contact_email,
+          status: 'failed',
+          notes: result.error
+        });
+        throw new Error(result.error || "Failed to send reminder");
+      }
+    } catch (error: any) {
+      console.error("Payment reminder error:", error);
+      return { success: false, error: error.message };
     }
   },
 

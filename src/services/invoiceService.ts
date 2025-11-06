@@ -201,5 +201,62 @@ export const invoiceService = {
 
       if (error) throw error;
     });
+  },
+
+  async updateEmailStatus(invoiceId: string, status: {
+    emailSentAt?: string;
+    emailSentTo?: string;
+    emailStatus?: 'pending' | 'sent' | 'failed';
+    lastReminderSentAt?: string;
+    reminderCount?: number;
+  }): Promise<void> {
+    await retryWithBackoff(async () => {
+      const { error } = await supabase
+        .from("invoices")
+        .update({
+          ...status,
+          updated_at: new Date().toISOString()
+        })
+        .eq("id", invoiceId);
+
+      if (error) throw error;
+    });
+  },
+
+  async recordPaymentReminder(reminderData: {
+    bookingId: string;
+    invoiceId?: string;
+    reminderType: '30_day' | '7_day' | 'payment_received' | 'custom';
+    sentTo: string;
+    status: 'sent' | 'failed';
+    notes?: string;
+  }): Promise<void> {
+    await retryWithBackoff(async () => {
+      const { error } = await supabase
+        .from("payment_reminders")
+        .insert([reminderData]);
+
+      if (error) throw error;
+    });
+  },
+
+  async getPaymentReminders(bookingId: string): Promise<any[]> {
+    try {
+      const { data, error } = await retryWithBackoff(async () => {
+        const result = await supabase
+          .from("payment_reminders")
+          .select("*")
+          .eq("booking_id", bookingId)
+          .order("sent_at", { ascending: false });
+        
+        if (result.error) throw result.error;
+        return result;
+      });
+
+      return data || [];
+    } catch (error) {
+      console.error("Error fetching payment reminders:", error);
+      return [];
+    }
   }
 };
