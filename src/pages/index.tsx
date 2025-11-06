@@ -360,6 +360,31 @@ export default function HomePage() {
         toast({ title: "Booking Created", description: "New booking has been created successfully." });
       }
 
+      // Auto-generate or refresh reminders for BOTH pending and confirmed bookings
+      try {
+        const significantChange = isNewBooking
+          || editingBooking?.confirmed !== bookingData.confirmed
+          || editingBooking?.start_date !== bookingData.start_date
+          || editingBooking?.name !== bookingData.name
+          || editingBooking?.contact_name !== bookingData.contact_name;
+
+        if (significantChange) {
+          // Remove previous auto-generated reminders for this booking to avoid duplicates
+          await reminderService.deleteBookingReminders(savedBookingId);
+          // Create fresh reminders based on current status and dates
+          await reminderService.generateBookingReminders(savedBookingId, {
+            eventName: bookingData.name,
+            contactName: bookingData.contact_name,
+            startDate: new Date(bookingData.start_date),
+            isPending: !bookingData.confirmed
+          });
+          setReminderRefreshKey(prev => prev + 1);
+        }
+      } catch (reminderError) {
+        console.error("Error creating reminders:", reminderError);
+      }
+
+      // Invoice generation only for confirmed bookings
       if (bookingData.confirmed) {
         try {
           const existingInvoice = await invoiceService.getInvoiceByBookingId(savedBookingId);
@@ -375,21 +400,6 @@ export default function HomePage() {
         } catch (invoiceError) {
           console.error("Error creating invoice:", invoiceError);
           toast({ title: "Invoice Creation Failed", description: "Booking saved, but invoice creation failed.", variant: "destructive" });
-        }
-
-        try {
-          if (isNewBooking) {
-            await reminderService.generateBookingReminders(savedBookingId, {
-              eventName: bookingData.name,
-              contactName: bookingData.contact_name,
-              startDate: new Date(bookingData.start_date),
-              isPending: !bookingData.confirmed
-            });
-            toast({ title: "✓ Reminders Created", description: "Automatic task reminders have been set up.", variant: "default" });
-            setReminderRefreshKey(prev => prev + 1);
-          }
-        } catch (reminderError) {
-          console.error("Error creating reminders:", reminderError);
         }
       }
 

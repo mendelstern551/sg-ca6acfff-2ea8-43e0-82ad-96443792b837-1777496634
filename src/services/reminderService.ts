@@ -57,11 +57,10 @@ export const reminderService = {
 
       if (error) throw error;
 
-      // Filter out snoozed reminders that are still snoozed
       const now = new Date();
       return (data || []).filter(reminder => {
-        if (reminder.status === "snoozed" && reminder.snoozed_until) {
-          return isAfter(now, new Date(reminder.snoozed_until));
+        if (reminder.status === "snoozed") {
+          return !!reminder.snoozed_until && isAfter(now, new Date(reminder.snoozed_until));
         }
         return true;
       });
@@ -117,6 +116,9 @@ export const reminderService = {
 
   /**
    * Get reminders that should appear in center modal (due now)
+   * Includes:
+   * - pending with due_date <= now
+   * - snoozed with snoozed_until <= now
    */
   async getDueReminders(): Promise<Reminder[]> {
     try {
@@ -125,12 +127,20 @@ export const reminderService = {
       const { data, error } = await supabase
         .from("reminders")
         .select("*")
-        .eq("status", "pending")
-        .lte("due_date", now.toISOString())
+        .in("status", ["pending", "snoozed"])
         .order("due_date", { ascending: true });
 
       if (error) throw error;
-      return data || [];
+
+      return (data || []).filter((r) => {
+        if (r.status === "pending") {
+          return r.due_date ? isAfter(now, new Date(r.due_date)) || +new Date(r.due_date) <= +now : false;
+        }
+        if (r.status === "snoozed" && r.snoozed_until) {
+          return isAfter(now, new Date(r.snoozed_until)) || +new Date(r.snoozed_until) <= +now;
+        }
+        return false;
+      });
     } catch (error) {
       console.error("Error fetching due reminders:", error);
       return [];
@@ -138,7 +148,8 @@ export const reminderService = {
   },
 
   /**
-   * Get minimized reminders (snoozed and marked as minimized)
+   * Get minimized reminders (snoozed and marked as minimized) to show in the corner
+   * Show them WHILE snoozed (until snooze expires)
    */
   async getMinimizedReminders(): Promise<Reminder[]> {
     try {
@@ -153,10 +164,9 @@ export const reminderService = {
 
       if (error) throw error;
 
-      // Filter to only show minimized reminders that are still snoozed
       return (data || []).filter(reminder => {
         if (reminder.snoozed_until) {
-          return isAfter(now, new Date(reminder.snoozed_until));
+          return isBefore(now, new Date(reminder.snoozed_until));
         }
         return false;
       });
@@ -350,7 +360,7 @@ export const reminderService = {
         });
       }
 
-      // 1 week before event notice
+      // 1 week before event notice (separate operational task)
       const oneWeekBefore = addDays(bookingData.startDate, -7);
       if (isAfter(oneWeekBefore, now)) {
         reminders.push({
