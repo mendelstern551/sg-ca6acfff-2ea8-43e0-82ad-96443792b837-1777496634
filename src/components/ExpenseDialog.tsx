@@ -77,7 +77,7 @@ export function ExpenseDialog({ open, onOpenChange, onSave, expense, bookings }:
     }
 
     onSave({
-      booking_id: bookingId,
+      booking_id: bookingId === "none" ? null : bookingId,
       description,
       amount: Number(amount),
       category,
@@ -192,10 +192,10 @@ export function ExpenseDialog({ open, onOpenChange, onSave, expense, bookings }:
             </div>
             <div className="space-y-2">
               <Label>Related Booking (Optional)</Label>
-              <Select value={bookingId || ""} onValueChange={(value) => setBookingId(value || null)}>
+              <Select value={bookingId || "none"} onValueChange={(value) => setBookingId(value === "none" ? null : value)}>
                 <SelectTrigger><SelectValue placeholder="Select booking" /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">None (General Expense)</SelectItem>
+                  <SelectItem value="none">None (General Expense)</SelectItem>
                   {bookings.map((booking) => (
                     <SelectItem key={booking.id} value={booking.id}>{booking.name}</SelectItem>
                   ))}
