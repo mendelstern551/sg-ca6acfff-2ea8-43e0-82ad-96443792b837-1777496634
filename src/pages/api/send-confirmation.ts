@@ -141,7 +141,7 @@ export default async function handler(
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        from: "Trout Lake Resort <thetroutlakeresort@gmail.com>",
+        from: "Trout Lake Resort <billing@troutlakeresort.ca>",
         to: [to],
         subject: `Booking Confirmed - ${bookingName} at Trout Lake Resort`,
         html: emailHtml,
