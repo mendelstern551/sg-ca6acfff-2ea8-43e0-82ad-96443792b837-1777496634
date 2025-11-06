@@ -8,7 +8,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { EnhancedCalendar } from "@/components/ui/enhanced-calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { CalendarIcon, Calculator, Mail } from "lucide-react";
+import { CalendarIcon, Calculator, Mail, AlertTriangle } from "lucide-react";
 import { format, differenceInDays } from "date-fns";
 import { Booking, BookingType, Payment, DEFAULT_PRICING, PricingConfig } from "@/types/booking";
 import { formatCurrency, calculateBookingCost } from "@/lib/bookingCalculations";
@@ -16,6 +16,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { DateRange } from "react-day-picker";
 import { emailService } from "@/services/emailService";
 import { useToast } from "@/hooks/use-toast";
+import { conflictDetectionService } from "@/services/conflictDetectionService";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 type BookingInsert = Omit<Booking, "id" | "created_at" | "updated_at" | "payments">;
 
@@ -27,7 +29,7 @@ interface BookingDialogProps {
   bookings: Booking[];
 }
 
-export function BookingDialog({ open, onOpenChange, onSave, booking: editingBooking }: BookingDialogProps) {
+export function BookingDialog({ open, onOpenChange, onSave, booking: editingBooking, bookings }: BookingDialogProps) {
   const [bookingType, setBookingType] = useState<BookingType>("shabaton");
   const [name, setName] = useState("");
   const [contactName, setContactName] = useState("");
@@ -47,6 +49,10 @@ export function BookingDialog({ open, onOpenChange, onSave, booking: editingBook
   const [discountPercent, setDiscountPercent] = useState<number | null>(null);
   const [notes, setNotes] = useState("");
   const [payments, setPayments] = useState<Payment[]>([]);
+
+  // ✅ NEW: Conflict detection state
+  const [dateConflict, setDateConflict] = useState<{ hasConflict: boolean; message?: string }>({ hasConflict: false });
+  const [capacityWarning, setCapacityWarning] = useState<{ hasWarning: boolean; message?: string }>({ hasWarning: false });
 
   const [pricingConfig] = useState<PricingConfig>(DEFAULT_PRICING);
   const { toast } = useToast();
@@ -126,9 +132,53 @@ export function BookingDialog({ open, onOpenChange, onSave, booking: editingBook
   
   useEffect(recalculateRates, [bookingType, numberOfGuests, customPrice, discountPercent, pricingConfig]);
 
+  // ✅ NEW: Conflict detection when dates or guests change
+  useEffect(() => {
+    if (dateRange?.from && dateRange?.to) {
+      // Check for date conflicts
+      const conflict = conflictDetectionService.checkDateConflict(
+        dateRange.from.toISOString(),
+        dateRange.to.toISOString(),
+        bookings,
+        editingBooking?.id // Exclude current booking if editing
+      );
+      setDateConflict(conflict);
+
+      // Check for capacity warnings
+      if (typeof numberOfGuests === 'number' && numberOfGuests > 0) {
+        const capacityCheck = conflictDetectionService.checkCapacityWarning(
+          numberOfGuests,
+          dateRange.from.toISOString(),
+          dateRange.to.toISOString(),
+          bookings,
+          editingBooking?.id
+        );
+        setCapacityWarning(capacityCheck);
+      }
+    } else {
+      setDateConflict({ hasConflict: false });
+      setCapacityWarning({ hasWarning: false });
+    }
+  }, [dateRange, numberOfGuests, bookings, editingBooking?.id]);
+
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!contactName || !dateRange?.from || !dateRange?.to || numberOfGuests === "") return;
+
+    // ✅ NEW: Warn about conflicts before saving
+    if (dateConflict.hasConflict) {
+      const proceed = window.confirm(
+        `⚠️ WARNING: ${dateConflict.message}\n\nDo you want to proceed anyway?`
+      );
+      if (!proceed) return;
+    }
+
+    if (capacityWarning.hasWarning) {
+      const proceed = window.confirm(
+        `⚠️ WARNING: ${capacityWarning.message}\n\nDo you want to proceed anyway?`
+      );
+      if (!proceed) return;
+    }
 
     const amountPaid = payments.reduce((sum, p) => sum + Number(p.amount), 0);
     const balanceDue = totalCost - amountPaid;
@@ -328,6 +378,25 @@ export function BookingDialog({ open, onOpenChange, onSave, booking: editingBook
               </div>
             </div>
           </div>
+
+          {/* ✅ NEW: Conflict and capacity warnings */}
+          {dateConflict.hasConflict && (
+            <Alert variant="destructive" className="border-2 border-red-500">
+              <AlertTriangle className="h-4 w-4" />
+              <AlertDescription className="font-semibold">
+                {dateConflict.message}
+              </AlertDescription>
+            </Alert>
+          )}
+
+          {capacityWarning.hasWarning && (
+            <Alert className="border-2 border-amber-500 bg-amber-50 dark:bg-amber-950/20">
+              <AlertTriangle className="h-4 w-4 text-amber-600" />
+              <AlertDescription className="font-semibold text-amber-800 dark:text-amber-200">
+                {capacityWarning.message}
+              </AlertDescription>
+            </Alert>
+          )}
 
           <Card className="bg-slate-50 dark:bg-slate-900/50">
             <CardContent className="pt-6">
