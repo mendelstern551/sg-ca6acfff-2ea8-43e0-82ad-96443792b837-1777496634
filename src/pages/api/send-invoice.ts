@@ -1,5 +1,466 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import nodemailer from "nodemailer";
+import React from "react";
+import ReactPDF from "@react-pdf/renderer";
+import { Document, Page, Text, View, StyleSheet, Image, Font } from "@react-pdf/renderer";
+
+// Define PDF styles
+const styles = StyleSheet.create({
+  page: {
+    padding: 40,
+    fontFamily: "Helvetica",
+    fontSize: 10,
+    backgroundColor: "#ffffff"
+  },
+  logoContainer: {
+    alignItems: "center",
+    marginBottom: 30,
+    paddingBottom: 20,
+    borderBottom: "3 solid #0f766e"
+  },
+  logo: {
+    width: 200,
+    height: "auto",
+    marginBottom: 10
+  },
+  header: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginBottom: 30
+  },
+  invoiceMeta: {
+    alignItems: "flex-end"
+  },
+  invoiceTitle: {
+    fontSize: 28,
+    color: "#1e293b",
+    marginBottom: 8,
+    fontFamily: "Helvetica-Bold"
+  },
+  invoiceNumber: {
+    fontSize: 14,
+    color: "#0f766e",
+    marginBottom: 8,
+    fontFamily: "Helvetica-Bold"
+  },
+  invoiceDate: {
+    fontSize: 10,
+    color: "#64748b"
+  },
+  billingSection: {
+    flexDirection: "row",
+    gap: 20,
+    marginVertical: 25
+  },
+  billingBox: {
+    flex: 1,
+    backgroundColor: "#f8fafc",
+    padding: 20,
+    borderRadius: 8,
+    borderLeft: "4 solid #0f766e"
+  },
+  billingTitle: {
+    fontSize: 9,
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+    color: "#64748b",
+    marginBottom: 12,
+    fontFamily: "Helvetica-Bold"
+  },
+  billingName: {
+    fontSize: 14,
+    color: "#0f766e",
+    marginBottom: 8,
+    fontFamily: "Helvetica-Bold"
+  },
+  billingDetail: {
+    fontSize: 11,
+    color: "#1e293b",
+    marginVertical: 2
+  },
+  table: {
+    marginVertical: 25
+  },
+  tableHeader: {
+    flexDirection: "row",
+    backgroundColor: "#f1f5f9",
+    padding: 12,
+    borderBottom: "2 solid #e2e8f0"
+  },
+  tableHeaderText: {
+    fontSize: 9,
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+    color: "#475569",
+    fontFamily: "Helvetica-Bold"
+  },
+  tableRow: {
+    flexDirection: "row",
+    padding: 15,
+    borderBottom: "1 solid #f1f5f9"
+  },
+  tableDescription: {
+    flex: 7
+  },
+  tableAmount: {
+    flex: 3,
+    textAlign: "right"
+  },
+  itemTitle: {
+    fontSize: 11,
+    fontFamily: "Helvetica-Bold",
+    marginBottom: 4
+  },
+  itemSubtitle: {
+    fontSize: 9,
+    color: "#64748b",
+    marginTop: 2
+  },
+  amountText: {
+    fontSize: 13,
+    fontFamily: "Helvetica-Bold"
+  },
+  totalsSection: {
+    marginTop: 20,
+    paddingTop: 20,
+    borderTop: "2 solid #e2e8f0"
+  },
+  totalRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    padding: 10,
+    fontSize: 12
+  },
+  totalLabel: {
+    color: "#64748b"
+  },
+  totalAmount: {
+    fontFamily: "Helvetica-Bold"
+  },
+  paymentRow: {
+    color: "#059669",
+    fontFamily: "Helvetica-Bold"
+  },
+  balanceRow: {
+    color: "#ea580c",
+    fontFamily: "Helvetica-Bold"
+  },
+  grandTotal: {
+    backgroundColor: "#ecfdf5",
+    border: "2 solid #0f766e",
+    borderRadius: 8,
+    padding: 15,
+    marginTop: 12,
+    flexDirection: "row",
+    justifyContent: "space-between"
+  },
+  grandTotalText: {
+    fontSize: 16,
+    color: "#0f766e",
+    fontFamily: "Helvetica-Bold"
+  },
+  paymentInstructions: {
+    backgroundColor: "#eff6ff",
+    padding: 20,
+    borderRadius: 8,
+    borderLeft: "4 solid #2563eb",
+    marginTop: 25
+  },
+  paymentTitle: {
+    fontSize: 11,
+    color: "#1e40af",
+    marginBottom: 10,
+    fontFamily: "Helvetica-Bold"
+  },
+  paymentText: {
+    fontSize: 10,
+    color: "#1e293b",
+    lineHeight: 1.6,
+    marginVertical: 3
+  },
+  warningBox: {
+    backgroundColor: "#fef3c7",
+    padding: 20,
+    borderRadius: 8,
+    borderLeft: "4 solid #f59e0b",
+    marginTop: 30
+  },
+  warningTitle: {
+    fontSize: 11,
+    color: "#92400e",
+    marginBottom: 8,
+    fontFamily: "Helvetica-Bold"
+  },
+  warningText: {
+    fontSize: 10,
+    color: "#78350f",
+    lineHeight: 1.5
+  },
+  successBox: {
+    backgroundColor: "#d1fae5",
+    padding: 20,
+    borderRadius: 8,
+    borderLeft: "4 solid #059669",
+    marginTop: 30
+  },
+  successTitle: {
+    fontSize: 11,
+    color: "#065f46",
+    marginBottom: 8,
+    fontFamily: "Helvetica-Bold"
+  },
+  successText: {
+    fontSize: 10,
+    color: "#047857",
+    lineHeight: 1.5
+  },
+  notesBox: {
+    backgroundColor: "#f8fafc",
+    padding: 15,
+    borderRadius: 8,
+    marginTop: 20
+  },
+  notesTitle: {
+    fontSize: 10,
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+    color: "#475569",
+    marginBottom: 8,
+    fontFamily: "Helvetica-Bold"
+  },
+  notesText: {
+    fontSize: 10,
+    color: "#334155",
+    lineHeight: 1.5
+  },
+  footer: {
+    marginTop: 40,
+    paddingTop: 20,
+    borderTop: "1 solid #e2e8f0",
+    alignItems: "center"
+  },
+  footerText: {
+    fontSize: 10,
+    color: "#64748b",
+    textAlign: "center",
+    lineHeight: 1.6,
+    marginVertical: 3
+  },
+  footerBold: {
+    fontFamily: "Helvetica-Bold",
+    color: "#1e293b"
+  }
+});
+
+// PDF Invoice Document Component
+const InvoiceDocument = ({ data }: { data: any }) => (
+  <Document>
+    <Page size="A4" style={styles.page}>
+      {/* Logo Section */}
+      <View style={styles.logoContainer}>
+        <Image 
+          src="https://3000-ca6acfff-2ea8-43e0-82ad-96443792b837.softgen.dev/ChatGPT_Image_Nov_5_2025_03_58_44_PM.png"
+          style={styles.logo}
+        />
+        <Text style={{ fontSize: 10, color: "#64748b" }}>Sainte-Agathe-des-Monts • Canada</Text>
+      </View>
+
+      {/* Header */}
+      <View style={styles.header}>
+        <View style={{ flex: 1 }} />
+        <View style={styles.invoiceMeta}>
+          <Text style={styles.invoiceTitle}>INVOICE</Text>
+          <Text style={styles.invoiceNumber}>#{data.invoiceNumber}</Text>
+          <Text style={styles.invoiceDate}>
+            Issue Date: {new Date().toLocaleDateString("en-US", { 
+              year: "numeric", 
+              month: "long", 
+              day: "numeric" 
+            })}
+          </Text>
+        </View>
+      </View>
+
+      {/* Billing Section */}
+      <View style={styles.billingSection}>
+        <View style={styles.billingBox}>
+          <Text style={styles.billingTitle}>Bill To</Text>
+          <Text style={styles.billingName}>{data.clientName}</Text>
+        </View>
+        
+        <View style={styles.billingBox}>
+          <Text style={styles.billingTitle}>Event Information</Text>
+          <Text style={styles.billingName}>{data.numberOfGuests} Guests</Text>
+          <Text style={styles.billingDetail}>
+            {new Date(data.eventDateStart).toLocaleDateString("en-US", { 
+              weekday: "long", 
+              year: "numeric", 
+              month: "long", 
+              day: "numeric" 
+            })}
+          </Text>
+          <Text style={{ fontSize: 9, color: "#64748b", marginVertical: 2 }}>through</Text>
+          <Text style={styles.billingDetail}>
+            {new Date(data.eventDateEnd).toLocaleDateString("en-US", { 
+              weekday: "long", 
+              year: "numeric", 
+              month: "long", 
+              day: "numeric" 
+            })}
+          </Text>
+        </View>
+      </View>
+
+      {/* Items Table */}
+      <View style={styles.table}>
+        <View style={styles.tableHeader}>
+          <Text style={[styles.tableHeaderText, { flex: 7 }]}>Description</Text>
+          <Text style={[styles.tableHeaderText, { flex: 3, textAlign: "right" }]}>Amount</Text>
+        </View>
+        
+        <View style={styles.tableRow}>
+          <View style={styles.tableDescription}>
+            <Text style={styles.itemTitle}>Event Venue Rental</Text>
+            <Text style={styles.itemSubtitle}>
+              {data.numberOfGuests} guests
+            </Text>
+            <Text style={styles.itemSubtitle}>
+              {new Date(data.eventDateStart).toLocaleDateString("en-US", { month: "short", day: "numeric" })} - {" "}
+              {new Date(data.eventDateEnd).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+            </Text>
+          </View>
+          <View style={styles.tableAmount}>
+            <Text style={styles.amountText}>
+              ${Number(data.totalAmount).toLocaleString("en-US", { 
+                minimumFractionDigits: 2, 
+                maximumFractionDigits: 2 
+              })}
+            </Text>
+          </View>
+        </View>
+      </View>
+
+      {/* Totals */}
+      <View style={styles.totalsSection}>
+        <View style={styles.totalRow}>
+          <Text style={styles.totalLabel}>Subtotal</Text>
+          <Text style={styles.totalAmount}>
+            ${Number(data.totalAmount).toLocaleString("en-US", { 
+              minimumFractionDigits: 2, 
+              maximumFractionDigits: 2 
+            })}
+          </Text>
+        </View>
+        
+        {data.hasPayments && (
+          <>
+            <View style={[styles.totalRow, styles.paymentRow]}>
+              <Text>Amount Paid</Text>
+              <Text>
+                -${Number(data.depositAmount).toLocaleString("en-US", { 
+                  minimumFractionDigits: 2, 
+                  maximumFractionDigits: 2 
+                })}
+              </Text>
+            </View>
+            
+            <View style={[styles.totalRow, styles.balanceRow]}>
+              <Text>Balance Due</Text>
+              <Text>
+                ${Number(data.actualBalanceDue).toLocaleString("en-US", { 
+                  minimumFractionDigits: 2, 
+                  maximumFractionDigits: 2 
+                })}
+              </Text>
+            </View>
+          </>
+        )}
+        
+        <View style={styles.grandTotal}>
+          <Text style={styles.grandTotalText}>Total Amount</Text>
+          <Text style={styles.grandTotalText}>
+            ${Number(data.totalAmount).toLocaleString("en-US", { 
+              minimumFractionDigits: 2, 
+              maximumFractionDigits: 2 
+            })}
+          </Text>
+        </View>
+      </View>
+
+      {/* Payment Instructions */}
+      <View style={styles.paymentInstructions}>
+        <Text style={styles.paymentTitle}>Payment Instructions</Text>
+        <Text style={styles.paymentText}>
+          <Text style={{ fontFamily: "Helvetica-Bold" }}>Checks:</Text> Please make checks payable to{" "}
+          <Text style={{ fontFamily: "Helvetica-Bold" }}>Cong Zera Kodesh</Text>
+        </Text>
+        <Text style={styles.paymentText}>
+          <Text style={{ fontFamily: "Helvetica-Bold" }}>E-Transfer:</Text> Send to{" "}
+          <Text style={{ fontFamily: "Helvetica-Bold" }}>billing@troutlakeresort.ca</Text>
+        </Text>
+      </View>
+
+      {/* Payment Status */}
+      {data.hasPayments && data.actualBalanceDue > 0 && (
+        <View style={styles.warningBox}>
+          <Text style={styles.warningTitle}>⚠ Payment Required</Text>
+          <Text style={styles.warningText}>
+            A balance of <Text style={{ fontFamily: "Helvetica-Bold" }}>
+              ${Number(data.actualBalanceDue).toLocaleString("en-US", { 
+                minimumFractionDigits: 2, 
+                maximumFractionDigits: 2 
+              })}
+            </Text> remains outstanding. Please remit payment by the agreed due date to maintain your reservation.
+          </Text>
+        </View>
+      )}
+      
+      {data.hasPayments && data.actualBalanceDue <= 0 && (
+        <View style={styles.successBox}>
+          <Text style={styles.successTitle}>✓ Paid in Full</Text>
+          <Text style={styles.successText}>
+            Thank you! Your payment has been received and your reservation is confirmed.
+          </Text>
+        </View>
+      )}
+      
+      {!data.hasPayments && (
+        <View style={styles.warningBox}>
+          <Text style={styles.warningTitle}>⚠ Payment Required</Text>
+          <Text style={styles.warningText}>
+            Full payment of <Text style={{ fontFamily: "Helvetica-Bold" }}>
+              ${Number(data.totalAmount).toLocaleString("en-US", { 
+                minimumFractionDigits: 2, 
+                maximumFractionDigits: 2 
+              })}
+            </Text> is required. Please remit payment by the agreed due date to maintain your reservation.
+          </Text>
+        </View>
+      )}
+
+      {/* Notes */}
+      {data.notes && (
+        <View style={styles.notesBox}>
+          <Text style={styles.notesTitle}>Additional Notes</Text>
+          <Text style={styles.notesText}>{data.notes}</Text>
+        </View>
+      )}
+
+      {/* Footer */}
+      <View style={styles.footer}>
+        <Text style={[styles.footerText, styles.footerBold]}>
+          Thank you for choosing Trout Lake Resort!
+        </Text>
+        <Text style={styles.footerText}>
+          For questions regarding this invoice, please contact our billing office at billing@troutlakeresort.ca
+        </Text>
+        <Text style={[styles.footerText, { fontSize: 9, marginTop: 10 }]}>
+          This is a computer-generated invoice.
+        </Text>
+      </View>
+    </Page>
+  </Document>
+);
 
 export default async function handler(
   req: NextApiRequest,
@@ -33,7 +494,6 @@ export default async function handler(
   const SMTP_PASS = process.env.SMTP_AUTH_PASS;
   const FROM_EMAIL = process.env.INVOICE_FROM_EMAIL || "billing@troutlakeresort.ca";
 
-  // Log configuration (without password) for debugging
   console.log("Email Configuration:", {
     host: SMTP_HOST,
     port: SMTP_PORT,
@@ -43,19 +503,13 @@ export default async function handler(
   });
 
   if (!SMTP_HOST || !SMTP_PORT || !SMTP_USER || !SMTP_PASS) {
-    console.error("SMTP configuration is incomplete:", {
-      hasHost: !!SMTP_HOST,
-      hasPort: !!SMTP_PORT,
-      hasUser: !!SMTP_USER,
-      hasPass: !!SMTP_PASS,
-    });
+    console.error("SMTP configuration is incomplete");
     return res.status(500).json({
       error: "Email service not configured. Please contact support.",
     });
   }
 
   try {
-    // Create transporter
     const transporter = nodemailer.createTransport({
       host: SMTP_HOST,
       port: parseInt(SMTP_PORT),
@@ -68,7 +522,6 @@ export default async function handler(
       logger: true,
     });
 
-    // Verify connection
     console.log("Verifying SMTP connection...");
     await transporter.verify();
     console.log("SMTP connection verified successfully");
@@ -85,7 +538,6 @@ export default async function handler(
     body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
     .container { max-width: 600px; margin: 0 auto; padding: 20px; }
     .header { text-align: center; margin-bottom: 30px; }
-    .logo { max-width: 200px; margin-bottom: 20px; }
     .invoice-box { border: 2px solid #0ea5e9; border-radius: 8px; padding: 20px; margin: 20px 0; }
     .invoice-number { font-size: 24px; font-weight: bold; color: #0ea5e9; margin-bottom: 10px; }
     .detail-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #eee; }
@@ -105,7 +557,7 @@ export default async function handler(
     <div class="invoice-box">
       <div class="invoice-number">Invoice ${invoiceNumber}</div>
       <p>Dear ${clientName},</p>
-      <p>Thank you for choosing Trout Lake Resort! Please find your invoice details below:</p>
+      <p>Thank you for choosing Trout Lake Resort! Please find your invoice attached as a PDF.</p>
 
       <div class="detail-row">
         <span class="detail-label">Event Dates:</span>
@@ -157,175 +609,29 @@ export default async function handler(
 </html>
     `;
 
-    // Complete invoice HTML for attachment
-    const invoiceAttachmentHtml = `
-<!DOCTYPE html>
-<html>
-<head>
-  <title>Invoice ${invoiceNumber}</title>
-  <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 0; background: white; }
-    .invoice { max-width: 850px; margin: 40px auto; background: white; padding: 60px; }
+    // Generate PDF
+    console.log("Generating PDF invoice...");
+    const pdfData = {
+      invoiceNumber,
+      clientName,
+      eventDateStart,
+      eventDateEnd,
+      numberOfGuests,
+      totalAmount,
+      depositAmount,
+      hasPayments,
+      actualBalanceDue,
+      notes
+    };
+
+    const pdfBuffer = await ReactPDF.renderToBuffer(
+      React.createElement(InvoiceDocument, { data: pdfData })
+    );
     
-    .logo-container { text-align: center; margin-bottom: 40px; padding-bottom: 30px; border-bottom: 3px solid #0f766e; }
-    .logo-text { font-size: 36px; font-weight: bold; color: #0f766e; margin-bottom: 10px; }
-    
-    .header { display: flex; justify-content: space-between; align-items: start; margin-bottom: 50px; }
-    
-    .invoice-meta { text-align: right; }
-    .invoice-meta h2 { font-size: 36px; color: #1e293b; margin-bottom: 8px; font-weight: 300; letter-spacing: -1px; }
-    .invoice-number { font-size: 18px; color: #0f766e; font-weight: 600; margin-bottom: 12px; }
-    .invoice-date { font-size: 14px; color: #64748b; }
-    
-    .billing-section { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; margin: 40px 0; }
-    .billing-box { background: #f8fafc; padding: 25px; border-radius: 12px; border-left: 4px solid #0f766e; }
-    .billing-box h3 { font-size: 12px; text-transform: uppercase; letter-spacing: 1px; color: #64748b; margin-bottom: 15px; font-weight: 600; }
-    .billing-box p { font-size: 15px; color: #1e293b; line-height: 1.8; margin: 4px 0; }
-    .billing-box strong { display: block; font-size: 18px; color: #0f766e; margin-bottom: 8px; }
-    
-    .items-table { width: 100%; margin: 40px 0; border-collapse: collapse; }
-    .items-table thead { background: #f1f5f9; }
-    .items-table th { padding: 15px 20px; text-align: left; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; color: #475569; font-weight: 600; border-bottom: 2px solid #e2e8f0; }
-    .items-table td { padding: 18px 20px; color: #334155; font-size: 15px; border-bottom: 1px solid #f1f5f9; }
-    .items-table tr:last-child td { border-bottom: none; }
-    .items-table .amount { text-align: right; font-weight: 600; font-size: 16px; }
-    
-    .totals { margin-top: 30px; padding-top: 30px; border-top: 2px solid #e2e8f0; }
-    .total-row { display: flex; justify-content: space-between; padding: 12px 20px; font-size: 16px; }
-    .total-row.subtotal { color: #64748b; }
-    .total-row.payment { color: #059669; font-weight: 600; }
-    .total-row.balance { color: #ea580c; font-weight: 600; }
-    .total-row.grand-total { background: #ecfdf5; border: 2px solid #0f766e; border-radius: 8px; margin-top: 15px; padding: 20px; font-size: 20px; font-weight: 700; color: #0f766e; }
-    
-    .payment-terms { margin-top: 50px; padding: 25px; background: #fef3c7; border-radius: 8px; border-left: 4px solid #f59e0b; }
-    .payment-terms h4 { color: #92400e; font-size: 14px; margin-bottom: 10px; font-weight: 600; }
-    .payment-terms p { color: #78350f; font-size: 13px; line-height: 1.6; }
-    
-    .footer { margin-top: 60px; padding-top: 30px; border-top: 1px solid #e2e8f0; text-align: center; }
-    .footer p { color: #64748b; font-size: 13px; line-height: 1.8; }
-    .footer strong { color: #1e293b; }
-  </style>
-</head>
-<body>
-  <div class="invoice">
-    <div class="logo-container">
-      <div class="logo-text">TROUT LAKE RESORT</div>
-      <p style="color: #64748b;">Sainte-Agathe-des-Monts • Canada</p>
-    </div>
+    console.log("PDF generated successfully, size:", pdfBuffer.length, "bytes");
 
-    <div class="header">
-      <div style="flex: 1;"></div>
-      <div class="invoice-meta">
-        <h2>INVOICE</h2>
-        <div class="invoice-number">#${invoiceNumber}</div>
-        <div class="invoice-date">Issue Date: ${new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</div>
-      </div>
-    </div>
-
-    <div class="billing-section">
-      <div class="billing-box">
-        <h3>Bill To</h3>
-        <strong>${clientName}</strong>
-      </div>
-      
-      <div class="billing-box">
-        <h3>Event Information</h3>
-        <strong>${numberOfGuests} Guests</strong>
-        <p>${new Date(eventDateStart).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
-        <p>through</p>
-        <p>${new Date(eventDateEnd).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
-      </div>
-    </div>
-
-    <table class="items-table">
-      <thead>
-        <tr>
-          <th style="width: 70%">Description</th>
-          <th class="amount">Amount</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr>
-          <td>
-            <strong>Event Venue Rental</strong><br>
-            <span style="font-size: 13px; color: #64748b;">
-              ${numberOfGuests} guests<br>
-              ${new Date(eventDateStart).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - ${new Date(eventDateEnd).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-            </span>
-          </td>
-          <td class="amount">$${Number(totalAmount).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
-        </tr>
-      </tbody>
-    </table>
-
-    <div class="totals">
-      <div class="total-row subtotal">
-        <span>Subtotal</span>
-        <span>$${Number(totalAmount).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-      </div>
-      ${hasPayments ? `
-      <div class="total-row payment">
-        <span>Amount Paid</span>
-        <span>-$${Number(depositAmount).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-      </div>
-      <div class="total-row balance">
-        <span>Balance Due</span>
-        <span>$${Number(actualBalanceDue).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-      </div>
-      ` : ''}
-      <div class="total-row grand-total">
-        <span>Total Amount</span>
-        <span>$${Number(totalAmount).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-      </div>
-    </div>
-
-    <div style="margin-top: 40px; padding: 25px; background: #eff6ff; border-radius: 8px; border-left: 4px solid #2563eb;">
-      <h4 style="color: #1e40af; font-size: 14px; margin-bottom: 12px; font-weight: 600;">Payment Instructions</h4>
-      <p style="color: #1e293b; font-size: 13px; line-height: 1.8; margin-bottom: 8px;">
-        <strong>Checks:</strong> Please make checks payable to <strong>Cong Zera Kodesh</strong>
-      </p>
-      <p style="color: #1e293b; font-size: 13px; line-height: 1.8;">
-        <strong>E-Transfer:</strong> Send to <strong>billing@troutlakeresort.ca</strong>
-      </p>
-    </div>
-
-    ${hasPayments && actualBalanceDue > 0 ? `
-    <div class="payment-terms">
-      <h4>⚠ Payment Required</h4>
-      <p>A balance of <strong>$${Number(actualBalanceDue).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong> remains outstanding. Please remit payment by the agreed due date to maintain your reservation.</p>
-    </div>
-    ` : hasPayments && actualBalanceDue <= 0 ? `
-    <div class="payment-terms" style="background: #d1fae5; border-left-color: #059669;">
-      <h4 style="color: #065f46;">✓ Paid in Full</h4>
-      <p style="color: #047857;">Thank you! Your payment has been received and your reservation is confirmed.</p>
-    </div>
-    ` : `
-    <div class="payment-terms">
-      <h4>⚠ Payment Required</h4>
-      <p>Full payment of <strong>$${Number(totalAmount).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong> is required. Please remit payment by the agreed due date to maintain your reservation.</p>
-    </div>
-    `}
-
-    ${notes ? `
-    <div style="margin-top: 30px; padding: 20px; background: #f8fafc; border-radius: 8px;">
-      <h4 style="color: #475569; font-size: 13px; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.5px;">Additional Notes</h4>
-      <p style="color: #334155; font-size: 14px; line-height: 1.6;">${notes}</p>
-    </div>
-    ` : ""}
-
-    <div class="footer">
-      <p><strong>Thank you for choosing Trout Lake Resort!</strong></p>
-      <p>For questions regarding this invoice, please contact our billing office at billing@troutlakeresort.ca</p>
-      <p style="margin-top: 15px; font-size: 12px;">This is a computer-generated invoice.</p>
-    </div>
-  </div>
-</body>
-</html>
-    `;
-
-    // Send email with attachment
-    console.log("Attempting to send email with attachment...");
+    // Send email with PDF attachment
+    console.log("Attempting to send email with PDF attachment...");
     const info = await transporter.sendMail({
       from: `"Trout Lake Resort - Billing" <${FROM_EMAIL}>`,
       to: to,
@@ -333,26 +639,24 @@ export default async function handler(
       html: emailHtml,
       attachments: [
         {
-          filename: `Invoice-${invoiceNumber}.html`,
-          content: invoiceAttachmentHtml,
-          contentType: "text/html"
+          filename: `Invoice-${invoiceNumber}.pdf`,
+          content: pdfBuffer,
+          contentType: "application/pdf"
         }
       ]
     });
 
-    console.log("Email sent successfully with attachment:", info.messageId);
+    console.log("Email sent successfully with PDF attachment:", info.messageId);
 
     return res.status(200).json({
       success: true,
-      message: "Invoice sent successfully with attachment",
+      message: "Invoice sent successfully with PDF attachment",
       emailId: info.messageId,
     });
   } catch (error: any) {
     console.error("Detailed error sending invoice email:", {
       message: error.message,
       code: error.code,
-      command: error.command,
-      response: error.response,
       stack: error.stack,
     });
     
@@ -364,8 +668,6 @@ export default async function handler(
       errorMessage = "Connection timed out. Please check your SMTP server settings.";
     } else if (error.code === "ECONNREFUSED") {
       errorMessage = "Connection refused. Please verify SMTP host and port.";
-    } else if (error.responseCode === 550) {
-      errorMessage = "Email rejected. The 'from' address may need to be verified in SMTP.com.";
     }
     
     return res.status(500).json({
