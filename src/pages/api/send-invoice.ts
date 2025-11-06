@@ -3,6 +3,7 @@ import nodemailer from "nodemailer";
 import React from "react";
 import { renderToBuffer } from "@react-pdf/renderer";
 import { Document, Page, Text, View, StyleSheet, Image } from "@react-pdf/renderer";
+import { createClient } from "@supabase/supabase-js";
 
 const styles = StyleSheet.create({
   page: {
@@ -226,6 +227,7 @@ export default async function handler(
     balanceDue,
     depositAmount,
     notes,
+    bookingId,
   } = req.body;
 
   if (!to || !clientName || !invoiceNumber) {
@@ -572,6 +574,34 @@ export default async function handler(
 
     console.log("Email sent successfully with PDF attachment:", info.messageId);
 
+    // ✅ LOG EMAIL TO DATABASE
+    try {
+      const supabase = createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+      );
+
+      await supabase.from("email_logs").insert({
+        booking_id: bookingId || null,
+        email_type: "invoice",
+        recipient_email: to,
+        recipient_name: clientName,
+        subject: `Invoice ${invoiceNumber} - Trout Lake Resort`,
+        status: "sent",
+        metadata: {
+          invoice_number: invoiceNumber,
+          total_amount: totalAmount,
+          balance_due: balanceDue,
+          email_id: info.messageId
+        }
+      });
+
+      console.log("✅ Email logged to database");
+    } catch (logError) {
+      console.error("⚠️ Failed to log email to database:", logError);
+      // Don't fail the request if logging fails
+    }
+
     return res.status(200).json({
       success: true,
       message: "Invoice sent successfully with PDF attachment",
@@ -594,6 +624,30 @@ export default async function handler(
       errorMessage = "Connection refused. Please verify SMTP host and port.";
     }
     
+    // ✅ LOG FAILED EMAIL
+    try {
+      const supabase = createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+      );
+
+      await supabase.from("email_logs").insert({
+        booking_id: bookingId || null,
+        email_type: "invoice",
+        recipient_email: to,
+        recipient_name: clientName,
+        subject: `Invoice ${invoiceNumber} - Trout Lake Resort`,
+        status: "failed",
+        error_message: errorMessage,
+        metadata: {
+          invoice_number: invoiceNumber,
+          error_code: error.code
+        }
+      });
+    } catch (logError) {
+      console.error("⚠️ Failed to log failed email:", logError);
+    }
+
     return res.status(500).json({
       error: errorMessage,
       details: error.message,

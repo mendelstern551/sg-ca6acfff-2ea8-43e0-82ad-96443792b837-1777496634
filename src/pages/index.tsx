@@ -25,6 +25,7 @@ import { InvoiceDialog } from "@/components/InvoiceDialog";
 import { format } from "date-fns";
 import { managerService } from "@/services/managerService";
 import type { ManagerCompensation } from "@/services/managerService";
+import { EmailHistory } from "@/components/EmailHistory";
 
 type InvoiceRow = Database["public"]["Tables"]["invoices"]["Row"];
 type ExpenseInsert = Database["public"]["Tables"]["expenses"]["Insert"];
@@ -379,6 +380,7 @@ export default function HomePage() {
             <TabsTrigger value="expenses" className="data-[state=active]:bg-amber-100 dark:data-[state=active]:bg-amber-900/30 data-[state=active]:text-amber-900 dark:data-[state=active]:text-amber-100">Expenses</TabsTrigger>
             <TabsTrigger value="receipts" className="data-[state=active]:bg-amber-100 dark:data-[state=active]:bg-amber-900/30 data-[state=active]:text-amber-900 dark:data-[state=active]:text-amber-100">Receipts</TabsTrigger>
             <TabsTrigger value="manager" className="data-[state=active]:bg-amber-100 dark:data-[state=active]:bg-amber-900/30 data-[state=active]:text-amber-900 dark:data-[state=active]:text-amber-100">Manager</TabsTrigger>
+            <TabsTrigger value="emails" className="data-[state=active]:bg-amber-100 dark:data-[state=active]:bg-amber-900/30 data-[state=active]:text-amber-900 dark:data-[state=active]:text-amber-100">Email History</TabsTrigger>
           </TabsList>
 
           <TabsContent value="bookings" className="space-y-4">
@@ -413,6 +415,10 @@ export default function HomePage() {
               <CardHeader><CardTitle className="text-stone-900 dark:text-stone-100">Manager Compensation</CardTitle><CardDescription className="text-stone-600 dark:text-stone-400">Track maintenance fees, commissions, and payments to manager</CardDescription></CardHeader>
               <CardContent><ManagerSalary bookings={bookings} onAddExpense={handleAddExpense} allExpenses={expenses} onExpensesUpdate={loadAllData} /></CardContent>
             </Card>
+          </TabsContent>
+
+          <TabsContent value="emails" className="space-y-4">
+            <EmailHistory bookings={bookings.map(b => ({ id: b.id, name: b.name, contact_name: b.contact_name }))} />
           </TabsContent>
         </Tabs>
       </main>
