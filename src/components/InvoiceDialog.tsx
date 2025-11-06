@@ -5,9 +5,10 @@ import { Booking } from "@/types/booking";
 import { invoiceService } from "@/services/invoiceService";
 import { emailService } from "@/services/emailService";
 import { format } from "date-fns";
-import { Download, Loader2, FileText, Mail, Phone, Send } from "lucide-react";
+import { Download, Loader2, FileText, Mail, Phone, Send, Clock, CheckCircle, XCircle, AlertCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import type { Database } from "@/integrations/supabase/types";
+import { Badge } from "@/components/ui/badge";
 
 type Invoice = Database["public"]["Tables"]["invoices"]["Row"];
 
@@ -22,6 +23,8 @@ export function InvoiceDialog({ open, onOpenChange, booking }: InvoiceDialogProp
   const [loading, setLoading] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [sendingEmail, setSendingEmail] = useState(false);
+  const [reminderHistory, setReminderHistory] = useState<any[]>([]);
+  const [sendingReminder, setSendingReminder] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -61,6 +64,10 @@ export function InvoiceDialog({ open, onOpenChange, booking }: InvoiceDialogProp
       }
 
       setInvoice(existingInvoice);
+      
+      // Load reminder history
+      const reminders = await invoiceService.getPaymentReminders(booking.id);
+      setReminderHistory(reminders);
     } catch (error) {
       console.error("Error loading invoice:", error);
     } finally {
@@ -82,7 +89,6 @@ export function InvoiceDialog({ open, onOpenChange, booking }: InvoiceDialogProp
     try {
       setSendingEmail(true);
       
-      // ✅ Add 30-second timeout protection to prevent UI lockup
       const emailPromise = emailService.sendInvoiceEmail(invoice, booking);
       const timeoutPromise = new Promise((_, reject) => 
         setTimeout(() => reject(new Error("Email sending timed out after 30 seconds")), 30000)
@@ -95,6 +101,8 @@ export function InvoiceDialog({ open, onOpenChange, booking }: InvoiceDialogProp
           title: "Email Sent Successfully! ✓",
           description: `Invoice sent to ${invoice.client_email}`,
         });
+        // Reload to get updated email status
+        await loadOrCreateInvoice();
       } else {
         throw new Error(result.error || "Failed to send email");
       }
@@ -113,8 +121,44 @@ export function InvoiceDialog({ open, onOpenChange, booking }: InvoiceDialogProp
         variant: "destructive"
       });
     } finally {
-      // ✅ GUARANTEE: UI always releases, even on timeout or error
       setSendingEmail(false);
+    }
+  };
+
+  const handleSendReminder = async (reminderType: '30_day' | '7_day' | 'payment_received') => {
+    if (!booking.contact_email) {
+      toast({
+        title: "No Email Address",
+        description: "This booking doesn't have an email address.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    try {
+      setSendingReminder(true);
+      
+      const result = await emailService.sendPaymentReminder(booking, invoice, reminderType);
+      
+      if (result.success) {
+        toast({
+          title: "Reminder Sent! ✓",
+          description: `Payment reminder sent to ${booking.contact_email}`,
+        });
+        // Reload to get updated reminder history
+        await loadOrCreateInvoice();
+      } else {
+        throw new Error(result.error || "Failed to send reminder");
+      }
+    } catch (error: any) {
+      console.error("Error sending reminder:", error);
+      toast({
+        title: "Failed to Send Reminder",
+        description: error.message || "Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setSendingReminder(false);
     }
   };
 
@@ -340,6 +384,27 @@ export function InvoiceDialog({ open, onOpenChange, booking }: InvoiceDialogProp
   const actualBalanceDue = invoice.total_amount - actualAmountPaid;
   const hasPayments = validPayments.length > 0 && actualAmountPaid > 0;
 
+  const getEmailStatusBadge = () => {
+    if (!invoice.email_sent_at) {
+      return <Badge variant="secondary" className="flex items-center gap-1"><Clock className="h-3 w-3" />Not Sent</Badge>;
+    }
+    
+    if (invoice.email_status === 'sent') {
+      return (
+        <Badge variant="default" className="flex items-center gap-1 bg-green-600">
+          <CheckCircle className="h-3 w-3" />
+          Sent {format(new Date(invoice.email_sent_at), "MMM d, h:mm a")}
+        </Badge>
+      );
+    }
+    
+    if (invoice.email_status === 'failed') {
+      return <Badge variant="destructive" className="flex items-center gap-1"><XCircle className="h-3 w-3" />Failed</Badge>;
+    }
+    
+    return <Badge variant="secondary">Pending</Badge>;
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
@@ -348,6 +413,7 @@ export function InvoiceDialog({ open, onOpenChange, booking }: InvoiceDialogProp
             <span className="flex items-center gap-2">
               <FileText className="h-5 w-5" />
               Invoice {invoice.invoice_number}
+              {getEmailStatusBadge()}
             </span>
             <div className="flex gap-2">
               <Button 
@@ -376,6 +442,93 @@ export function InvoiceDialog({ open, onOpenChange, booking }: InvoiceDialogProp
             </div>
           </DialogTitle>
         </DialogHeader>
+
+        {actualBalanceDue > 0 && (
+          <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-4">
+            <div className="flex items-start justify-between">
+              <div>
+                <h4 className="font-semibold text-amber-900 mb-2 flex items-center gap-2">
+                  <AlertCircle className="h-4 w-4" />
+                  Payment Reminder Tools
+                </h4>
+                <p className="text-sm text-amber-700 mb-3">
+                  Outstanding balance: <strong>${actualBalanceDue.toFixed(2)}</strong>
+                  {invoice.last_reminder_sent_at && (
+                    <span className="ml-2 text-xs">
+                      (Last reminder: {format(new Date(invoice.last_reminder_sent_at), "MMM d, h:mm a")})
+                    </span>
+                  )}
+                </p>
+                <div className="flex gap-2">
+                  <Button
+                    onClick={() => handleSendReminder('30_day')}
+                    variant="outline"
+                    size="sm"
+                    disabled={sendingReminder || !booking.contact_email}
+                    className="text-xs"
+                  >
+                    Send 30-Day Reminder
+                  </Button>
+                  <Button
+                    onClick={() => handleSendReminder('7_day')}
+                    variant="outline"
+                    size="sm"
+                    disabled={sendingReminder || !booking.contact_email}
+                    className="text-xs"
+                  >
+                    Send 7-Day Reminder
+                  </Button>
+                </div>
+              </div>
+              {invoice.reminder_count ? (
+                <Badge variant="secondary">{invoice.reminder_count} reminder{invoice.reminder_count > 1 ? 's' : ''} sent</Badge>
+              ) : null}
+            </div>
+          </div>
+        )}
+
+        {actualBalanceDue <= 0 && hasPayments && (
+          <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <h4 className="font-semibold text-green-900 mb-1">Payment Received Confirmation</h4>
+                <p className="text-sm text-green-700">Send a thank you email confirming payment.</p>
+              </div>
+              <Button
+                onClick={() => handleSendReminder('payment_received')}
+                variant="outline"
+                size="sm"
+                disabled={sendingReminder || !booking.contact_email}
+                className="bg-green-100 hover:bg-green-200 text-green-800"
+              >
+                Send Confirmation
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {reminderHistory.length > 0 && (
+          <div className="bg-slate-50 border border-slate-200 rounded-lg p-4 mb-4">
+            <h4 className="font-semibold text-slate-900 mb-3 text-sm">Reminder History</h4>
+            <div className="space-y-2">
+              {reminderHistory.slice(0, 5).map((reminder) => (
+                <div key={reminder.id} className="flex items-center justify-between text-xs">
+                  <span className="text-slate-600">
+                    {reminder.reminder_type.replace('_', ' ').toUpperCase()}
+                  </span>
+                  <div className="flex items-center gap-2">
+                    <Badge variant={reminder.status === 'sent' ? 'default' : 'destructive'} className="text-xs">
+                      {reminder.status}
+                    </Badge>
+                    <span className="text-slate-500">
+                      {format(new Date(reminder.sent_at), "MMM d, h:mm a")}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         <div className="bg-white border rounded-lg p-8 space-y-6">
           {generating && (
