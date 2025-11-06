@@ -51,6 +51,8 @@ export default function HomePage() {
 
   useEffect(() => {
     loadAllData();
+    
+    // Set up Supabase real-time subscriptions for backend-driven updates
     const channel = supabase.channel('db-changes');
     const subscription = channel
       .on('postgres_changes', { event: '*', schema: 'public' }, payload => {
@@ -59,15 +61,11 @@ export default function HomePage() {
       })
       .subscribe();
     
-    // Set up automatic refresh every 30 seconds
-    const refreshInterval = setInterval(() => {
-      console.log('Auto-refreshing data...');
-      loadAllData();
-    }, 30000); // 30 seconds
+    // ✅ REMOVED: Fixed 30-second interval that interrupted user input
+    // Now relying solely on Supabase real-time subscriptions for instant, backend-driven updates
     
     return () => {
       subscription.unsubscribe();
-      clearInterval(refreshInterval);
     };
   }, []);
 

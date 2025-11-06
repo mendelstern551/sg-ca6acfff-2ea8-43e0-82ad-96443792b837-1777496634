@@ -82,7 +82,13 @@ export function InvoiceDialog({ open, onOpenChange, booking }: InvoiceDialogProp
     try {
       setSendingEmail(true);
       
-      const result = await emailService.sendInvoiceEmail(invoice, booking);
+      // ✅ Add 30-second timeout protection to prevent UI lockup
+      const emailPromise = emailService.sendInvoiceEmail(invoice, booking);
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error("Email sending timed out after 30 seconds")), 30000)
+      );
+      
+      const result = await Promise.race([emailPromise, timeoutPromise]) as any;
       
       if (result.success) {
         toast({
@@ -94,12 +100,20 @@ export function InvoiceDialog({ open, onOpenChange, booking }: InvoiceDialogProp
       }
     } catch (error: any) {
       console.error("Error sending invoice email:", error);
+      
+      let errorMessage = error.message || "Please check your email configuration and try again.";
+      
+      if (error.message?.includes("timed out")) {
+        errorMessage = "Email sending took too long. The email may still send in the background. Please check your email in a few minutes.";
+      }
+      
       toast({
         title: "Failed to Send Email",
-        description: error.message || "Please check your email configuration and try again.",
+        description: errorMessage,
         variant: "destructive"
       });
     } finally {
+      // ✅ GUARANTEE: UI always releases, even on timeout or error
       setSendingEmail(false);
     }
   };
