@@ -1,4 +1,4 @@
- 
+/* eslint-disable @typescript-eslint/no-empty-object-type */
 export type Json =
   | string
   | number
@@ -497,6 +497,68 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: []
+      }
+      reminders: {
+        Row: {
+          auto_generated: boolean | null
+          booking_id: string | null
+          category: string
+          created_at: string | null
+          description: string | null
+          due_date: string
+          id: string
+          metadata: Json | null
+          priority: string
+          recurring: boolean | null
+          recurring_interval: string | null
+          snoozed_until: string | null
+          status: string
+          title: string
+          updated_at: string | null
+        }
+        Insert: {
+          auto_generated?: boolean | null
+          booking_id?: string | null
+          category: string
+          created_at?: string | null
+          description?: string | null
+          due_date: string
+          id?: string
+          metadata?: Json | null
+          priority?: string
+          recurring?: boolean | null
+          recurring_interval?: string | null
+          snoozed_until?: string | null
+          status?: string
+          title: string
+          updated_at?: string | null
+        }
+        Update: {
+          auto_generated?: boolean | null
+          booking_id?: string | null
+          category?: string
+          created_at?: string | null
+          description?: string | null
+          due_date?: string
+          id?: string
+          metadata?: Json | null
+          priority?: string
+          recurring?: boolean | null
+          recurring_interval?: string | null
+          snoozed_until?: string | null
+          status?: string
+          title?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reminders_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {
