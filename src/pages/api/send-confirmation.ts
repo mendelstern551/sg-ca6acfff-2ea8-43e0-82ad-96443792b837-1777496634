@@ -1,5 +1,5 @@
-
 import type { NextApiRequest, NextApiResponse } from "next";
+import nodemailer from "nodemailer";
 
 export default async function handler(
   req: NextApiRequest,
@@ -27,16 +27,31 @@ export default async function handler(
     return res.status(400).json({ error: "Missing required fields" });
   }
 
-  const RESEND_API_KEY = process.env.RESEND_API_KEY;
+  const SMTP_HOST = process.env.SMTP_HOST;
+  const SMTP_PORT = process.env.SMTP_PORT;
+  const SMTP_USER = process.env.SMTP_AUTH_USER;
+  const SMTP_PASS = process.env.SMTP_AUTH_PASS;
+  const FROM_EMAIL = process.env.FORM_SEND_FROM;
 
-  if (!RESEND_API_KEY) {
-    console.error("RESEND_API_KEY is not configured");
+  if (!SMTP_HOST || !SMTP_PORT || !SMTP_USER || !SMTP_PASS || !FROM_EMAIL) {
+    console.error("SMTP configuration is incomplete");
     return res.status(500).json({
       error: "Email service not configured. Please contact support.",
     });
   }
 
   try {
+    // Create transporter
+    const transporter = nodemailer.createTransport({
+      host: SMTP_HOST,
+      port: parseInt(SMTP_PORT),
+      secure: false, // true for 465, false for other ports
+      auth: {
+        user: SMTP_USER,
+        pass: SMTP_PASS,
+      },
+    });
+
     const bookingTypeFormatted = bookingType.replace(/_/g, " ").toUpperCase();
     
     const emailHtml = `
@@ -134,31 +149,18 @@ export default async function handler(
 </html>
     `;
 
-    const response = await fetch("https://api.resend.com/emails", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${RESEND_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        from: "Trout Lake Resort <billing@troutlakeresort.ca>",
-        to: [to],
-        subject: `Booking Confirmed - ${bookingName} at Trout Lake Resort`,
-        html: emailHtml,
-      }),
+    // Send email
+    const info = await transporter.sendMail({
+      from: `"Trout Lake Resort" <${FROM_EMAIL}>`,
+      to: to,
+      subject: `Booking Confirmed - ${bookingName} at Trout Lake Resort`,
+      html: emailHtml,
     });
-
-    const data = await response.json();
-
-    if (!response.ok) {
-      console.error("Resend API error:", data);
-      throw new Error(data.message || "Failed to send email");
-    }
 
     return res.status(200).json({
       success: true,
       message: "Confirmation sent successfully",
-      emailId: data.id,
+      emailId: info.messageId,
     });
   } catch (error: any) {
     console.error("Error sending confirmation email:", error);
