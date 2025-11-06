@@ -26,6 +26,9 @@ import { format } from "date-fns";
 import { managerService } from "@/services/managerService";
 import type { ManagerCompensation } from "@/services/managerService";
 import { EmailHistory } from "@/components/EmailHistory";
+import { TaskSidebar } from "@/components/TaskSidebar";
+import { ReminderDialog } from "@/components/ReminderDialog";
+import { reminderService } from "@/services/reminderService";
 
 type InvoiceRow = Database["public"]["Tables"]["invoices"]["Row"];
 type ExpenseInsert = Database["public"]["Tables"]["expenses"]["Insert"];
@@ -48,6 +51,10 @@ export default function HomePage() {
   const [invoices, setInvoices] = useState<InvoiceRow[]>([]);
   const [selectedInvoiceBooking, setSelectedInvoiceBooking] = useState<Booking | undefined>();
   const [invoiceDialogOpen, setInvoiceDialogOpen] = useState(false);
+
+  const [reminderDialogOpen, setReminderDialogOpen] = useState(false);
+  const [reminderRefreshKey, setReminderRefreshKey] = useState(0);
+
   const { toast } = useToast();
 
   useEffect(() => {
@@ -183,6 +190,7 @@ export default function HomePage() {
       };
 
       let savedBookingId: string;
+      const isNewBooking = !editingBooking;
 
       if (editingBooking) {
         await bookingService.updateBooking(editingBooking.id, dataToSave as BookingUpdate);
@@ -209,6 +217,21 @@ export default function HomePage() {
         } catch (invoiceError) {
           console.error("Error creating invoice:", invoiceError);
           toast({ title: "Invoice Creation Failed", description: "Booking saved, but invoice creation failed.", variant: "destructive" });
+        }
+
+        try {
+          if (isNewBooking) {
+            await reminderService.generateBookingReminders(savedBookingId, {
+              eventName: bookingData.name,
+              contactName: bookingData.contact_name,
+              startDate: new Date(bookingData.start_date),
+              isPending: !bookingData.confirmed
+            });
+            toast({ title: "✓ Reminders Created", description: "Automatic task reminders have been set up.", variant: "default" });
+            setReminderRefreshKey(prev => prev + 1);
+          }
+        } catch (reminderError) {
+          console.error("Error creating reminders:", reminderError);
         }
       }
 
@@ -239,19 +262,22 @@ export default function HomePage() {
 
   const handleDeleteBooking = async (bookingId: string) => {
     try {
-      // First, delete any manager commission expenses associated with this booking
       const commissionExpenses = expenses.filter(
         exp => exp.booking_id === bookingId && 
         exp.category === "Manager Salary" && 
         exp.description?.includes("Manager Commission")
       );
 
-      // Delete all commission expenses for this booking
       await Promise.all(
         commissionExpenses.map(expense => expenseService.deleteExpense(expense.id))
       );
 
-      // Then delete the booking itself
+      try {
+        await reminderService.deleteBookingReminders(bookingId);
+      } catch (reminderError) {
+        console.error("Error deleting reminders:", reminderError);
+      }
+
       await bookingService.deleteBooking(bookingId);
       
       toast({ 
@@ -262,6 +288,7 @@ export default function HomePage() {
       });
       
       await loadAllData();
+      setReminderRefreshKey(prev => prev + 1);
     } catch (error) {
       console.error("Error deleting booking:", error);
       toast({ title: "Error", description: "Failed to delete booking.", variant: "destructive" });
@@ -422,6 +449,18 @@ export default function HomePage() {
           </TabsContent>
         </Tabs>
       </main>
+
+      <TaskSidebar 
+        onCreateReminder={() => setReminderDialogOpen(true)} 
+        refreshTrigger={reminderRefreshKey}
+      />
+
+      <ReminderDialog
+        open={reminderDialogOpen}
+        onOpenChange={setReminderDialogOpen}
+        onSuccess={() => setReminderRefreshKey(prev => prev + 1)}
+        bookings={bookings.map(b => ({ id: b.id, name: b.name, contact_name: b.contact_name }))}
+      />
 
       <BookingDialog open={bookingDialogOpen} onOpenChange={setBookingDialogOpen} onSave={handleSaveBooking} booking={editingBooking} bookings={bookings} />
       <ExpenseDialog open={expenseDialogOpen} onOpenChange={setExpenseDialogOpen} onSave={handleSaveExpense} expense={editingExpense} bookings={bookings} />
