@@ -1,5 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import nodemailer from "nodemailer";
+import { createClient } from "@supabase/supabase-js";
 
 export default async function handler(
   req: NextApiRequest,
@@ -21,6 +22,7 @@ export default async function handler(
     depositAmount,
     balanceDue,
     notes,
+    bookingId,
   } = req.body;
 
   if (!to || !clientName || !bookingName) {
@@ -181,6 +183,34 @@ export default async function handler(
 
     console.log("Email sent successfully:", info.messageId);
 
+    // ✅ LOG EMAIL TO DATABASE
+    try {
+      const supabase = createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+      );
+
+      await supabase.from("email_logs").insert({
+        booking_id: bookingId || null,
+        email_type: "confirmation",
+        recipient_email: to,
+        recipient_name: clientName,
+        subject: `Booking Confirmed - ${bookingName} at Trout Lake Resort`,
+        status: "sent",
+        metadata: {
+          booking_name: bookingName,
+          booking_type: bookingType,
+          total_cost: totalCost,
+          balance_due: balanceDue,
+          email_id: info.messageId
+        }
+      });
+
+      console.log("✅ Email logged to database");
+    } catch (logError) {
+      console.error("⚠️ Failed to log email to database:", logError);
+    }
+
     return res.status(200).json({
       success: true,
       message: "Confirmation sent successfully",
@@ -208,6 +238,31 @@ export default async function handler(
       errorMessage = "Email rejected. The 'from' address may need to be verified in SMTP.com.";
     }
     
+    // ✅ LOG FAILED EMAIL
+    try {
+      const supabase = createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+      );
+
+      await supabase.from("email_logs").insert({
+        booking_id: bookingId || null,
+        email_type: "confirmation",
+        recipient_email: to,
+        recipient_name: clientName,
+        subject: `Booking Confirmed - ${bookingName} at Trout Lake Resort`,
+        status: "failed",
+        error_message: errorMessage,
+        metadata: {
+          booking_name: bookingName,
+          booking_type: bookingType,
+          error_code: error.code
+        }
+      });
+    } catch (logError) {
+      console.error("⚠️ Failed to log failed email:", logError);
+    }
+
     return res.status(500).json({
       error: errorMessage,
       details: error.message,

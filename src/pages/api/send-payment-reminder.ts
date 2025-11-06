@@ -1,7 +1,7 @@
-
 import type { NextApiRequest, NextApiResponse } from "next";
 import nodemailer from "nodemailer";
 import { format } from "date-fns";
+import { createClient } from "@supabase/supabase-js";
 
 export default async function handler(
   req: NextApiRequest,
@@ -134,12 +134,63 @@ export default async function handler(
       html: emailHtml,
     });
 
+    // ✅ LOG EMAIL TO DATABASE
+    try {
+      const supabase = createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+      );
+
+      await supabase.from("email_logs").insert({
+        booking_id: booking.id || null,
+        email_type: "payment_reminder",
+        recipient_email: booking.contact_email,
+        recipient_name: booking.contact_name,
+        subject: emailSubject,
+        status: "sent",
+        metadata: {
+          reminder_type: reminderType,
+          balance_due: balanceDue,
+          event_date: booking.start_date
+        }
+      });
+
+      console.log("✅ Email logged to database");
+    } catch (logError) {
+      console.error("⚠️ Failed to log email to database:", logError);
+    }
+
     return res.status(200).json({
       success: true,
       message: "Payment reminder sent successfully",
     });
   } catch (error: any) {
     console.error("Error sending payment reminder:", error);
+    
+    // ✅ LOG FAILED EMAIL
+    try {
+      const supabase = createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+      );
+
+      await supabase.from("email_logs").insert({
+        booking_id: booking.id || null,
+        email_type: "payment_reminder",
+        recipient_email: booking.contact_email,
+        recipient_name: booking.contact_name,
+        subject: emailSubject || "Payment Reminder",
+        status: "failed",
+        error_message: error.message,
+        metadata: {
+          reminder_type: reminderType,
+          error_code: error.code
+        }
+      });
+    } catch (logError) {
+      console.error("⚠️ Failed to log failed email:", logError);
+    }
+
     return res.status(500).json({
       error: "Failed to send payment reminder",
       details: error.message,
