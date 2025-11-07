@@ -146,7 +146,10 @@ export const taskLogService = {
     }
   },
 
-  async getTaskTypesByBuilding(buildingId: string): Promise<TaskType[]> {
+  async getTaskTypesByBuilding(buildingId: string, retries = 0): Promise<TaskType[]> {
+    const maxRetries = 2;
+    const baseDelay = 500;
+
     try {
       // CRITICAL: Validate buildingId format (UUID) and non-empty
       if (!buildingId || buildingId.trim() === "") {
@@ -161,6 +164,24 @@ export const taskLogService = {
         return [];
       }
 
+      // Verify building exists in database first
+      const { data: buildingExists, error: checkError } = await supabase
+        .from("buildings")
+        .select("id")
+        .eq("id", buildingId)
+        .maybeSingle();
+
+      if (checkError) {
+        console.error("Error checking if building exists:", checkError);
+        return [];
+      }
+
+      if (!buildingExists) {
+        console.warn("Building ID does not exist in database:", buildingId);
+        return [];
+      }
+
+      // Now fetch task types
       const { data, error } = await supabase
         .from("task_types")
         .select("*")
@@ -168,15 +189,31 @@ export const taskLogService = {
         .order("name", { ascending: true });
 
       if (error) {
-        // Log the specific error but don't throw to prevent UI breaks
         console.error("Supabase error fetching task types:", error.message, "Building ID:", buildingId);
+        
+        // Retry with exponential backoff for network errors
+        if (retries < maxRetries && error.status !== 401 && error.status !== 403) {
+          const delay = baseDelay * Math.pow(2, retries);
+          console.log(`Retrying after ${delay}ms (attempt ${retries + 1}/${maxRetries})`);
+          await new Promise(resolve => setTimeout(resolve, delay));
+          return this.getTaskTypesByBuilding(buildingId, retries + 1);
+        }
+        
         return [];
       }
       
       return data || [];
     } catch (error) {
-      // Catch any unexpected errors and return empty array
       console.error("Unexpected error in getTaskTypesByBuilding:", error);
+      
+      // Retry for non-validation errors
+      if (retries < maxRetries) {
+        const delay = baseDelay * Math.pow(2, retries);
+        console.log(`Retrying after ${delay}ms (attempt ${retries + 1}/${maxRetries})`);
+        await new Promise(resolve => setTimeout(resolve, delay));
+        return this.getTaskTypesByBuilding(buildingId, retries + 1);
+      }
+      
       return [];
     }
   },

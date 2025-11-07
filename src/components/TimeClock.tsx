@@ -33,6 +33,7 @@ export function TimeClock({ employees, onRefresh }: TimeClockProps) {
   const [selectedBuilding, setSelectedBuilding] = useState<string>("");
   const [selectedTaskType, setSelectedTaskType] = useState<string>("");
   const [loading, setLoading] = useState(false);
+  const [loadingTasks, setLoadingTasks] = useState(false);
   const { toast } = useToast();
 
   // Clear any stale state on mount
@@ -64,35 +65,60 @@ export function TimeClock({ employees, onRefresh }: TimeClockProps) {
   }, [selectedEmployeeId]);
 
   useEffect(() => {
-    // CRITICAL: Only proceed if we have a valid building ID AND buildings are loaded
-    if (!selectedBuilding || selectedBuilding.trim() === "" || buildings.length === 0) {
-      // Clear task types when no valid building or buildings not loaded yet
-      setTaskTypes([]);
-      setSelectedTaskType("");
-      return;
-    }
-    
-    // Verify building exists in our current buildings list before fetching tasks
-    const buildingExists = buildings.some(b => b.id === selectedBuilding);
-    
-    if (buildingExists) {
-      loadTaskTypes(selectedBuilding);
-    } else {
-      // Building doesn't exist in current list - clear everything
-      console.warn("Selected building not found in current buildings list, clearing selection");
-      setSelectedBuilding("");
-      setSelectedTaskType("");
-      setTaskTypes([]);
+    // Debounce building change to prevent rapid queries
+    let timeoutId: NodeJS.Timeout;
+
+    const loadTasksIfValid = async () => {
+      // CRITICAL: Only proceed if we have a valid building ID AND buildings are loaded
+      if (!selectedBuilding || selectedBuilding.trim() === "" || buildings.length === 0) {
+        setTaskTypes([]);
+        setSelectedTaskType("");
+        return;
+      }
       
-      // Only show toast if user might have had something selected
-      if (selectedBuilding) {
+      // Verify building exists in our current buildings list before fetching tasks
+      const buildingExists = buildings.some(b => b.id === selectedBuilding);
+      
+      if (!buildingExists) {
+        // Building doesn't exist in current list - clear everything
+        console.warn("Selected building not found in current buildings list, clearing selection");
+        setSelectedBuilding("");
+        setSelectedTaskType("");
+        setTaskTypes([]);
+        
         toast({
           title: "Building Not Available",
           description: "The selected building is no longer available. Please select a different building.",
           variant: "destructive"
         });
+        return;
       }
-    }
+
+      // Now it's safe to load task types
+      setLoadingTasks(true);
+      try {
+        const data = await taskLogService.getTaskTypesByBuilding(selectedBuilding);
+        setTaskTypes(data);
+        
+        if (data.length === 0) {
+          console.warn("No task types found for building:", selectedBuilding);
+          toast({
+            title: "No Tasks Configured",
+            description: "This building has no task types set up yet.",
+          });
+        }
+      } catch (error) {
+        console.error("Error loading task types:", error);
+        setTaskTypes([]);
+      } finally {
+        setLoadingTasks(false);
+      }
+    };
+
+    // Debounce to prevent rapid successive queries
+    timeoutId = setTimeout(loadTasksIfValid, 300);
+    
+    return () => clearTimeout(timeoutId);
   }, [selectedBuilding, buildings]);
 
   useEffect(() => {
