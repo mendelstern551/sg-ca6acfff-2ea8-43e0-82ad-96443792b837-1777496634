@@ -1,66 +1,33 @@
-import type { NextApiRequest, NextApiResponse } from "next";
-import { supabase } from "@/integrations/supabase/client";
+import { createServerSupabaseClient } from "@supabase/auth-helpers-nextjs";
+import { NextApiRequest, NextApiResponse } from "next";
 
-interface ApiResponse {
-  data?: unknown;
-  error?: string;
-}
+export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+  if (req.method !== 'GET') {
+    return res.status(405).json({ error: 'Method Not Allowed' });
+  }
 
-const uuidRegex =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  const supabaseServerClient = createServerSupabaseClient({ req, res });
+  const { data: { session } } = await supabaseServerClient.auth.getSession();
 
-// Add a timeout guard to prevent hanging requests
-function withTimeout<T>(promise: Promise<T>, ms = 8000): Promise<T> {
-  return new Promise((resolve, reject) => {
-    const id = setTimeout(() => reject(new Error("Request timed out")), ms);
-    promise
-      .then((value) => {
-        clearTimeout(id);
-        resolve(value);
-      })
-      .catch((err) => {
-        clearTimeout(id);
-        reject(err);
-      });
-  });
-}
+  if (!session) {
+    return res.status(401).json({ error: "Not authorized" });
+  }
 
-export default async function handler(
-  req: NextApiRequest,
-  res: NextApiResponse<ApiResponse>
-) {
   try {
-    if (req.method !== "GET") {
-      res.setHeader("Allow", "GET");
-      return res.status(405).json({ error: "Method Not Allowed" });
-    }
-
-    const buildingId = String(req.query.buildingId || "").trim();
-    if (!buildingId || !uuidRegex.test(buildingId)) {
-      return res.status(400).json({ error: "Invalid or missing buildingId" });
-    }
-
-    // Single round-trip to Supabase with timeout guard
-    const { data, error } = await supabase
+    // This route now fetches ALL task types, as they are global.
+    const { data, error } = await supabaseServerClient
       .from("task_types")
-      .select("*")
-      .eq("building_id", buildingId)
+      .select("id, name")
       .order("name", { ascending: true });
 
     if (error) {
-      return res.status(502).json({ error: `Supabase error: ${error.message}` });
+      console.error("API error fetching task types:", error.message);
+      return res.status(500).json({ error: "Database query failed", details: error.message });
     }
 
-    res.setHeader(
-      "Cache-Control",
-      "public, s-maxage=30, stale-while-revalidate=120"
-    );
-    return res.status(200).json({ data: (data as unknown) ?? [] });
-  } catch (e) {
-    const message = e instanceof Error ? e.message : String(e);
-    if (message.includes("timed out")) {
-      return res.status(504).json({ error: "Upstream timeout when fetching task types" });
-    }
-    return res.status(500).json({ error: `Unexpected error: ${message}` });
+    return res.status(200).json({ data: data || [] });
+  } catch (error: any) {
+    console.error("Unexpected error in /api/task-types:", error);
+    return res.status(500).json({ error: "Internal Server Error", details: error.message });
   }
 }

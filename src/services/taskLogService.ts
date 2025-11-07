@@ -16,16 +16,18 @@ export interface TaskLogWithDetails extends Omit<TaskLog, "duration_minutes"> {
 
 export const taskLogService = {
   async getTaskTypes(): Promise<{ id: string; name: string }[]> {
-    const { data, error } = await supabase
-      .from("task_types")
-      .select("id, name")
-      .order("name", { ascending: true });
-
-    if (error) {
-      console.error("Error fetching task types:", error);
-      throw error;
+    try {
+      const resp = await fetch("/api/task-types");
+      if (!resp.ok) {
+        console.error("Failed to fetch task types from API route:", resp.statusText);
+        return [];
+      }
+      const json = await resp.json();
+      return json.data || [];
+    } catch (error) {
+      console.error("Error fetching task types via service:", error);
+      return [];
     }
-    return data || [];
   },
 
   async startTask(taskData: Omit<TaskLogInsert, "started_at">): Promise<TaskLog> {
@@ -187,72 +189,6 @@ export const taskLogService = {
     }
   },
 
-  async getTaskTypesByBuilding(buildingId: string, retries = 0): Promise<TaskType[]> {
-    const maxRetries = 3;
-    const baseDelay = 400;
-
-    try {
-      if (!buildingId || buildingId.trim() === "") {
-        console.warn("Empty building ID provided to getTaskTypesByBuilding");
-        return [];
-      }
-
-      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-      if (!uuidRegex.test(buildingId)) {
-        console.warn("Invalid UUID format for building ID:", buildingId);
-        return [];
-      }
-
-      const url = `/api/task-types?buildingId=${encodeURIComponent(buildingId)}`;
-      try {
-        const resp = await fetch(url, {
-          method: "GET",
-          headers: { Accept: "application/json" },
-        });
-
-        if (resp.ok) {
-          const json = await resp.json();
-          const arr = Array.isArray(json?.data) ? (json.data as TaskType[]) : [];
-          return arr;
-        }
-
-        // For 400/404, don't retry; these indicate invalid/missing building or not found
-        if (resp.status === 400 || resp.status === 404) {
-          console.warn("API responded with", resp.status, "for buildingId:", buildingId);
-          return [];
-        }
-
-        // Retry transient server-side errors (5xx or other non-OK apart from 400/404)
-        if (retries < maxRetries) {
-          const delay = baseDelay * Math.pow(2, retries);
-          console.log(`Retrying /api/task-types after ${delay}ms (attempt ${retries + 1}/${maxRetries})`);
-          await new Promise((resolve) => setTimeout(resolve, delay));
-          return this.getTaskTypesByBuilding(buildingId, retries + 1);
-        }
-
-        console.error("API /api/task-types returned non-OK status and retries exhausted:", resp.status);
-        return [];
-      } catch (apiErr) {
-        // Network-level error hitting the API route
-        console.warn("API proxy fetch failed:", apiErr);
-        if (retries < maxRetries) {
-          const delay = baseDelay * Math.pow(2, retries);
-          console.log(`Retrying /api/task-types after ${delay}ms due to network error (attempt ${retries + 1}/${maxRetries})`);
-          await new Promise((resolve) => setTimeout(resolve, delay));
-          return this.getTaskTypesByBuilding(buildingId, retries + 1);
-        }
-        return [];
-      }
-    } catch (error) {
-      console.error("Unexpected error in getTaskTypesByBuilding:", {
-        error: error instanceof Error ? error.message : String(error),
-        buildingId,
-        timestamp: new Date().toISOString(),
-      });
-      return [];
-    }
-  },
-
   async createBuilding(name: string, address?: string, description?: string): Promise<Building> {
     try {
       const { data, error } = await supabase
@@ -278,7 +214,7 @@ export const taskLogService = {
       const { data, error } = await supabase
         .from("task_types")
         .insert({
-          building_id: buildingId,
+          // building_id is no longer used, tasks are global
           name,
           description
         })
