@@ -168,7 +168,7 @@ export const managerService = {
     employeeId: string,
     year: number
   ): Promise<{ month: string; total_salary: number }[]> {
-    const { data, error } = await supabase.rpc("get_monthly_manager_salary", {
+    const { data, error } = await supabase.rpc("get_monthly_manager_salary" as never, {
       p_employee_id: employeeId,
       p_year: year,
     });

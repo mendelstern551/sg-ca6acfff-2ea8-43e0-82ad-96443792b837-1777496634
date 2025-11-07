@@ -40,6 +40,7 @@ export type Database = {
           number_of_rooms: number | null
           payment_status: string | null
           per_person_rate: number | null
+          recurring: Json | null
           start_date: string
           status: string | null
           total_cost: number | null
@@ -70,6 +71,7 @@ export type Database = {
           number_of_rooms?: number | null
           payment_status?: string | null
           per_person_rate?: number | null
+          recurring?: Json | null
           start_date: string
           status?: string | null
           total_cost?: number | null
@@ -100,6 +102,7 @@ export type Database = {
           number_of_rooms?: number | null
           payment_status?: string | null
           per_person_rate?: number | null
+          recurring?: Json | null
           start_date?: string
           status?: string | null
           total_cost?: number | null
@@ -737,6 +740,7 @@ export type Database = {
           metadata: Json | null
           priority: string | null
           recurring: Json | null
+          recurring_interval: string | null
           snoozed_until: string | null
           status: string
           title: string
@@ -754,6 +758,7 @@ export type Database = {
           metadata?: Json | null
           priority?: string | null
           recurring?: Json | null
+          recurring_interval?: string | null
           snoozed_until?: string | null
           status?: string
           title: string
@@ -771,6 +776,7 @@ export type Database = {
           metadata?: Json | null
           priority?: string | null
           recurring?: Json | null
+          recurring_interval?: string | null
           snoozed_until?: string | null
           status?: string
           title?: string

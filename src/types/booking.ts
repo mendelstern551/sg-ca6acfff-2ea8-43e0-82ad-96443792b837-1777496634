@@ -11,7 +11,7 @@ export type Payment = Omit<Database["public"]["Tables"]["payments"]["Row"], "not
 
 // Application-level enums/types
 export type BookingType = "yom_tov" | "shabaton" | "night_event";
-export type PaymentStatus = "pending" | "deposit_paid" | "partial" | "paid" | "refunded" | "cancelled";
+export type PaymentStatus = "paid" | "partial" | "pending" | "overdue";
 export type PaymentMethod = "cash" | "check" | "credit_card" | "bank_transfer" | "venmo" | "zelle" | "other" | "pending";
 
 export interface ManagerPayment {

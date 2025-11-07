@@ -19,7 +19,7 @@ import { useToast } from "@/hooks/use-toast";
 import { conflictDetectionService } from "@/services/conflictDetectionService";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
-type BookingInsert = Omit<Booking, "id" | "created_at" | "updated_at" | "payments" | "recurring">;
+type BookingInsert = Omit<Booking, "id" | "created_at" | "updated_at" | "payments">;
 
 interface BookingDialogProps {
   open: boolean;
