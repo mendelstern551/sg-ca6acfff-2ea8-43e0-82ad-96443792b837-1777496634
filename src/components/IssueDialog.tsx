@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import {
   Dialog,
@@ -67,8 +66,9 @@ export function IssueDialog({
         description,
         task_log_id: taskLogId,
         room_id: roomId,
-        reported_by_employee_id: employeeId,
+        reported_by_id: employeeId,
         status: 'new',
+        title: description.substring(0, 50),
       });
       toast({
         title: "✅ Issue Reported",

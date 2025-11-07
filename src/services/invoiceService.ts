@@ -87,6 +87,7 @@ export const invoiceService = {
     const invoiceData: InvoiceInsert = {
       booking_id: bookingId,
       invoice_number: invoiceNumber,
+      amount: bookingData.totalAmount,
       client_name: bookingData.clientName,
       client_email: bookingData.clientEmail,
       client_phone: bookingData.clientPhone,

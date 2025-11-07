@@ -30,7 +30,8 @@ export const emailTrackingService = {
         status: data.status || "sent",
         error_message: data.errorMessage || null,
         metadata: data.metadata || null,
-        sent_at: new Date().toISOString()
+        sent_at: new Date().toISOString(),
+        sent_to: data.recipientEmail,
       };
 
       const { data: result, error } = await supabase
