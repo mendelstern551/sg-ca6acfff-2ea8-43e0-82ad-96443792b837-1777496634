@@ -8,10 +8,10 @@ type TaskLogInsert = Database["public"]["Tables"]["task_logs"]["Insert"];
 type Building = Database["public"]["Tables"]["buildings"]["Row"];
 type TaskType = Database["public"]["Tables"]["task_types"]["Row"];
 
-export interface TaskLogWithDetails extends TaskLog {
+export interface TaskLogWithDetails extends Omit<TaskLog, "duration_minutes"> {
   building?: Building;
   task_type?: TaskType;
-  duration_minutes?: number;
+  duration_minutes?: number | null;
 }
 
 export const taskLogService = {
