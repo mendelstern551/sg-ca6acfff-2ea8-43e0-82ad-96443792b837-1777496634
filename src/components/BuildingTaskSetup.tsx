@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -24,6 +23,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { sampleDataService } from "@/services/sampleDataService";
 
 type Building = Database["public"]["Tables"]["buildings"]["Row"];
 type TaskType = Database["public"]["Tables"]["task_types"]["Row"];
@@ -36,6 +36,7 @@ export function BuildingTaskSetup() {
   const [newBuilding, setNewBuilding] = useState({ name: "", address: "", description: "" });
   const [newTask, setNewTask] = useState({ buildingId: "", name: "", description: "" });
   const [loading, setLoading] = useState(false);
+  const [creatingSample, setCreatingSample] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -137,12 +138,57 @@ export function BuildingTaskSetup() {
     }
   };
 
+  const handleCreateSampleData = async () => {
+    setCreatingSample(true);
+    try {
+      await sampleDataService.createSampleData();
+      toast({
+        title: "Sample Data Created",
+        description: "Buildings and task types have been set up for you"
+      });
+      await loadData();
+    } catch (error) {
+      console.error("Error creating sample data:", error);
+      toast({
+        title: "Error",
+        description: "Failed to create sample data",
+        variant: "destructive"
+      });
+    } finally {
+      setCreatingSample(false);
+    }
+  };
+
   const getTasksByBuilding = (buildingId: string) => {
     return taskTypes.filter(t => t.building_id === buildingId);
   };
 
   return (
     <div className="space-y-6">
+      {buildings.length === 0 && (
+        <Card className="bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800">
+          <CardContent className="pt-6">
+            <div className="text-center space-y-4">
+              <div>
+                <h3 className="text-lg font-semibold text-blue-900 dark:text-blue-100 mb-2">
+                  Quick Setup Available
+                </h3>
+                <p className="text-sm text-blue-700 dark:text-blue-300">
+                  Get started quickly with sample buildings and task types, or create your own from scratch
+                </p>
+              </div>
+              <Button
+                onClick={handleCreateSampleData}
+                disabled={creatingSample}
+                className="bg-blue-600 hover:bg-blue-700"
+              >
+                {creatingSample ? "Creating..." : "Create Sample Data"}
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       <div className="grid gap-6 md:grid-cols-2">
         <Card>
           <CardHeader>

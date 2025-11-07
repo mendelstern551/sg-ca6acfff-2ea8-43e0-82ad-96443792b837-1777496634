@@ -128,6 +128,8 @@ export default function TimeTrackingPage() {
     );
   }
 
+  const showEmptyState = employees.length === 0;
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-amber-50 via-rose-50 to-blue-50 dark:from-stone-950 dark:via-slate-900 dark:to-indigo-950">
       <header className="border-b border-stone-200 dark:border-stone-800 bg-white/95 dark:bg-stone-900/95 backdrop-blur-sm sticky top-0 z-50 shadow-sm">
@@ -149,6 +151,40 @@ export default function TimeTrackingPage() {
       </header>
 
       <main className="container mx-auto px-4 py-8">
+        {showEmptyState && (
+          <Card className="mb-8 bg-gradient-to-r from-orange-50 to-amber-50 dark:from-orange-900/20 dark:to-amber-900/20 border-orange-200 dark:border-orange-800">
+            <CardContent className="pt-6">
+              <div className="flex items-start gap-4">
+                <div className="p-3 bg-orange-100 dark:bg-orange-900/30 rounded-lg">
+                  <Users className="h-6 w-6 text-orange-600 dark:text-orange-400" />
+                </div>
+                <div className="flex-1">
+                  <h3 className="text-lg font-semibold text-orange-900 dark:text-orange-100 mb-2">
+                    Welcome to Time Tracking!
+                  </h3>
+                  <p className="text-sm text-orange-700 dark:text-orange-300 mb-4">
+                    Get started by adding your first employee, then set up buildings and task types for comprehensive tracking.
+                  </p>
+                  <div className="space-y-2 text-sm text-orange-600 dark:text-orange-400">
+                    <p className="flex items-center gap-2">
+                      <span className="w-6 h-6 rounded-full bg-orange-100 dark:bg-orange-900/50 flex items-center justify-center text-xs font-bold">1</span>
+                      Add employees with photos and hourly rates
+                    </p>
+                    <p className="flex items-center gap-2">
+                      <span className="w-6 h-6 rounded-full bg-orange-100 dark:bg-orange-900/50 flex items-center justify-center text-xs font-bold">2</span>
+                      Set up buildings and task types for detailed tracking
+                    </p>
+                    <p className="flex items-center gap-2">
+                      <span className="w-6 h-6 rounded-full bg-orange-100 dark:bg-orange-900/50 flex items-center justify-center text-xs font-bold">3</span>
+                      Employees can clock in/out and track their daily tasks
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         <div className="grid gap-6 md:grid-cols-3 mb-8">
           <Card className="bg-white dark:bg-stone-900 border-stone-200 dark:border-stone-800 hover:shadow-lg transition-all">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
