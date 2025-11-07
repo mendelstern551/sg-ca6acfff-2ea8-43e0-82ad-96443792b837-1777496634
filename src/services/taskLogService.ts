@@ -1,5 +1,3 @@
-
-import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
 import { differenceInMinutes } from "date-fns";
 
@@ -131,103 +129,109 @@ export const taskLogService = {
     }
   },
 
-  async getAllBuildings(): Promise<Building[]> {
+  async getAllBuildings(retries = 0): Promise<Building[]> {
+    const maxRetries = 3;
+    const baseDelay = 400;
     try {
-      const { data, error } = await supabase
-        .from("buildings")
-        .select("*")
-        .order("name", { ascending: true });
+      const resp = await fetch("/api/buildings", {
+        method: "GET",
+        headers: { Accept: "application/json" },
+      });
 
-      if (error) throw error;
-      return data || [];
-    } catch (error) {
-      console.error("Error fetching buildings:", error);
+      if (resp.ok) {
+        const json = await resp.json();
+        const arr = Array.isArray(json?.data) ? (json.data as Building[]) : [];
+        return arr;
+      }
+
+      if (resp.status === 400 || resp.status === 404) {
+        console.warn("API responded with", resp.status, "for buildings list");
+        return [];
+      }
+
+      if (retries < maxRetries) {
+        const delay = baseDelay * Math.pow(2, retries);
+        console.log(`Retrying /api/buildings after ${delay}ms (attempt ${retries + 1}/${maxRetries})`);
+        await new Promise((resolve) => setTimeout(resolve, delay));
+        return this.getAllBuildings(retries + 1);
+      }
+
+      console.error("API /api/buildings returned non-OK status and retries exhausted:", resp.status);
+      return [];
+    } catch (apiErr) {
+      console.warn("API /api/buildings fetch failed:", apiErr);
+      if (retries < maxRetries) {
+        const delay = baseDelay * Math.pow(2, retries);
+        console.log(`Retrying /api/buildings after ${delay}ms due to network error (attempt ${retries + 1}/${maxRetries})`);
+        await new Promise((resolve) => setTimeout(resolve, delay));
+        return this.getAllBuildings(retries + 1);
+      }
       return [];
     }
   },
 
   async getTaskTypesByBuilding(buildingId: string, retries = 0): Promise<TaskType[]> {
-    const maxRetries = 2;
-    const baseDelay = 500;
+    const maxRetries = 3;
+    const baseDelay = 400;
 
     try {
-      // CRITICAL: Validate buildingId format (UUID) and non-empty
       if (!buildingId || buildingId.trim() === "") {
         console.warn("Empty building ID provided to getTaskTypesByBuilding");
         return [];
       }
 
-      // Basic UUID format validation to catch obviously invalid IDs early
       const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
       if (!uuidRegex.test(buildingId)) {
         console.warn("Invalid UUID format for building ID:", buildingId);
         return [];
       }
 
-      // Verify building exists in database first
-      const { data: buildingExists, error: checkError } = await supabase
-        .from("buildings")
-        .select("id")
-        .eq("id", buildingId)
-        .maybeSingle();
-
-      if (checkError) {
-        console.error("Error checking if building exists:", checkError.message);
-        return [];
-      }
-
-      if (!buildingExists) {
-        console.warn("Building ID does not exist in database:", buildingId);
-        return [];
-      }
-
-      // Now fetch task types
-      const { data, error } = await supabase
-        .from("task_types")
-        .select("*")
-        .eq("building_id", buildingId)
-        .order("name", { ascending: true });
-
-      if (error) {
-        console.error("Supabase error fetching task types:", {
-          message: error.message,
-          buildingId,
-          timestamp: new Date().toISOString()
+      const url = `/api/task-types?buildingId=${encodeURIComponent(buildingId)}`;
+      try {
+        const resp = await fetch(url, {
+          method: "GET",
+          headers: { Accept: "application/json" },
         });
-        
-        // Check if it's a network error vs API error
-        const isNetworkError = error.message?.includes("fetch") || error.message?.includes("network");
-        const isAuthError = error.message?.includes("401") || error.message?.includes("403") || error.message?.includes("Unauthorized") || error.message?.includes("Forbidden");
-        
-        // Retry only on network errors, not auth/permission errors
-        if (retries < maxRetries && (isNetworkError || !isAuthError)) {
+
+        if (resp.ok) {
+          const json = await resp.json();
+          const arr = Array.isArray(json?.data) ? (json.data as TaskType[]) : [];
+          return arr;
+        }
+
+        // For 400/404, don't retry; these indicate invalid/missing building or not found
+        if (resp.status === 400 || resp.status === 404) {
+          console.warn("API responded with", resp.status, "for buildingId:", buildingId);
+          return [];
+        }
+
+        // Retry transient server-side errors (5xx or other non-OK apart from 400/404)
+        if (retries < maxRetries) {
           const delay = baseDelay * Math.pow(2, retries);
-          console.log(`Retrying after ${delay}ms (attempt ${retries + 1}/${maxRetries}), error type: ${isNetworkError ? 'network' : 'other'}`);
-          await new Promise(resolve => setTimeout(resolve, delay));
+          console.log(`Retrying /api/task-types after ${delay}ms (attempt ${retries + 1}/${maxRetries})`);
+          await new Promise((resolve) => setTimeout(resolve, delay));
           return this.getTaskTypesByBuilding(buildingId, retries + 1);
         }
-        
-        console.error("Max retries reached or non-retryable error, returning empty array");
+
+        console.error("API /api/task-types returned non-OK status and retries exhausted:", resp.status);
+        return [];
+      } catch (apiErr) {
+        // Network-level error hitting the API route
+        console.warn("API proxy fetch failed:", apiErr);
+        if (retries < maxRetries) {
+          const delay = baseDelay * Math.pow(2, retries);
+          console.log(`Retrying /api/task-types after ${delay}ms due to network error (attempt ${retries + 1}/${maxRetries})`);
+          await new Promise((resolve) => setTimeout(resolve, delay));
+          return this.getTaskTypesByBuilding(buildingId, retries + 1);
+        }
         return [];
       }
-      
-      return data || [];
     } catch (error) {
       console.error("Unexpected error in getTaskTypesByBuilding:", {
         error: error instanceof Error ? error.message : String(error),
         buildingId,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
       });
-      
-      // Retry for network errors
-      if (retries < maxRetries) {
-        const delay = baseDelay * Math.pow(2, retries);
-        console.log(`Retrying after ${delay}ms due to exception (attempt ${retries + 1}/${maxRetries})`);
-        await new Promise(resolve => setTimeout(resolve, delay));
-        return this.getTaskTypesByBuilding(buildingId, retries + 1);
-      }
-      
-      console.error("Max retries exceeded for getTaskTypesByBuilding");
       return [];
     }
   },
