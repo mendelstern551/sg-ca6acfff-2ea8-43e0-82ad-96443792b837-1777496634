@@ -17,6 +17,7 @@ import Link from "next/link";
 import { BuildingTaskSetup } from "@/components/BuildingTaskSetup";
 import { ActivityDashboard } from "@/components/ActivityDashboard";
 import { TimeReports } from "@/components/TimeReports";
+import { BuildingMaps } from "@/components/BuildingMaps";
 
 type Employee = Database["public"]["Tables"]["employees"]["Row"];
 type TimeEntry = Database["public"]["Tables"]["time_entries"]["Row"];
@@ -229,10 +230,11 @@ export default function TimeTrackingPage() {
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4 lg:w-[600px] bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 p-1">
+          <TabsList className="grid w-full grid-cols-5 lg:w-[760px] bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 p-1">
             <TabsTrigger value="clock">Time Clock</TabsTrigger>
             <TabsTrigger value="employees">Employees</TabsTrigger>
             <TabsTrigger value="activity">Activity</TabsTrigger>
+            <TabsTrigger value="maps">Maps</TabsTrigger>
             <TabsTrigger value="reports">Reports</TabsTrigger>
           </TabsList>
 
@@ -290,6 +292,10 @@ export default function TimeTrackingPage() {
                 <ActivityDashboard employees={activeEmployees} refreshTrigger={refreshKey} />
               </CardContent>
             </Card>
+          </TabsContent>
+
+          <TabsContent value="maps" className="space-y-4">
+            <BuildingMaps />
           </TabsContent>
 
           <TabsContent value="reports" className="space-y-4">

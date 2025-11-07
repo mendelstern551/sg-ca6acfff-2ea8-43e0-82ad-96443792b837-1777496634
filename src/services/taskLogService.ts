@@ -16,6 +16,35 @@ export interface TaskLogWithDetails extends Omit<TaskLog, "duration_minutes"> {
 
 export const taskLogService = {
   async getTaskTypes(): Promise<{ id: string; name: string }[]> {
+    const maxRetries = 3;
+    const baseDelay = 300;
+
+    for (let attempt = 0; attempt < maxRetries; attempt++) {
+      try {
+        const resp = await fetch("/api/task-types", {
+          method: "GET",
+          headers: { Accept: "application/json" }
+        });
+
+        if (resp.ok) {
+          const ct = resp.headers.get("content-type") || "";
+          if (ct.includes("application/json")) {
+            const json = await resp.json() as { data?: { id: string; name: string }[] };
+            return Array.isArray(json?.data) ? json.data : [];
+          } else {
+            const text = await resp.text();
+            console.warn("[task types] Non-JSON response, skipping parse. Status:", resp.status, "Snippet:", text.slice(0, 120));
+          }
+        } else {
+          console.warn("[task types] API returned non-OK:", resp.status);
+        }
+      } catch (err) {
+        console.warn("[task types] API request failed:", err);
+      }
+      const delay = baseDelay * Math.pow(2, attempt);
+      await new Promise((resolve) => setTimeout(resolve, delay));
+    }
+
     try {
       const { data, error } = await supabase
         .from("task_types")
@@ -24,28 +53,13 @@ export const taskLogService = {
 
       if (error) throw error;
       return data || [];
-    } catch (primaryError) {
-      console.warn("Supabase task_types fetch failed, falling back to /api/task-types", primaryError);
-      try {
-        const resp = await fetch("/api/task-types", {
-          method: "GET",
-          headers: { Accept: "application/json" }
-        });
-        if (!resp.ok) {
-          console.error("Fallback /api/task-types HTTP error:", resp.status);
-          return [];
-        }
-        const json = await resp.json() as { data?: { id: string; name: string }[] };
-        return Array.isArray(json?.data) ? json.data : [];
-      } catch (fallbackError) {
-        console.error("Fallback /api/task-types failed:", fallbackError);
-        return [];
-      }
+    } catch (sdkErr) {
+      console.error("[task types] Supabase fallback failed:", sdkErr);
+      return [];
     }
   },
 
   async startTask(taskData: Omit<TaskLogInsert, "started_at">): Promise<TaskLog> {
-    // Ensure no other task is active for this employee
     const { data: activeTask, error: activeTaskError } = await supabase
       .from("task_logs")
       .select("id")
@@ -56,7 +70,7 @@ export const taskLogService = {
     if (activeTask) {
       throw new Error("An active task is already running. Please complete it before starting a new one.");
     }
-    if (activeTaskError && activeTaskError.code !== 'PGRST116') { // Ignore "not found" error
+    if (activeTaskError && activeTaskError.code !== 'PGRST116') {
         throw activeTaskError;
     }
 
@@ -172,30 +186,34 @@ export const taskLogService = {
       });
 
       if (resp.ok) {
-        const json = await resp.json();
-        const arr = Array.isArray(json?.data) ? (json.data as Building[]) : [];
-        return arr;
+        const ct = resp.headers.get("content-type") || "";
+        if (ct.includes("application/json")) {
+          const json = await resp.json();
+          const arr = Array.isArray(json?.data) ? (json.data as Building[]) : [];
+          return arr;
+        } else {
+          const text = await resp.text();
+          console.warn("[buildings] Non-JSON response, skipping parse. Status:", resp.status, "Snippet:", text.slice(0, 120));
+        }
+      } else {
+        console.warn("[buildings] API returned non-OK:", resp.status);
       }
 
       if (resp.status === 400 || resp.status === 404) {
-        console.warn("API responded with", resp.status, "for buildings list");
         return [];
       }
 
       if (retries < maxRetries) {
         const delay = baseDelay * Math.pow(2, retries);
-        console.log(`Retrying /api/buildings after ${delay}ms (attempt ${retries + 1}/${maxRetries})`);
         await new Promise((resolve) => setTimeout(resolve, delay));
         return this.getAllBuildings(retries + 1);
       }
 
-      console.error("API /api/buildings returned non-OK status and retries exhausted:", resp.status);
       return [];
     } catch (apiErr) {
       console.warn("API /api/buildings fetch failed:", apiErr);
       if (retries < maxRetries) {
         const delay = baseDelay * Math.pow(2, retries);
-        console.log(`Retrying /api/buildings after ${delay}ms due to network error (attempt ${retries + 1}/${maxRetries})`);
         await new Promise((resolve) => setTimeout(resolve, delay));
         return this.getAllBuildings(retries + 1);
       }
@@ -211,7 +229,7 @@ export const taskLogService = {
         .select()
         .single();
 
-      if (error) throw error;
+    if (error) throw error;
       return data;
     } catch (error) {
       console.error("Error creating building:", error);
