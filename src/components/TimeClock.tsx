@@ -43,25 +43,44 @@ export function TimeClock({ employees, onRefresh }: TimeClockProps) {
     if (selectedEmployeeId) {
       loadEmployeeStatus();
     } else {
-      // Reset state when no employee is selected
+      // Reset ALL state when no employee is selected
       setActiveTimeEntry(null);
       setActiveBreak(null);
       setActiveTask(null);
       setElapsedTime(0);
       setBreakTime(0);
+      setSelectedBuilding("");
+      setSelectedTaskType("");
+      setTaskTypes([]);
     }
   }, [selectedEmployeeId]);
 
   useEffect(() => {
-    // Only load task types if a valid building is selected
+    // Only load task types if we have both a valid building AND it exists in our buildings list
     if (selectedBuilding && selectedBuilding.trim() !== "") {
-      loadTaskTypes(selectedBuilding);
+      // Verify building exists before attempting to load tasks
+      const buildingExists = buildings.some(b => b.id === selectedBuilding);
+      
+      if (buildingExists) {
+        loadTaskTypes(selectedBuilding);
+      } else {
+        // Building doesn't exist - clear the selection
+        console.warn("Selected building no longer exists, clearing selection");
+        setSelectedBuilding("");
+        setSelectedTaskType("");
+        setTaskTypes([]);
+        toast({
+          title: "Building Not Found",
+          description: "The selected building no longer exists. Please select a different building.",
+          variant: "destructive"
+        });
+      }
     } else {
       // Clear task types when no building is selected
       setTaskTypes([]);
       setSelectedTaskType("");
     }
-  }, [selectedBuilding]);
+  }, [selectedBuilding, buildings]); // Add buildings as dependency
 
   useEffect(() => {
     let interval: NodeJS.Timeout;
@@ -89,6 +108,13 @@ export function TimeClock({ employees, onRefresh }: TimeClockProps) {
     try {
       const data = await taskLogService.getAllBuildings();
       setBuildings(data);
+      
+      // If we have a selected building that no longer exists, clear it
+      if (selectedBuilding && !data.some(b => b.id === selectedBuilding)) {
+        setSelectedBuilding("");
+        setSelectedTaskType("");
+        setTaskTypes([]);
+      }
     } catch (error) {
       console.error("Error loading buildings:", error);
       toast({
