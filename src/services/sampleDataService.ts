@@ -1,4 +1,3 @@
-
 import { taskLogService } from "./taskLogService";
 
 export const sampleDataService = {
@@ -30,17 +29,11 @@ export const sampleDataService = {
         { name: "Table Setup", description: "Set up dining tables for meals" }
       ];
 
-      await Promise.all([
-        ...taskTypes.map(task => 
-          taskLogService.createTaskType(mainLodge.id, task.name, task.description)
-        ),
-        ...taskTypes.slice(0, 4).map(task => 
-          taskLogService.createTaskType(cabin1.id, task.name, task.description)
-        ),
-        ...taskTypes.slice(0, 4).map(task => 
-          taskLogService.createTaskType(cabin2.id, task.name, task.description)
+      await Promise.all(
+        taskTypes.map(task =>
+          taskLogService.createTaskType(task.name, task.description)
         )
-      ]);
+      );
 
       return { success: true, message: "Sample data created successfully" };
     } catch (error) {
