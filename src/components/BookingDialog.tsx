@@ -72,7 +72,7 @@ export function BookingDialog({ open, onOpenChange, onSave, booking: editingBook
       setAdditionalCleaningFee(editingBooking.additional_cleaning_fee);
       setTotalCost(editingBooking.total_cost);
       setDepositAmount(editingBooking.deposit_amount);
-      setConfirmed(!!editingBooking.confirmed);
+      setConfirmed(Boolean(editingBooking.confirmed));
       setCustomPrice(editingBooking.custom_price ? Number(editingBooking.custom_price) : null);
       setDiscountPercent(editingBooking.discount_percent ? Number(editingBooking.discount_percent) : null);
       setNotes(editingBooking.notes || "");

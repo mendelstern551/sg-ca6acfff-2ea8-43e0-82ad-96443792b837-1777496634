@@ -1,5 +1,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
+import { calculateTotalHours, TimeEntryWithDuration } from "./timeTrackingService";
+import { differenceInMinutes } from "date-fns";
 
 type ManagerCompensationRow = Database["public"]["Tables"]["manager_compensation"]["Row"];
 type ManagerCompensationInsert = Database["public"]["Tables"]["manager_compensation"]["Insert"];
@@ -13,6 +15,19 @@ export interface ManagerCompensation extends ManagerCompensationRow {
 }
 
 export type ManagerPayment = ManagerPaymentRow;
+
+type TimeEntry = Database["public"]["Tables"]["time_entries"]["Row"];
+
+interface EmployeeWithStats {
+  id: string;
+  full_name: string | null;
+  email: string | null;
+  phone_number: string | null;
+  job_title: string | null;
+  pay_rate: number | null;
+  total_hours: number;
+  total_earnings: number;
+}
 
 export const managerService = {
   async getAllCompensation(): Promise<ManagerCompensation[]> {
@@ -97,5 +112,68 @@ export const managerService = {
 
     if (error) throw error;
     return (data as ManagerCompensation[]) || [];
-  }
+  },
+
+  async getEmployeeHoursAndPay(
+    startDate: Date,
+    endDate: Date
+  ): Promise<EmployeeWithStats[]> {
+    const { data: employees, error: employeesError } = await supabase
+      .from("employees")
+      .select("id, full_name, email, phone_number, job_title, pay_rate");
+
+    if (employeesError) {
+      console.error("Error fetching employees:", employeesError);
+      return [];
+    }
+
+    try {
+      const { data: timeEntries, error: timeEntriesError } = await supabase
+        .from("time_entries")
+        .select("*")
+        .in("employee_id", employees.map((e) => e.id));
+
+      if (timeEntriesError) {
+        console.error("Error fetching time entries:", timeEntriesError);
+        return [];
+      }
+
+      const employeeStats = employees.map((employee) => {
+        const employeeTimeEntries = (timeEntries || []).filter(
+          (entry) => entry.employee_id === employee.id && entry.clock_out
+        ).map(e => ({ ...e, duration_minutes: differenceInMinutes(new Date(e.clock_out!), new Date(e.clock_in)) }));
+        
+        const { totalHours } = calculateTotalHours(employeeTimeEntries);
+        const payRate = employee.pay_rate || 0;
+        const totalEarnings = totalHours * payRate;
+
+        return {
+          ...employee,
+          total_hours: totalHours,
+          total_earnings: totalEarnings,
+        };
+      });
+
+      return employeeStats;
+    } catch (error) {
+      console.error("Error calculating employee hours and pay:", error);
+      return [];
+    }
+  },
+
+  async getManagerSalaryData(
+    employeeId: string,
+    year: number
+  ): Promise<{ month: string; total_salary: number }[]> {
+    const { data, error } = await supabase.rpc("get_monthly_manager_salary", {
+      p_employee_id: employeeId,
+      p_year: year,
+    });
+
+    if (error) {
+      console.error("Error fetching manager salary data:", error);
+      return [];
+    }
+    return data;
+  },
 };

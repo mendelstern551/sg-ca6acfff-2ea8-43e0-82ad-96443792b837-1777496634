@@ -18,6 +18,7 @@ interface IssueDialogProps {
   onOpenChange: (open: boolean) => void;
   taskLogId?: string | null;
   roomId?: string | null;
+  buildingId?: string | null;
   employeeId?: string;
   onSuccess: () => void;
 }
@@ -27,6 +28,7 @@ export function IssueDialog({
   onOpenChange,
   taskLogId,
   roomId,
+  buildingId,
   employeeId,
   onSuccess,
 }: IssueDialogProps) {
@@ -66,6 +68,7 @@ export function IssueDialog({
         description,
         task_log_id: taskLogId,
         room_id: roomId,
+        building_id: buildingId,
         reported_by_id: employeeId,
         status: 'new',
         title: description.substring(0, 50),

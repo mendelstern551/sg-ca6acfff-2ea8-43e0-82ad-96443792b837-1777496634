@@ -239,71 +239,33 @@ export const bookingService = {
     return normalizeBooking({ ...data, payments: [] });
   },
 
-  async updateBooking(id: string, updates: BookingUpdate): Promise<Booking> {
-    // CRITICAL FIX: Only select booking table columns, never include payments in the select
-    const { data, error } = await retryWithBackoff(async () => {
-      const result = await supabase
+  async updateBooking(id: string, updates: Partial<Booking>): Promise<Booking | null> {
+    try {
+      // Ensure numeric fields are correctly typed
+      const numericUpdates: { [key: string]: any } = {};
+      if (updates.custom_price !== undefined) {
+        numericUpdates.custom_price = updates.custom_price === null ? null : Number(updates.custom_price);
+      }
+      if (updates.discount_percent !== undefined) {
+        numericUpdates.discount_percent = updates.discount_percent === null ? null : Number(updates.discount_percent);
+      }
+
+      const { data, error } = await supabase
         .from("bookings")
-        .update({ ...updates, updated_at: new Date().toISOString() })
+        .update({ ...updates, ...numericUpdates, updated_at: new Date().toISOString() })
         .eq("id", id)
-        .select(`
-          id,
-          name,
-          booking_type,
-          contact_name,
-          contact_email,
-          contact_phone,
-          start_date,
-          end_date,
-          number_of_guests,
-          number_of_rooms,
-          base_rate,
-          per_person_rate,
-          cleaning_fee,
-          additional_cleaning_fee,
-          total_cost,
-          deposit_amount,
-          amount_paid,
-          balance_due,
-          payment_status,
-          confirmed,
-          custom_price,
-          discount_percent,
-          notes,
-          created_at,
-          updated_at
-        `)
+        .select("*, payments(*)")
         .single();
       
-      if (result.error) throw result.error;
-      return result;
-    });
-
-    if (error) throw error;
-
-    // Get payments for the updated booking with retry logic (separate query)
-    try {
-      const { data: paymentsData } = await retryWithBackoff(async () => {
-        const result = await supabase
-          .from("payments")
-          .select("*")
-          .eq("booking_id", id);
-        
-        if (result.error) throw result.error;
-        return result;
-      });
-
-      return normalizeBooking({ 
-        ...data, 
-        payments: paymentsData || [] 
-      });
-    } catch (paymentsError) {
-      console.error("Failed to fetch payments after retries:", paymentsError);
-      return normalizeBooking({ ...data, payments: [] });
+      if (error) throw error;
+      return data;
+    } catch (error) {
+      console.error("Error updating booking:", error);
+      return null;
     }
   },
 
-  async deleteBooking(id: string): Promise<void> {
+  async deleteBooking(id: string): Promise<boolean> {
     const { error } = await retryWithBackoff(async () => {
       const result = await supabase
         .from("bookings")
@@ -315,6 +277,7 @@ export const bookingService = {
     });
 
     if (error) throw error;
+    return true;
   },
 
   async getBookingsByDateRange(startDate: string, endDate: string): Promise<Booking[]> {
