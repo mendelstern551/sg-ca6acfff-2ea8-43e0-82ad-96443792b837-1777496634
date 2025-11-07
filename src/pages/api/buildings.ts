@@ -7,7 +7,23 @@ interface ApiResponse {
   details?: string;
 }
 
-// Use the SERVICE ROLE key to bypass RLS restrictions
+function assertEnv() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const svc = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+  if (!url) throw new Error("Missing NEXT_PUBLIC_SUPABASE_URL");
+  if (!svc) throw new Error("Missing SUPABASE_SERVICE_ROLE_KEY");
+
+  if (!url.startsWith("https://") || !url.includes(".supabase.co")) {
+    throw new Error("SUPABASE URL looks wrong");
+  }
+  if (!svc.startsWith("eyJhbGci")) {
+    throw new Error("Service role key looks malformed");
+  }
+}
+assertEnv();
+
+// create the server-side Supabase client ONCE
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!,
@@ -26,26 +42,25 @@ export default async function handler(
   try {
     const { data, error } = await supabase
       .from("buildings")
-      .select(`
-        *,
-        rooms ( * )
-      `)
+      .select("id,name,rooms(id,name)")
       .order("name", { ascending: true });
 
     if (error) {
-      console.error("API error fetching buildings:", error.message);
-      return res.status(500).json({ 
-        error: "Database query failed", 
-        details: error.message 
+      return res.status(500).json({
+        error: "Database query failed",
+        details: error.message,
       });
     }
 
-    res.setHeader("Cache-Control", "public, s-maxage=30, stale-while-revalidate=120");
-    return res.status(200).json({ data: data || [] });
+    res.setHeader(
+      "Cache-Control",
+      "public, s-maxage=30, stale-while-revalidate=120"
+    );
 
-  } catch (e) {
-    const message = e instanceof Error ? e.message : String(e);
-    console.error("Unexpected error in buildings API:", message);
-    return res.status(500).json({ error: "Internal Server Error", details: message });
+    return res.status(200).json({ data: data ?? [] });
+  } catch (e: any) {
+    return res
+      .status(500)
+      .json({ error: "Internal Server Error", details: String(e?.message || e) });
   }
 }
