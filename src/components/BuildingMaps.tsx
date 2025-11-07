@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { buildingService, Building, Room } from "@/services/buildingService";
+import { buildingService, BuildingWithRooms, Room } from "@/services/buildingService";
 import { Bed, BedDouble, Home, Image as ImageIcon, Map } from "lucide-react";
 
 function roomTotalBeds(room: Room): number {
@@ -10,7 +10,7 @@ function roomTotalBeds(room: Room): number {
   return singles + bunks;
 }
 
-function buildingTotals(building: Building) {
+function buildingTotals(building: BuildingWithRooms) {
   const rooms = Array.isArray(building.rooms) ? building.rooms : [];
   const totalRooms = rooms.length;
   const totalSingles = rooms.reduce((sum, r) => sum + Number(r.bed_count || 0), 0);
@@ -20,7 +20,7 @@ function buildingTotals(building: Building) {
 }
 
 export function BuildingMaps() {
-  const [buildings, setBuildings] = useState<Building[]>([]);
+  const [buildings, setBuildings] = useState<BuildingWithRooms[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -178,7 +178,7 @@ export function BuildingMaps() {
                     <p className="text-sm text-slate-500">No rooms configured for this building.</p>
                   ) : (
                     <ul className="space-y-1">
-                      {b.rooms.map((r) => (
+                      {(b.rooms as Room[]).map((r) => (
                         <li
                           key={r.id}
                           className="text-sm flex items-center justify-between p-2 rounded-md bg-slate-50 dark:bg-slate-800/50"

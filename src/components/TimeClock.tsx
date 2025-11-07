@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -11,7 +10,7 @@ import { taskLogService, TaskLog } from "@/services/taskLogService";
 import type { Database } from "@/integrations/supabase/types";
 import { useToast } from "@/hooks/use-toast";
 import { format, differenceInMinutes } from "date-fns";
-import { Building, Room, buildingService } from "@/services/buildingService";
+import { BuildingWithRooms, Room, buildingService } from "@/services/buildingService";
 import { IssueDialog } from "./IssueDialog";
 import { TimeReportDialog } from "./TimeReports";
 import { issueService } from "@/services/issueService";
@@ -29,7 +28,7 @@ function EmployeeTimeCard({ employee, onRefresh, taskTypes, buildings }: {
   employee: Employee;
   onRefresh: () => void;
   taskTypes: { id: string; name: string }[];
-  buildings: Building[];
+  buildings: BuildingWithRooms[];
 }) {
   const [activeTimeEntry, setActiveTimeEntry] = useState<TimeEntry | null>(null);
   const [activeBreak, setActiveBreak] = useState<TimeEntry | null>(null);
@@ -398,7 +397,7 @@ function EmployeeTimeCard({ employee, onRefresh, taskTypes, buildings }: {
 
 export function TimeClock({ employees, onRefresh }: TimeClockProps) {
   const [taskTypes, setTaskTypes] = useState<{ id: string; name: string }[]>([]);
-  const [buildings, setBuildings] = useState<Building[]>([]);
+  const [buildings, setBuildings] = useState<BuildingWithRooms[]>([]);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
 
