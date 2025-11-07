@@ -1,5 +1,6 @@
 import type { Database } from "@/integrations/supabase/types";
 import { differenceInMinutes } from "date-fns";
+import { supabase } from "@/integrations/supabase/client";
 
 type TaskLog = Database["public"]["Tables"]["task_logs"]["Row"];
 type TaskLogInsert = Database["public"]["Tables"]["task_logs"]["Insert"];
