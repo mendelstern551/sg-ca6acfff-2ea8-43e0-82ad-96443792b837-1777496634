@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Calendar, Users, DollarSign, FileText, Plus } from "lucide-react";
+import { Calendar, Users, DollarSign, FileText, Plus, Clock } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -31,6 +31,7 @@ import { ReminderDialog } from "@/components/ReminderDialog";
 import { reminderService } from "@/services/reminderService";
 import { ReminderModal } from "@/components/ReminderModal";
 import { CornerNotifications } from "@/components/CornerNotifications";
+import Link from "next/link";
 
 type InvoiceRow = Database["public"]["Tables"]["invoices"]["Row"];
 type ExpenseInsert = Database["public"]["Tables"]["expenses"]["Insert"];
@@ -590,8 +591,26 @@ export default function HomePage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-amber-50 via-rose-50 to-blue-50 dark:from-stone-950 dark:via-slate-900 dark:to-indigo-950">
       <header className="border-b border-stone-200 dark:border-stone-800 bg-white/95 dark:bg-stone-900/95 backdrop-blur-sm sticky top-0 z-50 shadow-sm">
-        <div className="container mx-auto px-4 py-4"><div className="flex items-center justify-between">
-          <div><h1 className="text-2xl font-bold text-stone-900 dark:text-stone-100">Trout Lake Resort</h1><p className="text-sm text-stone-600 dark:text-stone-400 mt-1">Booking Management System</p></div><ThemeSwitch /></div></div>
+        <div className="container mx-auto px-4 py-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-6">
+              <div>
+                <h1 className="text-2xl font-bold text-stone-900 dark:text-stone-100">Trout Lake Resort</h1>
+                <p className="text-sm text-stone-600 dark:text-stone-400 mt-1">Booking Management System</p>
+              </div>
+              <nav className="hidden md:flex items-center gap-4 ml-8">
+                <Link 
+                  href="/time-tracking"
+                  className="text-sm font-medium text-stone-600 dark:text-stone-400 hover:text-orange-600 dark:hover:text-orange-400 transition-colors flex items-center gap-2"
+                >
+                  <Clock className="h-4 w-4" />
+                  Time Tracking
+                </Link>
+              </nav>
+            </div>
+            <ThemeSwitch />
+          </div>
+        </div>
       </header>
 
       <main className="container mx-auto px-4 py-8">
