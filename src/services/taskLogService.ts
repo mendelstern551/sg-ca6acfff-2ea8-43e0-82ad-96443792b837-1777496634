@@ -17,15 +17,19 @@ export interface TaskLogWithDetails extends Omit<TaskLog, "duration_minutes"> {
 export const taskLogService = {
   async getTaskTypes(): Promise<{ id: string; name: string }[]> {
     try {
-      const resp = await fetch("/api/task-types");
-      if (!resp.ok) {
-        console.error("Failed to fetch task types from API route:", resp.statusText);
-        return [];
+      const { data, error } = await supabase
+        .from("task_types")
+        .select("id, name")
+        .order("name", { ascending: true });
+
+      if (error) {
+        console.error("Error fetching task types directly from Supabase:", error);
+        throw error;
       }
-      const json = await resp.json();
-      return json.data || [];
+      return data || [];
     } catch (error) {
-      console.error("Error fetching task types via service:", error);
+      console.error("Error in getTaskTypes service:", error);
+      // Return empty array to prevent client-side crashes
       return [];
     }
   },
