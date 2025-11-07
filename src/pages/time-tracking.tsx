@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -15,6 +14,7 @@ import type { Database } from "@/integrations/supabase/types";
 import { useToast } from "@/hooks/use-toast";
 import { format, startOfWeek, endOfWeek, startOfMonth, endOfMonth } from "date-fns";
 import Link from "next/link";
+import { BuildingTaskSetup } from "@/components/BuildingTaskSetup";
 
 type Employee = Database["public"]["Tables"]["employees"]["Row"];
 type TimeEntry = Database["public"]["Tables"]["time_entries"]["Row"];
@@ -201,6 +201,8 @@ export default function TimeTrackingPage() {
                 />
               </CardContent>
             </Card>
+
+            <BuildingTaskSetup />
           </TabsContent>
 
           <TabsContent value="activity" className="space-y-4">
