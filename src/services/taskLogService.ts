@@ -148,9 +148,16 @@ export const taskLogService = {
 
   async getTaskTypesByBuilding(buildingId: string): Promise<TaskType[]> {
     try {
-      // Validate buildingId before making the query
+      // CRITICAL: Validate buildingId format (UUID) and non-empty
       if (!buildingId || buildingId.trim() === "") {
-        console.warn("Invalid building ID provided to getTaskTypesByBuilding");
+        console.warn("Empty building ID provided to getTaskTypesByBuilding");
+        return [];
+      }
+
+      // Basic UUID format validation to catch obviously invalid IDs early
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      if (!uuidRegex.test(buildingId)) {
+        console.warn("Invalid UUID format for building ID:", buildingId);
         return [];
       }
 
@@ -161,14 +168,16 @@ export const taskLogService = {
         .order("name", { ascending: true });
 
       if (error) {
-        console.error("Supabase error fetching task types:", error);
-        throw error;
+        // Log the specific error but don't throw to prevent UI breaks
+        console.error("Supabase error fetching task types:", error.message, "Building ID:", buildingId);
+        return [];
       }
       
       return data || [];
     } catch (error) {
-      console.error("Error fetching task types for building:", buildingId, error);
-      return []; // Return empty array instead of throwing to prevent UI breaks
+      // Catch any unexpected errors and return empty array
+      console.error("Unexpected error in getTaskTypesByBuilding:", error);
+      return [];
     }
   },
 

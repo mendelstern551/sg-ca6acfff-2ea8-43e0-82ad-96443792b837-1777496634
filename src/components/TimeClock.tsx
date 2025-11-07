@@ -35,6 +35,14 @@ export function TimeClock({ employees, onRefresh }: TimeClockProps) {
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
 
+  // Clear any stale state on mount
+  useEffect(() => {
+    // Clear any potentially stale building selection from previous sessions
+    setSelectedBuilding("");
+    setSelectedTaskType("");
+    setTaskTypes([]);
+  }, []); // Run only once on mount
+
   useEffect(() => {
     loadBuildings();
   }, []);
@@ -56,31 +64,36 @@ export function TimeClock({ employees, onRefresh }: TimeClockProps) {
   }, [selectedEmployeeId]);
 
   useEffect(() => {
-    // Only load task types if we have both a valid building AND it exists in our buildings list
-    if (selectedBuilding && selectedBuilding.trim() !== "") {
-      // Verify building exists before attempting to load tasks
-      const buildingExists = buildings.some(b => b.id === selectedBuilding);
+    // CRITICAL: Only proceed if we have a valid building ID AND buildings are loaded
+    if (!selectedBuilding || selectedBuilding.trim() === "" || buildings.length === 0) {
+      // Clear task types when no valid building or buildings not loaded yet
+      setTaskTypes([]);
+      setSelectedTaskType("");
+      return;
+    }
+    
+    // Verify building exists in our current buildings list before fetching tasks
+    const buildingExists = buildings.some(b => b.id === selectedBuilding);
+    
+    if (buildingExists) {
+      loadTaskTypes(selectedBuilding);
+    } else {
+      // Building doesn't exist in current list - clear everything
+      console.warn("Selected building not found in current buildings list, clearing selection");
+      setSelectedBuilding("");
+      setSelectedTaskType("");
+      setTaskTypes([]);
       
-      if (buildingExists) {
-        loadTaskTypes(selectedBuilding);
-      } else {
-        // Building doesn't exist - clear the selection
-        console.warn("Selected building no longer exists, clearing selection");
-        setSelectedBuilding("");
-        setSelectedTaskType("");
-        setTaskTypes([]);
+      // Only show toast if user might have had something selected
+      if (selectedBuilding) {
         toast({
-          title: "Building Not Found",
-          description: "The selected building no longer exists. Please select a different building.",
+          title: "Building Not Available",
+          description: "The selected building is no longer available. Please select a different building.",
           variant: "destructive"
         });
       }
-    } else {
-      // Clear task types when no building is selected
-      setTaskTypes([]);
-      setSelectedTaskType("");
     }
-  }, [selectedBuilding, buildings]); // Add buildings as dependency
+  }, [selectedBuilding, buildings]);
 
   useEffect(() => {
     let interval: NodeJS.Timeout;
