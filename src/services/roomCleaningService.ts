@@ -19,6 +19,7 @@ export interface RoomWithBuilding {
 }
 
 export interface CleaningSessionWithDetails extends RoomCleaningSession {
+  clock_in_time: string;
   room?: {
     name: string;
     building?: {
@@ -78,7 +79,7 @@ export const roomCleaningService = {
     const sessionData: RoomCleaningSessionInsert = {
       employee_id: employeeId,
       room_id: roomId,
-      started_at: new Date().toISOString(),
+      clock_in_time: new Date().toISOString(),
       status: "in_progress"
     };
 
@@ -111,7 +112,7 @@ export const roomCleaningService = {
       `)
       .eq("employee_id", employeeId)
       .eq("status", "in_progress")
-      .order("started_at", { ascending: false })
+      .order("clock_in_time", { ascending: false })
       .limit(1)
       .single();
 
@@ -191,7 +192,7 @@ export const roomCleaningService = {
     const { error } = await supabase
       .from("room_cleaning_sessions")
       .update({
-        completed_at: new Date().toISOString(),
+        clock_out_time: new Date().toISOString(),
         status: "completed"
       })
       .eq("id", sessionId);
@@ -214,7 +215,7 @@ export const roomCleaningService = {
           name
         )
       `)
-      .order("started_at", { ascending: false })
+      .order("clock_in_time", { ascending: false })
       .limit(limit);
 
     if (error) throw error;

@@ -145,8 +145,8 @@ export function RoomCleaningInterface({ employeeId, employeeName, onComplete }: 
         await issueService.createIssue({
           room_id: activeSession.room_id,
           building_id: room.building_id,
-          employee_id: employeeId,
-          task_type: currentTaskForIssue.task_name,
+          reported_by_id: employeeId,
+          title: `Issue in ${room.name}: ${currentTaskForIssue.task_name}`,
           description: issueNotes,
           status: "open",
           priority: "medium"
@@ -287,7 +287,7 @@ export function RoomCleaningInterface({ employeeId, employeeName, onComplete }: 
                   <Badge variant="outline">{currentRoom?.building_name}</Badge>
                   <Badge variant="outline">Floor {currentRoom?.floor ?? "N/A"}</Badge>
                   <span className="text-xs text-stone-500">
-                    Started {activeSession.started_at ? formatDistanceToNow(new Date(activeSession.started_at), { addSuffix: true }) : ""}
+                    Started {activeSession.clock_in_time ? formatDistanceToNow(new Date(activeSession.clock_in_time), { addSuffix: true }) : ""}
                   </span>
                 </CardDescription>
               </div>

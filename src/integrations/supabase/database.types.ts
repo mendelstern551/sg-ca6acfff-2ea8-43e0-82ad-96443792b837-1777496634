@@ -1045,6 +1045,7 @@ export type Database = {
           completed_at: string | null
           created_at: string | null
           id: string
+          issue_reported: boolean
           notes: string | null
           session_id: string | null
           task_id: string | null
@@ -1054,6 +1055,7 @@ export type Database = {
           completed_at?: string | null
           created_at?: string | null
           id?: string
+          issue_reported?: boolean
           notes?: string | null
           session_id?: string | null
           task_id?: string | null
@@ -1063,6 +1065,7 @@ export type Database = {
           completed_at?: string | null
           created_at?: string | null
           id?: string
+          issue_reported?: boolean
           notes?: string | null
           session_id?: string | null
           task_id?: string | null
