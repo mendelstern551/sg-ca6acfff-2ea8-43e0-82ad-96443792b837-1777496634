@@ -8,44 +8,22 @@ export type Room = Database["public"]["Tables"]["rooms"]["Row"];
 
 export const buildingService = {
   async getBuildingsWithRooms(): Promise<Building[]> {
-    try {
-      const resp = await fetch("/api/buildings", {
-        method: "GET",
-        headers: { Accept: "application/json" }
-      });
+    const resp = await fetch("/api/buildings");
 
-      if (resp.ok) {
-        const ct = resp.headers.get("content-type") || "";
-        if (ct.includes("application/json")) {
-          const json = await resp.json() as { data?: unknown };
-          const arr = Array.isArray((json as any)?.data) ? (json as any).data as Building[] : [];
-          return arr;
-        } else {
-          const text = await resp.text();
-          console.warn("[buildings] Non-JSON response, skipping parse. Status:", resp.status, "Snippet:", text.slice(0, 120));
-        }
-      } else {
-        console.warn("API /api/buildings returned non-OK:", resp.status);
-      }
-    } catch (apiErr) {
-      console.warn("API /api/buildings request failed, falling back to Supabase client:", apiErr);
+    if (!resp.ok) {
+      const errorBody = await resp.text();
+      console.error("Failed to fetch buildings via API:", resp.status, errorBody);
+      throw new Error(`Failed to fetch buildings. Status: ${resp.status}`);
+    }
+    
+    const result = await resp.json();
+
+    if (result.error || !Array.isArray(result.data)) {
+        console.error("API returned an error or invalid data structure:", result);
+        throw new Error(result.error || "Invalid data from server");
     }
 
-    // Fallback: direct Supabase query
-    const { data, error } = await supabase
-      .from("buildings")
-      .select(`
-        *,
-        rooms ( * )
-      `)
-      .order("name", { ascending: true });
-
-    if (error) {
-      console.error("Error fetching buildings with rooms:", error);
-      throw error;
-    }
-
-    return data as Building[];
+    return result.data as Building[];
   },
 
   async getBuilding(id: string): Promise<Building | null> {
