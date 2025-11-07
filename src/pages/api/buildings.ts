@@ -17,12 +17,23 @@ export default async function handler(
   }
 
   try {
-    // Use service role client on server-side for reliable access
+    // Server-side: Use anon key but ensure RLS is disabled on buildings/rooms tables
+    // This works because RLS is completely disabled on these tables in the database
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
     const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
     
-    const supabase = createClient(supabaseUrl, supabaseKey);
+    if (!supabaseUrl || !supabaseKey) {
+      return res.status(500).json({ error: "Supabase configuration missing" });
+    }
+    
+    const supabase = createClient(supabaseUrl, supabaseKey, {
+      auth: {
+        persistSession: false,
+        autoRefreshToken: false,
+      }
+    });
 
+    // Simple query without RLS dependency
     const { data, error } = await supabase
       .from("buildings")
       .select(`
@@ -32,10 +43,14 @@ export default async function handler(
       .order("name", { ascending: true });
 
     if (error) {
-      console.error("API error fetching buildings:", error.message);
-      return res.status(502).json({ error: "Database query failed", details: error.message });
+      console.error("API error fetching buildings:", error.message, error.details, error.hint);
+      return res.status(502).json({ 
+        error: "Database query failed", 
+        details: `${error.message}${error.hint ? ' - ' + error.hint : ''}`
+      });
     }
 
+    // Cache for 30 seconds to reduce load
     res.setHeader("Cache-Control", "public, s-maxage=30, stale-while-revalidate=120");
     return res.status(200).json({ data: data || [] });
   } catch (e) {
