@@ -92,7 +92,7 @@ export function ReminderModal({
         onClick={(e) => e.stopPropagation()}
         onMouseDown={(e) => e.stopPropagation()}
       >
-        <Card className="w-full bg-white dark:bg-stone-900 shadow-2xl border-4 border-orange-500 animate-in zoom-in-95 rounded-lg overflow-hidden">
+        <Card className="w-full bg-white dark:bg-stone-900 shadow-2xl border-4 border-orange-500 animate-in zoom-in-95 rounded-lg overflow-visible">
           {/* Header with Icon */}
           <div className={`${categoryColor} text-white p-6 relative`}>
             <div className="absolute -top-10 left-1/2 -translate-x-1/2">
@@ -134,11 +134,24 @@ export function ReminderModal({
               <label className="text-sm font-medium text-stone-700 dark:text-stone-300">
                 Snooze for:
               </label>
-              <Select value={snoozeTime} onValueChange={setSnoozeTime}>
-                <SelectTrigger className="w-full">
+              <Select 
+                value={snoozeTime} 
+                onValueChange={setSnoozeTime}
+              >
+                <SelectTrigger 
+                  className="w-full relative z-[10001]"
+                  onClick={(e) => e.stopPropagation()}
+                  onMouseDown={(e) => e.stopPropagation()}
+                >
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent 
+                  className="z-[10002]"
+                  position="popper"
+                  sideOffset={5}
+                  onClick={(e) => e.stopPropagation()}
+                  onMouseDown={(e) => e.stopPropagation()}
+                >
                   <SelectItem value="5">5 minutes</SelectItem>
                   <SelectItem value="15">15 minutes</SelectItem>
                   <SelectItem value="30">30 minutes</SelectItem>
