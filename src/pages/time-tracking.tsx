@@ -15,6 +15,8 @@ import { useToast } from "@/hooks/use-toast";
 import { format, startOfWeek, endOfWeek, startOfMonth, endOfMonth } from "date-fns";
 import Link from "next/link";
 import { BuildingTaskSetup } from "@/components/BuildingTaskSetup";
+import { ActivityDashboard } from "@/components/ActivityDashboard";
+import { TimeReports } from "@/components/TimeReports";
 
 type Employee = Database["public"]["Tables"]["employees"]["Row"];
 type TimeEntry = Database["public"]["Tables"]["time_entries"]["Row"];
@@ -27,11 +29,45 @@ export default function TimeTrackingPage() {
   const [editingEmployee, setEditingEmployee] = useState<Employee | undefined>();
   const [loading, setLoading] = useState(true);
   const [refreshKey, setRefreshKey] = useState(0);
+  const [clockedInCount, setClockedInCount] = useState(0);
+  const [todayHours, setTodayHours] = useState(0);
   const { toast } = useToast();
 
   useEffect(() => {
     loadEmployees();
   }, [refreshKey]);
+
+  useEffect(() => {
+    if (employees.length > 0) {
+      updateStats();
+    }
+  }, [employees, refreshKey]);
+
+  const updateStats = async () => {
+    try {
+      let clockedIn = 0;
+      let totalMinutes = 0;
+
+      await Promise.all(
+        employees.map(async (employee) => {
+          const [activeEntry, todayEntries] = await Promise.all([
+            timeTrackingService.getActiveTimeEntry(employee.id),
+            timeTrackingService.getTodayEntries(employee.id)
+          ]);
+
+          if (activeEntry) clockedIn++;
+
+          const stats = timeTrackingService.calculateTotalHours(todayEntries);
+          totalMinutes += stats.workHours * 60;
+        })
+      );
+
+      setClockedInCount(clockedIn);
+      setTodayHours(totalMinutes / 60);
+    } catch (error) {
+      console.error("Error updating stats:", error);
+    }
+  };
 
   const loadEmployees = async () => {
     try {
@@ -137,7 +173,7 @@ export default function TimeTrackingPage() {
               </div>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-green-600 dark:text-green-400">0</div>
+              <div className="text-2xl font-bold text-green-600 dark:text-green-400">{clockedInCount}</div>
               <p className="text-xs text-stone-600 dark:text-stone-400 mt-1">Currently working</p>
             </CardContent>
           </Card>
@@ -150,7 +186,7 @@ export default function TimeTrackingPage() {
               </div>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-purple-600 dark:text-purple-400">0.0</div>
+              <div className="text-2xl font-bold text-purple-600 dark:text-purple-400">{todayHours.toFixed(1)}</div>
               <p className="text-xs text-stone-600 dark:text-stone-400 mt-1">Total work hours</p>
             </CardContent>
           </Card>
@@ -215,32 +251,13 @@ export default function TimeTrackingPage() {
                 <CardDescription>Real-time employee activity and task tracking</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="text-center py-12 text-stone-500 dark:text-stone-400">
-                  <Clock className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                  <p className="text-lg font-medium mb-2">No active time entries</p>
-                  <p className="text-sm">Employees will appear here when they clock in</p>
-                </div>
+                <ActivityDashboard employees={activeEmployees} refreshTrigger={refreshKey} />
               </CardContent>
             </Card>
           </TabsContent>
 
           <TabsContent value="reports" className="space-y-4">
-            <Card className="bg-white dark:bg-stone-900 border-stone-200 dark:border-stone-800">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <BarChart3 className="h-5 w-5" />
-                  Time Reports & Payroll
-                </CardTitle>
-                <CardDescription>Generate detailed time tracking reports for payroll</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="text-center py-12 text-stone-500 dark:text-stone-400">
-                  <BarChart3 className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                  <p className="text-lg font-medium mb-2">Reports coming soon</p>
-                  <p className="text-sm">Time reports and payroll exports will be available here</p>
-                </div>
-              </CardContent>
-            </Card>
+            <TimeReports employees={employees} />
           </TabsContent>
         </Tabs>
       </main>
