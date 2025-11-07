@@ -1,6 +1,5 @@
 
 import type { NextApiRequest, NextApiResponse } from "next";
-import { createClient } from "@supabase/supabase-js";
 
 interface ApiResponse {
   data?: unknown;
@@ -24,13 +23,23 @@ export default async function handler(
     const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim();
 
     if (!url || !serviceKey) {
-      console.error("Missing Supabase credentials");
+      console.error("Missing Supabase credentials", { hasUrl: !!url, hasKey: !!serviceKey });
       return res.status(500).json({ 
         error: "Server configuration error", 
         details: "Missing Supabase credentials" 
       });
     }
 
+    if (url === "invalid_url" || serviceKey === "invalid_service_role_key") {
+      console.error("Invalid Supabase credentials detected");
+      return res.status(500).json({ 
+        error: "Server configuration error", 
+        details: "Invalid Supabase credentials" 
+      });
+    }
+
+    const { createClient } = await import("@supabase/supabase-js");
+    
     const supabase = createClient(url, serviceKey, {
       auth: { 
         persistSession: false, 
