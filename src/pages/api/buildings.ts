@@ -1,6 +1,5 @@
-
 import type { NextApiRequest, NextApiResponse } from "next";
-import { supabase } from "@/integrations/supabase/client";
+import { createClient } from "@supabase/supabase-js";
 
 interface ApiResponse {
   data?: unknown;
@@ -18,6 +17,12 @@ export default async function handler(
   }
 
   try {
+    // Use service role client on server-side for reliable access
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+    const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+    
+    const supabase = createClient(supabaseUrl, supabaseKey);
+
     const { data, error } = await supabase
       .from("buildings")
       .select(`
