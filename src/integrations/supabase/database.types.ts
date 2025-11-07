@@ -530,6 +530,7 @@ export type Database = {
       }
       manager_compensation: {
         Row: {
+          amount: number
           base_salary: number
           booking_id: string | null
           calculation_logic: string | null
@@ -540,6 +541,7 @@ export type Database = {
           manager_id: string | null
         }
         Insert: {
+          amount?: number
           base_salary?: number
           booking_id?: string | null
           calculation_logic?: string | null
@@ -550,6 +552,7 @@ export type Database = {
           manager_id?: string | null
         }
         Update: {
+          amount?: number
           base_salary?: number
           booking_id?: string | null
           calculation_logic?: string | null

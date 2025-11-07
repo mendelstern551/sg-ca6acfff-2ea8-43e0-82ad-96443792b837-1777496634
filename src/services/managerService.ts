@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
 import { timeTrackingService } from "./timeTrackingService";
@@ -169,7 +168,7 @@ export const managerService = {
     const { data, error } = await supabase.rpc("get_monthly_manager_salary", {
       p_employee_id: employeeId,
       p_year: year,
-    } as any);
+    });
 
     if (error) {
       console.error("Error fetching manager salary data:", error);
