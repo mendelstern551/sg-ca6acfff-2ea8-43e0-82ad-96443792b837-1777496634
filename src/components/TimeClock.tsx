@@ -14,6 +14,7 @@ import { BuildingWithRooms, Room, buildingService } from "@/services/buildingSer
 import { IssueDialog } from "./IssueDialog";
 import { TimeReportDialog } from "./TimeReports";
 import { issueService } from "@/services/issueService";
+import { RoomCleaningInterface } from "./RoomCleaningInterface";
 
 type Employee = Database["public"]["Tables"]["employees"]["Row"];
 type TimeEntry = Database["public"]["Tables"]["time_entries"]["Row"];
@@ -46,6 +47,8 @@ function EmployeeTimeCard({ employee, onRefresh, taskTypes, buildings }: {
 
   const [issueDialogOpen, setIssueDialogOpen] = useState(false);
   const [issueReportingInfo, setIssueReportingInfo] = useState<{taskLogId: string | null, roomId: string | null} | null>(null);
+  
+  const [showRoomCleaning, setShowRoomCleaning] = useState(false);
 
   const { toast } = useToast();
 
@@ -276,71 +279,101 @@ function EmployeeTimeCard({ employee, onRefresh, taskTypes, buildings }: {
         )}
 
         {activeTimeEntry && !activeBreak && !activeTask && (
-          <div className="mt-4 p-4 bg-slate-50 dark:bg-slate-800/50 rounded-lg">
-            <h4 className="font-semibold text-sm mb-3">Start a Task</h4>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <Select value={selectedBuildingId || ""} onValueChange={id => { setSelectedBuildingId(id); setSelectedRoomId(null); }}>
-                <SelectTrigger><SelectValue placeholder="Select Building" /></SelectTrigger>
-                <SelectContent>
-                  {buildings.map(building => (
-                    <SelectItem key={building.id} value={building.id}>{building.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              
-              <Select value={selectedRoomId || ""} onValueChange={setSelectedRoomId} disabled={!selectedBuildingId}>
-                <SelectTrigger><SelectValue placeholder="Select Room" /></SelectTrigger>
-                <SelectContent>
-                  {selectedBuilding?.rooms?.map(room => (
-                    <SelectItem key={room.id} value={room.id}>{room.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-
-              <div className="md:col-span-2">
-                <Select value={selectedTaskId || ""} onValueChange={setSelectedTaskId}>
-                  <SelectTrigger><SelectValue placeholder="Select Task Type" /></SelectTrigger>
-                  <SelectContent>
-                    {taskTypes.map(task => (
-                      <SelectItem key={task.id} value={task.id}>{task.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+          <div className="mt-4 space-y-4">
+            <div className="flex items-center justify-center gap-2 mb-4">
+              <Button
+                variant={!showRoomCleaning ? "default" : "outline"}
+                onClick={() => setShowRoomCleaning(false)}
+                className="flex-1"
+              >
+                Quick Tasks
+              </Button>
+              <Button
+                variant={showRoomCleaning ? "default" : "outline"}
+                onClick={() => setShowRoomCleaning(true)}
+                className="flex-1"
+              >
+                Room Cleaning
+              </Button>
             </div>
-            
-            {selectedBuilding && (
-              <Card className="mt-4 overflow-hidden">
-                <CardHeader className="p-3 bg-slate-100 dark:bg-slate-700">
-                  <CardTitle className="text-sm flex items-center justify-between">
-                    <span>{selectedRoom ? `Room: ${selectedRoom.name}` : `Building: ${selectedBuilding.name}`}</span>
-                    {selectedRoom && (
-                        <div className="flex items-center gap-3 text-xs font-normal">
-                            <span className="flex items-center gap-1"><Bed className="h-4 w-4" /> {selectedRoom.bed_count || 0}</span>
-                            <span className="flex items-center gap-1"><BedDouble className="h-4 w-4" /> {selectedRoom.bunk_bed_count || 0}</span>
+
+            {!showRoomCleaning ? (
+              <div className="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-lg">
+                <h4 className="font-semibold text-sm mb-3">Start a Task</h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <Select value={selectedBuildingId || ""} onValueChange={id => { setSelectedBuildingId(id); setSelectedRoomId(null); }}>
+                    <SelectTrigger><SelectValue placeholder="Select Building" /></SelectTrigger>
+                    <SelectContent>
+                      {buildings.map(building => (
+                        <SelectItem key={building.id} value={building.id}>{building.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  
+                  <Select value={selectedRoomId || ""} onValueChange={setSelectedRoomId} disabled={!selectedBuildingId}>
+                    <SelectTrigger><SelectValue placeholder="Select Room" /></SelectTrigger>
+                    <SelectContent>
+                      {selectedBuilding?.rooms?.map(room => (
+                        <SelectItem key={room.id} value={room.id}>{room.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+
+                  <div className="md:col-span-2">
+                    <Select value={selectedTaskId || ""} onValueChange={setSelectedTaskId}>
+                      <SelectTrigger><SelectValue placeholder="Select Task Type" /></SelectTrigger>
+                      <SelectContent>
+                        {taskTypes.map(task => (
+                          <SelectItem key={task.id} value={task.id}>{task.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                
+                {selectedBuilding && (
+                  <Card className="mt-4 overflow-hidden">
+                    <CardHeader className="p-3 bg-slate-100 dark:bg-slate-700">
+                      <CardTitle className="text-sm flex items-center justify-between">
+                        <span>{selectedRoom ? `Room: ${selectedRoom.name}` : `Building: ${selectedBuilding.name}`}</span>
+                        {selectedRoom && (
+                            <div className="flex items-center gap-3 text-xs font-normal">
+                                <span className="flex items-center gap-1"><Bed className="h-4 w-4" /> {selectedRoom.bed_count || 0}</span>
+                                <span className="flex items-center gap-1"><BedDouble className="h-4 w-4" /> {selectedRoom.bunk_bed_count || 0}</span>
+                            </div>
+                        )}
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="p-2">
+                      {mapUrl ? (
+                          <img src={mapUrl} alt={`${selectedRoom?.name || selectedBuilding?.name} map`} className="rounded-md w-full object-contain max-h-60" />
+                      ) : (
+                        <div className="flex flex-col items-center justify-center h-32 text-slate-500">
+                          <ImageIcon className="h-8 w-8 mb-2" />
+                          <p className="text-sm">No map available for this selection.</p>
                         </div>
-                    )}
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="p-2">
-                  {mapUrl ? (
-                      <img src={mapUrl} alt={`${selectedRoom?.name || selectedBuilding?.name} map`} className="rounded-md w-full object-contain max-h-60" />
-                  ) : (
-                    <div className="flex flex-col items-center justify-center h-32 text-slate-500">
-                      <ImageIcon className="h-8 w-8 mb-2" />
-                      <p className="text-sm">No map available for this selection.</p>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            )}
+                      )}
+                    </CardContent>
+                  </Card>
+                )}
 
-            <div className="mt-4">
-              <Textarea placeholder="Add optional notes for this task..." value={taskNotes} onChange={(e) => setTaskNotes(e.target.value)} />
-            </div>
-            <Button onClick={handleStartTask} disabled={isSubmittingTask || !selectedTaskId || !selectedBuildingId} className="w-full mt-4">
-              {isSubmittingTask ? "Starting..." : "Start Task"}
-            </Button>
+                <div className="mt-4">
+                  <Textarea placeholder="Add optional notes for this task..." value={taskNotes} onChange={(e) => setTaskNotes(e.target.value)} />
+                </div>
+                <Button onClick={handleStartTask} disabled={isSubmittingTask || !selectedTaskId || !selectedBuildingId} className="w-full mt-4">
+                  {isSubmittingTask ? "Starting..." : "Start Task"}
+                </Button>
+              </div>
+            ) : (
+              <RoomCleaningInterface
+                employeeId={employee.id}
+                employeeName={employee.full_name}
+                onComplete={() => {
+                  fetchEmployeeStatus();
+                  onRefresh();
+                }}
+              />
+            )}
           </div>
         )}
 
