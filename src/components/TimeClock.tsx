@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -43,12 +42,24 @@ export function TimeClock({ employees, onRefresh }: TimeClockProps) {
   useEffect(() => {
     if (selectedEmployeeId) {
       loadEmployeeStatus();
+    } else {
+      // Reset state when no employee is selected
+      setActiveTimeEntry(null);
+      setActiveBreak(null);
+      setActiveTask(null);
+      setElapsedTime(0);
+      setBreakTime(0);
     }
   }, [selectedEmployeeId]);
 
   useEffect(() => {
-    if (selectedBuilding) {
+    // Only load task types if a valid building is selected
+    if (selectedBuilding && selectedBuilding.trim() !== "") {
       loadTaskTypes(selectedBuilding);
+    } else {
+      // Clear task types when no building is selected
+      setTaskTypes([]);
+      setSelectedTaskType("");
     }
   }, [selectedBuilding]);
 
@@ -75,13 +86,44 @@ export function TimeClock({ employees, onRefresh }: TimeClockProps) {
   }, [activeBreak]);
 
   const loadBuildings = async () => {
-    const data = await taskLogService.getAllBuildings();
-    setBuildings(data);
+    try {
+      const data = await taskLogService.getAllBuildings();
+      setBuildings(data);
+    } catch (error) {
+      console.error("Error loading buildings:", error);
+      toast({
+        title: "Error Loading Buildings",
+        description: "Failed to load building list. Please refresh the page.",
+        variant: "destructive"
+      });
+    }
   };
 
   const loadTaskTypes = async (buildingId: string) => {
-    const data = await taskLogService.getTaskTypesByBuilding(buildingId);
-    setTaskTypes(data);
+    try {
+      if (!buildingId || buildingId.trim() === "") {
+        setTaskTypes([]);
+        return;
+      }
+      
+      const data = await taskLogService.getTaskTypesByBuilding(buildingId);
+      setTaskTypes(data);
+      
+      if (data.length === 0) {
+        toast({
+          title: "No Tasks Configured",
+          description: "This building has no task types set up yet.",
+        });
+      }
+    } catch (error) {
+      console.error("Error loading task types:", error);
+      setTaskTypes([]);
+      toast({
+        title: "Error Loading Tasks",
+        description: "Failed to load task types for this building.",
+        variant: "destructive"
+      });
+    }
   };
 
   const loadEmployeeStatus = async () => {

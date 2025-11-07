@@ -148,17 +148,27 @@ export const taskLogService = {
 
   async getTaskTypesByBuilding(buildingId: string): Promise<TaskType[]> {
     try {
+      // Validate buildingId before making the query
+      if (!buildingId || buildingId.trim() === "") {
+        console.warn("Invalid building ID provided to getTaskTypesByBuilding");
+        return [];
+      }
+
       const { data, error } = await supabase
         .from("task_types")
         .select("*")
         .eq("building_id", buildingId)
         .order("name", { ascending: true });
 
-      if (error) throw error;
+      if (error) {
+        console.error("Supabase error fetching task types:", error);
+        throw error;
+      }
+      
       return data || [];
     } catch (error) {
-      console.error("Error fetching task types:", error);
-      return [];
+      console.error("Error fetching task types for building:", buildingId, error);
+      return []; // Return empty array instead of throwing to prevent UI breaks
     }
   },
 
