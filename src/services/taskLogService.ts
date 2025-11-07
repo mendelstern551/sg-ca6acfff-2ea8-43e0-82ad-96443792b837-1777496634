@@ -1,8 +1,8 @@
+import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
 import { differenceInMinutes } from "date-fns";
-import { supabase } from "@/integrations/supabase/client";
 
-type TaskLog = Database["public"]["Tables"]["task_logs"]["Row"];
+export type TaskLog = Database["public"]["Tables"]["task_logs"]["Row"];
 type TaskLogInsert = Database["public"]["Tables"]["task_logs"]["Insert"];
 type Building = Database["public"]["Tables"]["buildings"]["Row"];
 type TaskType = Database["public"]["Tables"]["task_types"]["Row"];
@@ -14,38 +14,46 @@ export interface TaskLogWithDetails extends Omit<TaskLog, "duration_minutes"> {
 }
 
 export const taskLogService = {
-  async startTask(
-    employeeId: string,
-    buildingId: string,
-    taskTypeId: string,
-    timeEntryId?: string
-  ): Promise<TaskLog> {
-    try {
-      const activeTask = await this.getActiveTask(employeeId);
-      if (activeTask) {
-        await this.completeTask(activeTask.id);
-      }
+  async getTaskTypes(): Promise<{ id: string; name: string }[]> {
+    const { data, error } = await supabase
+      .from("task_types")
+      .select("id, name")
+      .order("name", { ascending: true });
 
-      const insertData: TaskLogInsert = {
-        employee_id: employeeId,
-        building_id: buildingId,
-        task_type_id: taskTypeId,
-        time_entry_id: timeEntryId || null,
-        started_at: new Date().toISOString()
-      };
-
-      const { data, error } = await supabase
-        .from("task_logs")
-        .insert(insertData)
-        .select()
-        .single();
-
-      if (error) throw error;
-      return data;
-    } catch (error) {
-      console.error("Error starting task:", error);
+    if (error) {
+      console.error("Error fetching task types:", error);
       throw error;
     }
+    return data || [];
+  },
+
+  async startTask(taskData: Omit<TaskLogInsert, "started_at">): Promise<TaskLog> {
+    // Ensure no other task is active for this employee
+    const { data: activeTask, error: activeTaskError } = await supabase
+      .from("task_logs")
+      .select("id")
+      .eq("employee_id", taskData.employee_id)
+      .is("completed_at", null)
+      .single();
+
+    if (activeTask) {
+      throw new Error("An active task is already running. Please complete it before starting a new one.");
+    }
+    if (activeTaskError && activeTaskError.code !== 'PGRST116') { // Ignore "not found" error
+        throw activeTaskError;
+    }
+
+    const { data, error } = await supabase
+      .from("task_logs")
+      .insert({ ...taskData, started_at: new Date().toISOString() })
+      .select()
+      .single();
+
+    if (error) {
+      console.error("Error starting task:", error);
+      throw new Error("Failed to start the task. Please try again.");
+    }
+    return data;
   },
 
   async completeTask(taskLogId: string, notes?: string): Promise<TaskLog> {
