@@ -10,24 +10,44 @@ export type BuildingWithRooms = Building & {
 
 export const buildingService = {
   async getBuildingsWithRooms(): Promise<BuildingWithRooms[]> {
-    const resp = await fetch("/api/buildings");
+    try {
+      const resp = await fetch("/api/buildings");
 
-    if (!resp.ok) {
-      // Improved error handling as you suggested
-      const errorBody = await resp.text();
-      console.error("Failed to fetch buildings via API:", resp.status, errorBody);
-      throw new Error(`Failed to fetch buildings. Status: ${resp.status}. Body: ${errorBody}`);
-    }
-    
-    const result = await resp.json();
+      if (!resp.ok) {
+        // Try to parse as JSON first
+        const contentType = resp.headers.get("content-type");
+        let errorMessage = `API request failed with status ${resp.status}`;
+        
+        if (contentType?.includes("application/json")) {
+          try {
+            const errorData = await resp.json();
+            errorMessage = errorData.error || errorData.message || errorMessage;
+            console.error("API JSON error:", errorData);
+          } catch (jsonError) {
+            console.error("Failed to parse error JSON:", jsonError);
+          }
+        } else {
+          // It's HTML or other non-JSON content
+          const htmlError = await resp.text();
+          console.error("API returned HTML error:", htmlError.substring(0, 500));
+          errorMessage = "Server returned an HTML error page. Check server logs.";
+        }
+        
+        throw new Error(errorMessage);
+      }
+      
+      const result = await resp.json();
 
-    if (result.error) {
+      if (result.error) {
         console.error("API returned an error:", result.error, result.details);
-        throw new Error(result.error);
+        throw new Error(`${result.error}${result.details ? `: ${result.details}` : ''}`);
+      }
+      
+      return Array.isArray(result.data) ? result.data : [];
+    } catch (error) {
+      console.error("buildingService.getBuildingsWithRooms error:", error);
+      throw error;
     }
-    
-    // The API now consistently returns a 'data' property
-    return result.data as BuildingWithRooms[];
   },
 
   async getBuilding(id: string): Promise<Building | null> {
