@@ -29,27 +29,27 @@ interface EmployeeWithStats {
   total_earnings: number;
 }
 
+const COMPENSATION_COLUMNS = 'id, booking_id, manager_id, amount, due_date, paid, notes, created_at, updated_at';
+
 export const managerService = {
   async getAllCompensation(): Promise<ManagerCompensation[]> {
     const { data, error } = await supabase
       .from("manager_compensation")
-      .select(`*`)
+      .select(COMPENSATION_COLUMNS)
       .order("due_date", { ascending: false });
 
     if (error) throw error;
-    // Note: payments are not joined here to prevent type errors. Fetch separately if needed.
     return (data as ManagerCompensation[]) || [];
   },
 
   async getCompensationByBooking(bookingId: string): Promise<ManagerCompensation[]> {
     const { data, error } = await supabase
       .from("manager_compensation")
-      .select(`*`)
+      .select(COMPENSATION_COLUMNS)
       .eq("booking_id", bookingId)
       .order("due_date", { ascending: false });
 
     if (error) throw error;
-    // Note: payments are not joined here to prevent type errors. Fetch separately if needed.
     return (data as ManagerCompensation[]) || [];
   },
 
@@ -57,7 +57,7 @@ export const managerService = {
     const { data, error } = await supabase
       .from("manager_compensation")
       .insert([compensation])
-      .select()
+      .select(COMPENSATION_COLUMNS)
       .single();
 
     if (error) throw error;
@@ -69,7 +69,7 @@ export const managerService = {
       .from("manager_compensation")
       .update({ ...updates, updated_at: new Date().toISOString() })
       .eq("id", id)
-      .select()
+      .select(COMPENSATION_COLUMNS)
       .single();
 
     if (error) throw error;
@@ -99,12 +99,11 @@ export const managerService = {
   async getUnpaidCompensation(): Promise<ManagerCompensation[]> {
     const { data, error } = await supabase
       .from("manager_compensation")
-      .select(`*`)
+      .select(COMPENSATION_COLUMNS)
       .eq("paid", false)
       .order("due_date", { ascending: true });
 
     if (error) throw error;
-    // Note: payments are not joined here to prevent type errors. Fetch separately if needed.
     return (data as ManagerCompensation[]) || [];
   },
 
@@ -176,6 +175,6 @@ export const managerService = {
       console.error("Error fetching manager salary data:", error);
       return [];
     }
-    return data;
+    return data || [];
   },
 };

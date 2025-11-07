@@ -1,13 +1,15 @@
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
 
-export type Building = Database["public"]["Tables"]["buildings"]["Row"] & {
-    rooms: Room[];
+type Building = Database["public"]["Tables"]["buildings"]["Row"];
+type Room = Database["public"]["Tables"]["rooms"]["Row"];
+
+export type BuildingWithRooms = Building & {
+  rooms: Room[];
 };
-export type Room = Database["public"]["Tables"]["rooms"]["Row"];
 
 export const buildingService = {
-  async getBuildingsWithRooms(): Promise<Building[]> {
+  async getBuildingsWithRooms(): Promise<BuildingWithRooms[]> {
     const resp = await fetch("/api/buildings");
 
     if (!resp.ok) {
@@ -25,7 +27,7 @@ export const buildingService = {
     }
     
     // The API now consistently returns a 'data' property
-    return result.data as Building[];
+    return result.data as BuildingWithRooms[];
   },
 
   async getBuilding(id: string): Promise<Building | null> {

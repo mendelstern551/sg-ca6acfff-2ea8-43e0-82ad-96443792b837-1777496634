@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -21,6 +20,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { buildingService, BuildingWithRooms } from "@/services/buildingService";
 import { supabase } from "@/integrations/supabase/client";
 import type { User } from "@supabase/supabase-js";
+import { EnhancedCalendar } from "@/components/ui/enhanced-calendar";
 
 type BookingInsert = Omit<Booking, "id" | "created_at" | "updated_at" | "payments">;
 
