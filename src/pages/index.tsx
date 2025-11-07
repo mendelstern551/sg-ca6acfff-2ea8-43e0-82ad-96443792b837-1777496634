@@ -32,12 +32,17 @@ import { reminderService } from "@/services/reminderService";
 import { ReminderModal } from "@/components/ReminderModal";
 import { CornerNotifications } from "@/components/CornerNotifications";
 import Link from "next/link";
+import { buildingService } from "@/services/buildingService";
 
 type InvoiceRow = Database["public"]["Tables"]["invoices"]["Row"];
 type ExpenseInsert = Database["public"]["Tables"]["expenses"]["Insert"];
 type BookingInsert = Database["public"]["Tables"]["bookings"]["Insert"];
 type BookingUpdate = Database["public"]["Tables"]["bookings"]["Update"];
 type Reminder = Database["public"]["Tables"]["reminders"]["Row"];
+
+type Profile = {
+  role: string;
+};
 
 export default function HomePage() {
   const [activeTab, setActiveTab] = useState("bookings");

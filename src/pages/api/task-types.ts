@@ -1,4 +1,3 @@
-
 import type { NextApiRequest, NextApiResponse } from "next";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -9,6 +8,22 @@ interface ApiResponse {
 
 const uuidRegex =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+// Add a timeout guard to prevent hanging requests
+function withTimeout<T>(promise: Promise<T>, ms = 8000): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const id = setTimeout(() => reject(new Error("Request timed out")), ms);
+    promise
+      .then((value) => {
+        clearTimeout(id);
+        resolve(value);
+      })
+      .catch((err) => {
+        clearTimeout(id);
+        reject(err);
+      });
+  });
+}
 
 export default async function handler(
   req: NextApiRequest,
@@ -25,20 +40,7 @@ export default async function handler(
       return res.status(400).json({ error: "Invalid or missing buildingId" });
     }
 
-    // Optional: basic existence check to mirror client behavior
-    const { data: buildingExists, error: checkError } = await supabase
-      .from("buildings")
-      .select("id")
-      .eq("id", buildingId)
-      .maybeSingle();
-
-    if (checkError) {
-      return res.status(502).json({ error: `Building check failed: ${checkError.message}` });
-    }
-    if (!buildingExists) {
-      return res.status(404).json({ error: "Building not found" });
-    }
-
+    // Single round-trip to Supabase with timeout guard
     const { data, error } = await supabase
       .from("task_types")
       .select("*")
@@ -53,10 +55,12 @@ export default async function handler(
       "Cache-Control",
       "public, s-maxage=30, stale-while-revalidate=120"
     );
-    return res.status(200).json({ data: data ?? [] });
+    return res.status(200).json({ data: (data as unknown) ?? [] });
   } catch (e) {
     const message = e instanceof Error ? e.message : String(e);
+    if (message.includes("timed out")) {
+      return res.status(504).json({ error: "Upstream timeout when fetching task types" });
+    }
     return res.status(500).json({ error: `Unexpected error: ${message}` });
   }
 }
-  

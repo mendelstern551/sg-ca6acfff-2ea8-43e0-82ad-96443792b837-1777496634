@@ -1,4 +1,4 @@
- 
+/* eslint-disable @typescript-eslint/no-empty-object-type */
 export type Json =
   | string
   | number
@@ -105,21 +105,27 @@ export type Database = {
           created_at: string | null
           description: string | null
           id: string
+          map_image_url: string | null
           name: string
+          target_heating_level: number | null
         }
         Insert: {
           address?: string | null
           created_at?: string | null
           description?: string | null
           id?: string
+          map_image_url?: string | null
           name: string
+          target_heating_level?: number | null
         }
         Update: {
           address?: string | null
           created_at?: string | null
           description?: string | null
           id?: string
+          map_image_url?: string | null
           name?: string
+          target_heating_level?: number | null
         }
         Relationships: []
       }
@@ -188,6 +194,7 @@ export type Database = {
           photo_url: string | null
           status: string | null
           updated_at: string | null
+          user_id: string | null
         }
         Insert: {
           address?: string | null
@@ -203,6 +210,7 @@ export type Database = {
           photo_url?: string | null
           status?: string | null
           updated_at?: string | null
+          user_id?: string | null
         }
         Update: {
           address?: string | null
@@ -218,6 +226,7 @@ export type Database = {
           photo_url?: string | null
           status?: string | null
           updated_at?: string | null
+          user_id?: string | null
         }
         Relationships: []
       }
@@ -359,6 +368,61 @@ export type Database = {
             columns: ["booking_id"]
             isOneToOne: false
             referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      issues: {
+        Row: {
+          created_at: string | null
+          description: string
+          id: string
+          reported_by_employee_id: string | null
+          resolved_at: string | null
+          room_id: string | null
+          status: string
+          task_log_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          description: string
+          id?: string
+          reported_by_employee_id?: string | null
+          resolved_at?: string | null
+          room_id?: string | null
+          status?: string
+          task_log_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          description?: string
+          id?: string
+          reported_by_employee_id?: string | null
+          resolved_at?: string | null
+          room_id?: string | null
+          status?: string
+          task_log_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "issues_reported_by_employee_id_fkey"
+            columns: ["reported_by_employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "issues_room_id_fkey"
+            columns: ["room_id"]
+            isOneToOne: false
+            referencedRelation: "rooms"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "issues_task_log_id_fkey"
+            columns: ["task_log_id"]
+            isOneToOne: false
+            referencedRelation: "task_logs"
             referencedColumns: ["id"]
           },
         ]
@@ -632,6 +696,47 @@ export type Database = {
           },
         ]
       }
+      rooms: {
+        Row: {
+          bed_count: number | null
+          building_id: string | null
+          bunk_bed_count: number | null
+          created_at: string | null
+          floor: string | null
+          id: string
+          map_image_url: string | null
+          name: string
+        }
+        Insert: {
+          bed_count?: number | null
+          building_id?: string | null
+          bunk_bed_count?: number | null
+          created_at?: string | null
+          floor?: string | null
+          id?: string
+          map_image_url?: string | null
+          name: string
+        }
+        Update: {
+          bed_count?: number | null
+          building_id?: string | null
+          bunk_bed_count?: number | null
+          created_at?: string | null
+          floor?: string | null
+          id?: string
+          map_image_url?: string | null
+          name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rooms_building_id_fkey"
+            columns: ["building_id"]
+            isOneToOne: false
+            referencedRelation: "buildings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       task_logs: {
         Row: {
           building_id: string
@@ -641,6 +746,7 @@ export type Database = {
           employee_id: string
           id: string
           notes: string | null
+          room_id: string | null
           started_at: string
           task_type_id: string
           time_entry_id: string | null
@@ -653,6 +759,7 @@ export type Database = {
           employee_id: string
           id?: string
           notes?: string | null
+          room_id?: string | null
           started_at: string
           task_type_id: string
           time_entry_id?: string | null
@@ -665,6 +772,7 @@ export type Database = {
           employee_id?: string
           id?: string
           notes?: string | null
+          room_id?: string | null
           started_at?: string
           task_type_id?: string
           time_entry_id?: string | null
@@ -682,6 +790,13 @@ export type Database = {
             columns: ["employee_id"]
             isOneToOne: false
             referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "task_logs_room_id_fkey"
+            columns: ["room_id"]
+            isOneToOne: false
+            referencedRelation: "rooms"
             referencedColumns: ["id"]
           },
           {
@@ -784,7 +899,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      is_admin: { Args: never; Returns: boolean }
     }
     Enums: {
       [_ in never]: never
