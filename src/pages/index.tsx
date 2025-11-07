@@ -33,6 +33,8 @@ import { ReminderModal } from "@/components/ReminderModal";
 import { CornerNotifications } from "@/components/CornerNotifications";
 import Link from "next/link";
 import { buildingService } from "@/services/buildingService";
+import { OpenIssuesNotifier } from "@/components/OpenIssuesNotifier";
+import { RealtimeActivityFeed } from "@/components/RealtimeActivityFeed";
 
 type InvoiceRow = Database["public"]["Tables"]["invoices"]["Row"];
 type ExpenseInsert = Database["public"]["Tables"]["expenses"]["Insert"];
@@ -595,6 +597,8 @@ export default function HomePage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-amber-50 via-rose-50 to-blue-50 dark:from-stone-950 dark:via-slate-900 dark:to-indigo-950">
+      <OpenIssuesNotifier />
+      <RealtimeActivityFeed />
       <header className="border-b border-stone-200 dark:border-stone-800 bg-white/95 dark:bg-stone-900/95 backdrop-blur-sm sticky top-0 z-50 shadow-sm">
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
