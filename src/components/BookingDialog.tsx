@@ -19,7 +19,7 @@ import { useToast } from "@/hooks/use-toast";
 import { conflictDetectionService } from "@/services/conflictDetectionService";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
-type BookingInsert = Omit<Booking, "id" | "created_at" | "updated_at" | "payments">;
+type BookingInsert = Omit<Booking, "id" | "created_at" | "updated_at" | "payments" | "recurring">;
 
 interface BookingDialogProps {
   open: boolean;
@@ -73,6 +73,7 @@ export function BookingDialog({ open, onOpenChange, onSave, booking: editingBook
       setTotalCost(editingBooking.total_cost);
       setDepositAmount(editingBooking.deposit_amount);
       setConfirmed(Boolean(editingBooking.confirmed));
+      // Ensure custom_price is treated as a number or null.
       setCustomPrice(editingBooking.custom_price ? Number(editingBooking.custom_price) : null);
       setDiscountPercent(editingBooking.discount_percent ? Number(editingBooking.discount_percent) : null);
       setNotes(editingBooking.notes || "");
@@ -206,6 +207,7 @@ export function BookingDialog({ open, onOpenChange, onSave, booking: editingBook
       custom_price: customPrice,
       discount_percent: discountPercent,
       notes: notes,
+      recurring: null, // Add default for new 'recurring' field
     };
     
     onSave(bookingData);

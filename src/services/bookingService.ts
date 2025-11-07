@@ -241,18 +241,11 @@ export const bookingService = {
 
   async updateBooking(id: string, updates: Partial<Booking>): Promise<Booking | null> {
     try {
-      // Ensure numeric fields are correctly typed
-      const numericUpdates: { [key: string]: any } = {};
-      if (updates.custom_price !== undefined) {
-        numericUpdates.custom_price = updates.custom_price === null ? null : Number(updates.custom_price);
-      }
-      if (updates.discount_percent !== undefined) {
-        numericUpdates.discount_percent = updates.discount_percent === null ? null : Number(updates.discount_percent);
-      }
-
+      // The database schema and component state are now corrected.
+      // Explicit casting is no longer needed and can be removed.
       const { data, error } = await supabase
         .from("bookings")
-        .update({ ...updates, ...numericUpdates, updated_at: new Date().toISOString() })
+        .update({ ...updates, updated_at: new Date().toISOString() })
         .eq("id", id)
         .select("*, payments(*)")
         .single();

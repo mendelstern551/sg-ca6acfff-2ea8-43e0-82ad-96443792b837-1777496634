@@ -29,7 +29,7 @@ export type Database = {
           contact_name: string
           contact_phone: string | null
           created_at: string | null
-          custom_price: boolean | null
+          custom_price: number | null
           deposit_amount: number | null
           discount_percent: number | null
           end_date: string
@@ -59,7 +59,7 @@ export type Database = {
           contact_name: string
           contact_phone?: string | null
           created_at?: string | null
-          custom_price?: boolean | null
+          custom_price?: number | null
           deposit_amount?: number | null
           discount_percent?: number | null
           end_date: string
@@ -89,7 +89,7 @@ export type Database = {
           contact_name?: string
           contact_phone?: string | null
           created_at?: string | null
-          custom_price?: boolean | null
+          custom_price?: number | null
           deposit_amount?: number | null
           discount_percent?: number | null
           end_date?: string
@@ -734,7 +734,9 @@ export type Database = {
           description: string | null
           due_date: string
           id: string
+          metadata: Json | null
           priority: string | null
+          recurring: Json | null
           snoozed_until: string | null
           status: string
           title: string
@@ -749,7 +751,9 @@ export type Database = {
           description?: string | null
           due_date: string
           id?: string
+          metadata?: Json | null
           priority?: string | null
+          recurring?: Json | null
           snoozed_until?: string | null
           status?: string
           title: string
@@ -764,7 +768,9 @@ export type Database = {
           description?: string | null
           due_date?: string
           id?: string
+          metadata?: Json | null
           priority?: string | null
+          recurring?: Json | null
           snoozed_until?: string | null
           status?: string
           title?: string
