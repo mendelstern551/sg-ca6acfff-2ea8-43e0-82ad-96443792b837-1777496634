@@ -1,7 +1,6 @@
 
 import type { NextApiRequest, NextApiResponse } from "next";
-import { createServerSupabaseClient } from "@supabase/auth-helpers-nextjs";
-import type { Database } from "@/integrations/supabase/types";
+import { supabase } from "@/integrations/supabase/client";
 
 interface ApiResponse {
   data?: unknown;
@@ -19,9 +18,7 @@ export default async function handler(
   }
 
   try {
-    const supabaseServerClient = createServerSupabaseClient<Database>({ req, res });
-
-    const { data, error } = await supabaseServerClient
+    const { data, error } = await supabase
       .from("buildings")
       .select(`
         *,
