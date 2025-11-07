@@ -255,7 +255,9 @@ export function BookingDialog({ open, onOpenChange, onSave, booking: editingBook
   };
 
   const handleConfirmedChange = (checked: boolean | string) => {
-    setConfirmed(Boolean(checked));
+    // The `checked` value from onCheckedChange can be 'indeterminate' as a string.
+    // We ensure it's always a boolean.
+    setConfirmed(checked === true);
   };
 
   return (

@@ -66,7 +66,7 @@ export const issueService = {
       .select(`
         *,
         rooms ( name, building_id ),
-        employees:reported_by_employee_id ( full_name )
+        employees:reported_by_id ( full_name )
       `)
       .in('status', ['new', 'open'])
       .order('created_at', { ascending: false });
