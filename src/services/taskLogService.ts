@@ -22,15 +22,25 @@ export const taskLogService = {
         .select("id, name")
         .order("name", { ascending: true });
 
-      if (error) {
-        console.error("Error fetching task types directly from Supabase:", error);
-        throw error;
-      }
+      if (error) throw error;
       return data || [];
-    } catch (error) {
-      console.error("Error in getTaskTypes service:", error);
-      // Return empty array to prevent client-side crashes
-      return [];
+    } catch (primaryError) {
+      console.warn("Supabase task_types fetch failed, falling back to /api/task-types", primaryError);
+      try {
+        const resp = await fetch("/api/task-types", {
+          method: "GET",
+          headers: { Accept: "application/json" }
+        });
+        if (!resp.ok) {
+          console.error("Fallback /api/task-types HTTP error:", resp.status);
+          return [];
+        }
+        const json = await resp.json() as { data?: { id: string; name: string }[] };
+        return Array.isArray(json?.data) ? json.data : [];
+      } catch (fallbackError) {
+        console.error("Fallback /api/task-types failed:", fallbackError);
+        return [];
+      }
     }
   },
 
@@ -210,7 +220,6 @@ export const taskLogService = {
   },
 
   async createTaskType(
-    buildingId: string,
     name: string,
     description?: string
   ): Promise<TaskType> {
@@ -218,7 +227,6 @@ export const taskLogService = {
       const { data, error } = await supabase
         .from("task_types")
         .insert({
-          // building_id is no longer used, tasks are global
           name,
           description
         })

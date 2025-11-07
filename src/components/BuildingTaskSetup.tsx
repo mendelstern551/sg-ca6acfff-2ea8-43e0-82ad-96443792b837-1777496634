@@ -46,8 +46,7 @@ export function BuildingTaskSetup() {
     }
     setIsSubmitting(true);
     try {
-      // The building ID is no longer needed for creation.
-      await taskLogService.createTaskType("dummy-id", newTypeName, "");
+      await taskLogService.createTaskType(newTypeName, "");
       toast({ title: "✅ Success", description: "New task type created." });
       setNewTypeName("");
       await fetchTaskTypes(); // Refresh the list
