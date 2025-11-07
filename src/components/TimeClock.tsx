@@ -34,6 +34,7 @@ export function TimeClock({ employees, onRefresh }: TimeClockProps) {
   const [selectedTaskType, setSelectedTaskType] = useState<string>("");
   const [loading, setLoading] = useState(false);
   const [loadingTasks, setLoadingTasks] = useState(false);
+  const [taskLoadError, setTaskLoadError] = useState<string | null>(null);
   const { toast } = useToast();
 
   // Clear any stale state on mount
@@ -42,6 +43,7 @@ export function TimeClock({ employees, onRefresh }: TimeClockProps) {
     setSelectedBuilding("");
     setSelectedTaskType("");
     setTaskTypes([]);
+    setTaskLoadError(null);
   }, []); // Run only once on mount
 
   useEffect(() => {
@@ -61,12 +63,15 @@ export function TimeClock({ employees, onRefresh }: TimeClockProps) {
       setSelectedBuilding("");
       setSelectedTaskType("");
       setTaskTypes([]);
+      setTaskLoadError(null);
     }
   }, [selectedEmployeeId]);
 
   useEffect(() => {
     // Debounce building change to prevent rapid queries
     const loadTasksIfValid = async () => {
+      setTaskLoadError(null);
+      
       // CRITICAL: Only proceed if we have a valid building ID AND buildings are loaded
       if (!selectedBuilding || selectedBuilding.trim() === "" || buildings.length === 0) {
         setTaskTypes([]);
@@ -83,6 +88,7 @@ export function TimeClock({ employees, onRefresh }: TimeClockProps) {
         setSelectedBuilding("");
         setSelectedTaskType("");
         setTaskTypes([]);
+        setTaskLoadError("Selected building is no longer available");
         
         toast({
           title: "Building Not Available",
@@ -97,9 +103,11 @@ export function TimeClock({ employees, onRefresh }: TimeClockProps) {
       try {
         const data = await taskLogService.getTaskTypesByBuilding(selectedBuilding);
         setTaskTypes(data);
+        setTaskLoadError(null);
         
         if (data.length === 0) {
           console.warn("No task types found for building:", selectedBuilding);
+          setTaskLoadError("No tasks configured");
           toast({
             title: "No Tasks Configured",
             description: "This building has no task types set up yet. Please configure tasks in the Building Setup section.",
@@ -108,10 +116,11 @@ export function TimeClock({ employees, onRefresh }: TimeClockProps) {
       } catch (error) {
         console.error("Error loading task types:", error);
         setTaskTypes([]);
+        setTaskLoadError("Failed to load tasks - please try again");
         
         toast({
           title: "Network Error",
-          description: "Failed to load tasks. Please check your connection and try again.",
+          description: "Failed to load tasks. Checking connection...",
           variant: "destructive"
         });
       } finally {
@@ -534,26 +543,44 @@ export function TimeClock({ employees, onRefresh }: TimeClockProps) {
                       </Select>
 
                       {selectedBuilding && (
-                        <Select value={selectedTaskType} onValueChange={setSelectedTaskType}>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select task..." />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {taskTypes.map(task => (
-                              <SelectItem key={task.id} value={task.id}>
-                                {task.name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                        <div className="space-y-2">
+                          {taskLoadError && (
+                            <div className="p-2 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded text-xs text-red-700 dark:text-red-300 flex items-center justify-between">
+                              <span>{taskLoadError}</span>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => {
+                                  setSelectedBuilding("");
+                                  setTimeout(() => setSelectedBuilding(selectedBuilding), 100);
+                                }}
+                                className="h-6"
+                              >
+                                Retry
+                              </Button>
+                            </div>
+                          )}
+                          <Select value={selectedTaskType} onValueChange={setSelectedTaskType}>
+                            <SelectTrigger disabled={loadingTasks || taskTypes.length === 0}>
+                              <SelectValue placeholder={loadingTasks ? "Loading tasks..." : taskTypes.length === 0 ? "No tasks available" : "Select task..."} />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {taskTypes.map(task => (
+                                <SelectItem key={task.id} value={task.id}>
+                                  {task.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
                       )}
 
                       <Button
                         onClick={handleStartTask}
-                        disabled={loading || !selectedBuilding || !selectedTaskType}
+                        disabled={loading || !selectedBuilding || !selectedTaskType || loadingTasks}
                         className="w-full"
                       >
-                        Start Task
+                        {loadingTasks ? "Loading Tasks..." : "Start Task"}
                       </Button>
                     </div>
                   )}
