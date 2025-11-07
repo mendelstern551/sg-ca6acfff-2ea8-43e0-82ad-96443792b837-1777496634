@@ -3,9 +3,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Clock, Play, Square, Coffee, MapPin, CheckCircle2 } from "lucide-react";
+import { Clock, Play, Square, Coffee, MapPin, CheckCircle2, AlertCircle } from "lucide-react";
 import { timeTrackingService } from "@/services/timeTrackingService";
 import { taskLogService } from "@/services/taskLogService";
+import { supabaseHealthCheck } from "@/services/supabaseHealthCheck";
 import type { Database } from "@/integrations/supabase/types";
 import { useToast } from "@/hooks/use-toast";
 import { format, differenceInMinutes } from "date-fns";
@@ -35,7 +36,30 @@ export function TimeClock({ employees, onRefresh }: TimeClockProps) {
   const [loading, setLoading] = useState(false);
   const [loadingTasks, setLoadingTasks] = useState(false);
   const [taskLoadError, setTaskLoadError] = useState<string | null>(null);
+  const [connectionError, setConnectionError] = useState<string | null>(null);
+  const [isConnectionHealthy, setIsConnectionHealthy] = useState(true);
   const { toast } = useToast();
+
+  // Initial connection health check
+  useEffect(() => {
+    const checkConnection = async () => {
+      const result = await supabaseHealthCheck.checkConnection();
+      setIsConnectionHealthy(result.isHealthy);
+      if (!result.isHealthy) {
+        setConnectionError(result.message);
+        console.error("Supabase Health Check Failed:", result);
+        
+        // Show one-time warning toast
+        toast({
+          title: "Connection Issue",
+          description: result.message,
+          variant: "destructive"
+        });
+      }
+    };
+
+    checkConnection();
+  }, [toast]);
 
   // Clear any stale state on mount
   useEffect(() => {
@@ -432,6 +456,19 @@ export function TimeClock({ employees, onRefresh }: TimeClockProps) {
 
         {selectedEmployee && (
           <>
+            {connectionError && !isConnectionHealthy && (
+              <div className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg flex items-start gap-3 mb-4">
+                <AlertCircle className="h-5 w-5 text-red-600 dark:text-red-400 mt-0.5 flex-shrink-0" />
+                <div className="flex-1">
+                  <h4 className="font-medium text-red-900 dark:text-red-100 mb-1">Connection Error</h4>
+                  <p className="text-sm text-red-800 dark:text-red-200">{connectionError}</p>
+                  <p className="text-xs text-red-700 dark:text-red-300 mt-2">
+                    Please check your internet connection or contact support if the issue persists.
+                  </p>
+                </div>
+              </div>
+            )}
+
             <div className="p-4 bg-slate-50 dark:bg-slate-800 rounded-lg space-y-3">
               <div className="flex items-center justify-between">
                 <span className="text-sm font-medium">Status</span>
