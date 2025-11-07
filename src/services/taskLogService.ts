@@ -192,7 +192,10 @@ export const taskLogService = {
         console.error("Supabase error fetching task types:", error.message, "Building ID:", buildingId);
         
         // Retry with exponential backoff for network errors
-        if (retries < maxRetries && error.status !== 401 && error.status !== 403) {
+        // Avoid retrying on auth/permission errors (typically 401/403)
+        const isAuthError = error.message?.includes("401") || error.message?.includes("403") || error.message?.includes("Unauthorized") || error.message?.includes("Forbidden");
+        
+        if (retries < maxRetries && !isAuthError) {
           const delay = baseDelay * Math.pow(2, retries);
           console.log(`Retrying after ${delay}ms (attempt ${retries + 1}/${maxRetries})`);
           await new Promise(resolve => setTimeout(resolve, delay));
