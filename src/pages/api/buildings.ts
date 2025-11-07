@@ -6,6 +6,7 @@ import type { Database } from "@/integrations/supabase/types";
 interface ApiResponse {
   data?: unknown;
   error?: string;
+  details?: string;
 }
 
 export default async function handler(
