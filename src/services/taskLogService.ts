@@ -6,6 +6,7 @@ export type TaskLog = Database["public"]["Tables"]["task_logs"]["Row"];
 type TaskLogInsert = Database["public"]["Tables"]["task_logs"]["Insert"];
 type Building = Database["public"]["Tables"]["buildings"]["Row"];
 type TaskType = Database["public"]["Tables"]["task_types"]["Row"];
+type Room = Database["public"]["Tables"]["rooms"]["Row"];
 
 export interface TaskLogWithDetails extends Omit<TaskLog, "duration_minutes"> {
   building?: Building;
@@ -91,18 +92,25 @@ export const taskLogService = {
     }
   },
 
-  async getActiveTask(employeeId: string): Promise<TaskLog | null> {
+  async getActiveTask(employeeId: string): Promise<(TaskLog & { task_types: { name: string; } | null; buildings: { name: string; } | null; rooms: Room | null; }) | null> {
     try {
       const { data, error } = await supabase
         .from("task_logs")
-        .select("*")
+        .select(`
+          *,
+          task_types ( name ),
+          buildings ( name ),
+          rooms ( * )
+        `)
         .eq("employee_id", employeeId)
         .is("completed_at", null)
         .order("started_at", { ascending: false })
-        .limit(1);
+        .single();
 
-      if (error) throw error;
-      return data && data.length > 0 ? data[0] : null;
+      if (error && error.code !== 'PGRST116') {
+        throw error;
+      }
+      return data;
     } catch (error) {
       console.error("Error fetching active task:", error);
       return null;

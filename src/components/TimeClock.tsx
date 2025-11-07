@@ -31,7 +31,7 @@ function EmployeeTimeCard({ employee, onRefresh, taskTypes, buildings }: {
 }) {
   const [activeTimeEntry, setActiveTimeEntry] = useState<TimeEntry | null>(null);
   const [activeBreak, setActiveBreak] = useState<TimeEntry | null>(null);
-  const [activeTask, setActiveTask] = useState<(TaskLog & { task_types: { name: string } | null, buildings: { name: string } | null, rooms: { name: string } | null }) | null>(null);
+  const [activeTask, setActiveTask] = useState<(TaskLog & { task_types: { name: string } | null, buildings: { name: string } | null, rooms: Room | null }) | null>(null);
 
   const [elapsedTime, setElapsedTime] = useState(0);
   const [breakTime, setBreakTime] = useState(0);
@@ -58,7 +58,7 @@ function EmployeeTimeCard({ employee, onRefresh, taskTypes, buildings }: {
       ]);
       setActiveTimeEntry(timeEntry);
       setActiveBreak(breakEntry);
-      setActiveTask(task as any);
+      setActiveTask(task);
     } catch (error) {
       console.error(`Failed to fetch status for ${employee.full_name}`, error);
       toast({ title: "Error", description: `Could not fetch status for ${employee.full_name}.`, variant: "destructive" });
@@ -366,7 +366,7 @@ function EmployeeTimeCard({ employee, onRefresh, taskTypes, buildings }: {
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => handleReportIssue(activeTask as TaskLog & { rooms?: Room | null })}
+                  onClick={() => handleReportIssue(activeTask)}
                   className="border-yellow-400 text-yellow-700 hover:bg-yellow-50 hover:text-yellow-800 dark:border-yellow-600 dark:text-yellow-400 dark:hover:bg-yellow-900/30 dark:hover:text-yellow-300"
                 >
                   <AlertTriangle className="h-4 w-4 mr-2" />
