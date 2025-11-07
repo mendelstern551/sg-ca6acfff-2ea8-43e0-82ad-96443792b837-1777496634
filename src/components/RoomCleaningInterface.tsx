@@ -1,0 +1,442 @@
+import { useState, useEffect } from "react";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { roomCleaningService, RoomWithBuilding, TaskWithCompletion, CleaningSessionWithDetails } from "@/services/roomCleaningService";
+import { issueService } from "@/services/issueService";
+import { Home, CheckCircle2, AlertCircle, Clock, Thermometer, Bed, BedDouble, PlayCircle, StopCircle } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { formatDistanceToNow } from "date-fns";
+
+interface RoomCleaningInterfaceProps {
+  employeeId: string;
+  employeeName: string;
+  onComplete?: () => void;
+}
+
+export function RoomCleaningInterface({ employeeId, employeeName, onComplete }: RoomCleaningInterfaceProps) {
+  const [rooms, setRooms] = useState<RoomWithBuilding[]>([]);
+  const [activeSession, setActiveSession] = useState<CleaningSessionWithDetails | null>(null);
+  const [tasks, setTasks] = useState<TaskWithCompletion[]>([]);
+  const [selectedRoom, setSelectedRoom] = useState<string>("");
+  const [loading, setLoading] = useState(true);
+  const [starting, setStarting] = useState(false);
+  const [issueDialogOpen, setIssueDialogOpen] = useState(false);
+  const [currentTaskForIssue, setCurrentTaskForIssue] = useState<TaskWithCompletion | null>(null);
+  const [issueNotes, setIssueNotes] = useState("");
+  const { toast } = useToast();
+
+  useEffect(() => {
+    loadData();
+  }, [employeeId]);
+
+  const loadData = async () => {
+    try {
+      setLoading(true);
+      const [roomsData, sessionData] = await Promise.all([
+        roomCleaningService.getRoomsWithBuildings(),
+        roomCleaningService.getActiveSession(employeeId)
+      ]);
+
+      setRooms(roomsData);
+      setActiveSession(sessionData);
+
+      if (sessionData) {
+        const tasksData = await roomCleaningService.getTasksWithCompletions(sessionData.id);
+        setTasks(tasksData);
+      }
+    } catch (error) {
+      console.error("Error loading room cleaning data:", error);
+      toast({
+        title: "Error",
+        description: "Failed to load room cleaning data",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleStartCleaning = async () => {
+    if (!selectedRoom) {
+      toast({
+        title: "Select a Room",
+        description: "Please select a room before starting",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    try {
+      setStarting(true);
+      const session = await roomCleaningService.startCleaningSession(employeeId, selectedRoom);
+      const tasksData = await roomCleaningService.getTasksWithCompletions(session.id);
+      
+      setActiveSession(session);
+      setTasks(tasksData);
+      setSelectedRoom("");
+
+      toast({
+        title: "🧹 Cleaning Started",
+        description: "You've clocked in for this room. Complete all tasks to finish."
+      });
+    } catch (error) {
+      console.error("Error starting cleaning session:", error);
+      toast({
+        title: "Error",
+        description: "Failed to start cleaning session",
+        variant: "destructive"
+      });
+    } finally {
+      setStarting(false);
+    }
+  };
+
+  const handleCompleteTask = async (task: TaskWithCompletion, withIssue = false) => {
+    if (!activeSession) return;
+
+    if (withIssue) {
+      setCurrentTaskForIssue(task);
+      setIssueDialogOpen(true);
+      return;
+    }
+
+    try {
+      if (task.completed && task.completion_id) {
+        await roomCleaningService.uncompleteTask(task.completion_id);
+      } else {
+        await roomCleaningService.completeTask(activeSession.id, task.id);
+      }
+
+      const updatedTasks = await roomCleaningService.getTasksWithCompletions(activeSession.id);
+      setTasks(updatedTasks);
+
+      toast({
+        title: task.completed ? "Task Unchecked" : "✓ Task Complete",
+        description: task.task_name
+      });
+    } catch (error) {
+      console.error("Error toggling task:", error);
+      toast({
+        title: "Error",
+        description: "Failed to update task",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleReportIssue = async () => {
+    if (!currentTaskForIssue || !activeSession) return;
+
+    try {
+      await roomCleaningService.completeTask(
+        activeSession.id,
+        currentTaskForIssue.id,
+        issueNotes,
+        true
+      );
+
+      const room = rooms.find(r => r.id === activeSession.room_id);
+      if (room && issueNotes.trim()) {
+        await issueService.createIssue({
+          room_id: activeSession.room_id,
+          building_id: room.building_id,
+          employee_id: employeeId,
+          task_type: currentTaskForIssue.task_name,
+          description: issueNotes,
+          status: "open",
+          priority: "medium"
+        });
+      }
+
+      const updatedTasks = await roomCleaningService.getTasksWithCompletions(activeSession.id);
+      setTasks(updatedTasks);
+
+      setIssueDialogOpen(false);
+      setIssueNotes("");
+      setCurrentTaskForIssue(null);
+
+      toast({
+        title: "⚠️ Issue Reported",
+        description: "Admin has been notified. Task marked complete.",
+        variant: "default"
+      });
+    } catch (error) {
+      console.error("Error reporting issue:", error);
+      toast({
+        title: "Error",
+        description: "Failed to report issue",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleFinishCleaning = async () => {
+    if (!activeSession) return;
+
+    const incompleteTasks = tasks.filter(t => !t.completed);
+    if (incompleteTasks.length > 0) {
+      toast({
+        title: "Tasks Incomplete",
+        description: `Please complete all ${incompleteTasks.length} remaining task(s) before finishing`,
+        variant: "destructive"
+      });
+      return;
+    }
+
+    try {
+      await roomCleaningService.endCleaningSession(activeSession.id);
+      
+      toast({
+        title: "✓ Room Complete!",
+        description: "Great job! You've finished cleaning this room.",
+      });
+
+      setActiveSession(null);
+      setTasks([]);
+      if (onComplete) onComplete();
+      await loadData();
+    } catch (error) {
+      console.error("Error ending session:", error);
+      toast({
+        title: "Error",
+        description: "Failed to end cleaning session",
+        variant: "destructive"
+      });
+    }
+  };
+
+  if (loading) {
+    return (
+      <Card className="bg-white dark:bg-stone-900 border-stone-200 dark:border-stone-800">
+        <CardContent className="py-8">
+          <div className="text-center text-stone-500 dark:text-stone-400">
+            Loading rooms...
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  const currentRoom = activeSession ? rooms.find(r => r.id === activeSession.room_id) : null;
+  const completedCount = tasks.filter(t => t.completed).length;
+  const totalTasks = tasks.length;
+  const progress = totalTasks > 0 ? (completedCount / totalTasks) * 100 : 0;
+
+  return (
+    <div className="space-y-6">
+      {!activeSession ? (
+        <Card className="bg-white dark:bg-stone-900 border-stone-200 dark:border-stone-800">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Home className="h-5 w-5 text-orange-600" />
+              Start Room Cleaning
+            </CardTitle>
+            <CardDescription>
+              Select a room to begin cleaning and track your tasks
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div>
+              <label className="text-sm font-medium text-stone-700 dark:text-stone-300 mb-2 block">
+                Select Room
+              </label>
+              <Select value={selectedRoom} onValueChange={setSelectedRoom}>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Choose a room to clean..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {rooms.map((room) => (
+                    <SelectItem key={room.id} value={room.id}>
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium">{room.name}</span>
+                        <span className="text-xs text-stone-500">
+                          ({room.building_name} • Floor {room.floor ?? "N/A"})
+                        </span>
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <Button
+              className="w-full bg-orange-600 hover:bg-orange-700"
+              onClick={handleStartCleaning}
+              disabled={!selectedRoom || starting}
+            >
+              <PlayCircle className="h-4 w-4 mr-2" />
+              {starting ? "Starting..." : "Start Cleaning"}
+            </Button>
+          </CardContent>
+        </Card>
+      ) : (
+        <Card className="bg-white dark:bg-stone-900 border-stone-200 dark:border-stone-800">
+          <CardHeader className="bg-gradient-to-r from-orange-50 to-amber-50 dark:from-orange-950/30 dark:to-amber-950/30">
+            <div className="flex items-start justify-between">
+              <div className="flex-1">
+                <CardTitle className="flex items-center gap-2 mb-2">
+                  <Home className="h-5 w-5 text-orange-600" />
+                  {currentRoom?.name}
+                </CardTitle>
+                <CardDescription className="flex flex-wrap gap-2 items-center">
+                  <Badge variant="outline">{currentRoom?.building_name}</Badge>
+                  <Badge variant="outline">Floor {currentRoom?.floor ?? "N/A"}</Badge>
+                  <span className="text-xs text-stone-500">
+                    Started {activeSession.started_at ? formatDistanceToNow(new Date(activeSession.started_at), { addSuffix: true }) : ""}
+                  </span>
+                </CardDescription>
+              </div>
+              {currentRoom?.target_heating_level && (
+                <Badge variant="secondary" className="gap-1">
+                  <Thermometer className="h-3 w-3" />
+                  {Number(currentRoom.target_heating_level).toFixed(0)}°C
+                </Badge>
+              )}
+            </div>
+
+            <div className="mt-4">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm font-medium text-stone-700 dark:text-stone-300">
+                  Progress: {completedCount} / {totalTasks} tasks
+                </span>
+                <span className="text-sm font-bold text-orange-600">{progress.toFixed(0)}%</span>
+              </div>
+              <div className="w-full bg-stone-200 dark:bg-stone-700 rounded-full h-2">
+                <div
+                  className="bg-orange-600 h-2 rounded-full transition-all duration-500"
+                  style={{ width: `${progress}%` }}
+                />
+              </div>
+            </div>
+          </CardHeader>
+
+          <CardContent className="space-y-3 pt-6">
+            <div className="grid gap-2 mb-6 p-3 bg-slate-50 dark:bg-slate-800 rounded-lg">
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-stone-600 dark:text-stone-400">Single Beds:</span>
+                <span className="font-semibold flex items-center gap-1">
+                  <Bed className="h-4 w-4" />
+                  {currentRoom?.bed_count || 0}
+                </span>
+              </div>
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-stone-600 dark:text-stone-400">Bunk Beds:</span>
+                <span className="font-semibold flex items-center gap-1">
+                  <BedDouble className="h-4 w-4" />
+                  {currentRoom?.bunk_bed_count || 0}
+                </span>
+              </div>
+            </div>
+
+            <h4 className="font-semibold text-sm text-stone-900 dark:text-stone-100 flex items-center gap-2 mb-3">
+              <CheckCircle2 className="h-4 w-4 text-orange-600" />
+              Cleaning Tasks
+            </h4>
+
+            <div className="space-y-2">
+              {tasks.map((task, index) => (
+                <div
+                  key={task.id}
+                  className={`flex items-start gap-3 p-3 rounded-lg border transition-all ${
+                    task.completed
+                      ? "bg-green-50 dark:bg-green-950/20 border-green-200 dark:border-green-800"
+                      : "bg-white dark:bg-stone-800 border-stone-200 dark:border-stone-700 hover:border-orange-300 dark:hover:border-orange-600"
+                  }`}
+                >
+                  <Checkbox
+                    checked={task.completed}
+                    onCheckedChange={() => handleCompleteTask(task)}
+                    className="mt-1"
+                  />
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="text-xs font-mono text-stone-500 dark:text-stone-400">
+                        {index + 1}.
+                      </span>
+                      <span className={`text-sm font-medium ${task.completed ? "line-through text-stone-500 dark:text-stone-400" : "text-stone-900 dark:text-stone-100"}`}>
+                        {task.task_name}
+                      </span>
+                      {task.issue_reported && (
+                        <Badge variant="destructive" className="text-xs gap-1">
+                          <AlertCircle className="h-3 w-3" />
+                          Issue
+                        </Badge>
+                      )}
+                    </div>
+                    {task.notes && (
+                      <p className="text-xs text-stone-600 dark:text-stone-400 mt-1 pl-6">
+                        Note: {task.notes}
+                      </p>
+                    )}
+                  </div>
+                  {!task.completed && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleCompleteTask(task, true)}
+                      className="text-orange-600 border-orange-300 hover:bg-orange-50"
+                    >
+                      <AlertCircle className="h-4 w-4 mr-1" />
+                      Report Issue
+                    </Button>
+                  )}
+                </div>
+              ))}
+            </div>
+
+            <Button
+              className="w-full bg-green-600 hover:bg-green-700 mt-6"
+              onClick={handleFinishCleaning}
+              disabled={completedCount < totalTasks}
+            >
+              <StopCircle className="h-4 w-4 mr-2" />
+              Finish Room Cleaning
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+
+      <Dialog open={issueDialogOpen} onOpenChange={setIssueDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <AlertCircle className="h-5 w-5 text-orange-600" />
+              Report Issue
+            </DialogTitle>
+            <DialogDescription>
+              {currentTaskForIssue?.task_name} - Describe the problem
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4">
+            <Textarea
+              placeholder="Describe the issue in detail (e.g., 'Toilet won't stop running', 'Light fixture broken')"
+              value={issueNotes}
+              onChange={(e) => setIssueNotes(e.target.value)}
+              rows={4}
+              className="w-full"
+            />
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIssueDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              className="bg-orange-600 hover:bg-orange-700"
+              onClick={handleReportIssue}
+              disabled={!issueNotes.trim()}
+            >
+              Report & Mark Complete
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
