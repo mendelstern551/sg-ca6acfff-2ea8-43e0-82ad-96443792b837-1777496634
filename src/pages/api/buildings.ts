@@ -17,12 +17,12 @@ export default async function handler(
   }
 
   try {
-    // Server-side: Use anon key but ensure RLS is disabled on buildings/rooms tables
-    // This works because RLS is completely disabled on these tables in the database
+    // Server-side: Use the SERVICE_ROLE_KEY to bypass RLS for public data.
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-    const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+    const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
     
     if (!supabaseUrl || !supabaseKey) {
+      console.error("Supabase server configuration is missing.");
       return res.status(500).json({ error: "Supabase configuration missing" });
     }
     
@@ -33,7 +33,6 @@ export default async function handler(
       }
     });
 
-    // Simple query without RLS dependency
     const { data, error } = await supabase
       .from("buildings")
       .select(`
