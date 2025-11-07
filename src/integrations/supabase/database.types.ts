@@ -1,4 +1,4 @@
- 
+/* eslint-disable @typescript-eslint/no-empty-object-type */
 export type Json =
   | string
   | number
@@ -118,6 +118,30 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      building_settings: {
+        Row: {
+          building_name: string
+          heating_level: number | null
+          id: string
+          settings: Json | null
+          updated_at: string | null
+        }
+        Insert: {
+          building_name: string
+          heating_level?: number | null
+          id?: string
+          settings?: Json | null
+          updated_at?: string | null
+        }
+        Update: {
+          building_name?: string
+          heating_level?: number | null
+          id?: string
+          settings?: Json | null
+          updated_at?: string | null
+        }
+        Relationships: []
       }
       buildings: {
         Row: {
@@ -536,9 +560,13 @@ export type Database = {
           calculation_logic: string | null
           commission_rate: number
           created_at: string | null
+          due_date: string | null
           effective_date: string
           id: string
           manager_id: string | null
+          notes: string | null
+          paid: boolean
+          updated_at: string | null
         }
         Insert: {
           amount?: number
@@ -547,9 +575,13 @@ export type Database = {
           calculation_logic?: string | null
           commission_rate?: number
           created_at?: string | null
+          due_date?: string | null
           effective_date: string
           id?: string
           manager_id?: string | null
+          notes?: string | null
+          paid?: boolean
+          updated_at?: string | null
         }
         Update: {
           amount?: number
@@ -558,9 +590,13 @@ export type Database = {
           calculation_logic?: string | null
           commission_rate?: number
           created_at?: string | null
+          due_date?: string | null
           effective_date?: string
           id?: string
           manager_id?: string | null
+          notes?: string | null
+          paid?: boolean
+          updated_at?: string | null
         }
         Relationships: [
           {
@@ -813,6 +849,146 @@ export type Database = {
           },
         ]
       }
+      room_cleaning_sessions: {
+        Row: {
+          clock_in_time: string
+          clock_out_time: string | null
+          created_at: string | null
+          employee_id: string | null
+          id: string
+          room_id: string | null
+          status: string | null
+        }
+        Insert: {
+          clock_in_time: string
+          clock_out_time?: string | null
+          created_at?: string | null
+          employee_id?: string | null
+          id?: string
+          room_id?: string | null
+          status?: string | null
+        }
+        Update: {
+          clock_in_time?: string
+          clock_out_time?: string | null
+          created_at?: string | null
+          employee_id?: string | null
+          id?: string
+          room_id?: string | null
+          status?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "room_cleaning_sessions_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "room_cleaning_sessions_room_id_fkey"
+            columns: ["room_id"]
+            isOneToOne: false
+            referencedRelation: "rooms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      room_issues: {
+        Row: {
+          description: string
+          employee_id: string | null
+          id: string
+          issue_type: string
+          priority: string | null
+          reported_at: string | null
+          resolved_at: string | null
+          resolved_by: string | null
+          room_id: string | null
+          session_id: string | null
+          status: string | null
+        }
+        Insert: {
+          description: string
+          employee_id?: string | null
+          id?: string
+          issue_type: string
+          priority?: string | null
+          reported_at?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          room_id?: string | null
+          session_id?: string | null
+          status?: string | null
+        }
+        Update: {
+          description?: string
+          employee_id?: string | null
+          id?: string
+          issue_type?: string
+          priority?: string | null
+          reported_at?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          room_id?: string | null
+          session_id?: string | null
+          status?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "room_issues_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "room_issues_resolved_by_fkey"
+            columns: ["resolved_by"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "room_issues_room_id_fkey"
+            columns: ["room_id"]
+            isOneToOne: false
+            referencedRelation: "rooms"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "room_issues_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "room_cleaning_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      room_tasks: {
+        Row: {
+          created_at: string | null
+          id: string
+          is_required: boolean | null
+          task_name: string
+          task_order: number
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          is_required?: boolean | null
+          task_name: string
+          task_order: number
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          is_required?: boolean | null
+          task_name?: string
+          task_order?: number
+        }
+        Relationships: []
+      }
       rooms: {
         Row: {
           bed_count: number | null
@@ -859,6 +1035,51 @@ export type Database = {
             columns: ["building_id"]
             isOneToOne: false
             referencedRelation: "buildings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      task_completions: {
+        Row: {
+          completed: boolean | null
+          completed_at: string | null
+          created_at: string | null
+          id: string
+          notes: string | null
+          session_id: string | null
+          task_id: string | null
+        }
+        Insert: {
+          completed?: boolean | null
+          completed_at?: string | null
+          created_at?: string | null
+          id?: string
+          notes?: string | null
+          session_id?: string | null
+          task_id?: string | null
+        }
+        Update: {
+          completed?: boolean | null
+          completed_at?: string | null
+          created_at?: string | null
+          id?: string
+          notes?: string | null
+          session_id?: string | null
+          task_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "task_completions_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "room_cleaning_sessions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "task_completions_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "room_tasks"
             referencedColumns: ["id"]
           },
         ]
@@ -1008,7 +1229,13 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      get_monthly_manager_salary: {
+        Args: { p_employee_id: string; p_year: number }
+        Returns: {
+          month: string
+          total_salary: number
+        }[]
+      }
     }
     Enums: {
       [_ in never]: never

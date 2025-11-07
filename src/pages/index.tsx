@@ -35,6 +35,7 @@ import Link from "next/link";
 import { buildingService } from "@/services/buildingService";
 import { OpenIssuesNotifier } from "@/components/OpenIssuesNotifier";
 import { RealtimeActivityFeed } from "@/components/RealtimeActivityFeed";
+import { BuildingMaps } from "@/components/BuildingMaps";
 
 type InvoiceRow = Database["public"]["Tables"]["invoices"]["Row"];
 type ExpenseInsert = Database["public"]["Tables"]["expenses"]["Insert"];
@@ -650,9 +651,10 @@ export default function HomePage() {
         </div>
 
         <Tabs value={activeTab} onValueChange={(value) => { setActiveTab(value); if (value !== "expenses") setFilteredBookingId(undefined); }} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-7 lg:w-[1050px] bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 p-1">
+          <TabsList className="grid w-full grid-cols-8 lg:w-[1200px] bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 p-1">
             <TabsTrigger value="bookings">Bookings</TabsTrigger>
             <TabsTrigger value="calendar">Calendar</TabsTrigger>
+            <TabsTrigger value="buildings">Buildings</TabsTrigger>
             <TabsTrigger value="invoices">Invoices</TabsTrigger>
             <TabsTrigger value="budget">Budget</TabsTrigger>
             <TabsTrigger value="expenses">Expenses</TabsTrigger>
@@ -669,6 +671,10 @@ export default function HomePage() {
           </TabsContent>
 
           <TabsContent value="calendar" className="space-y-4"><BookingCalendar key={`calendar-${refreshKey}-${bookings.length}`} bookings={bookings} onBookingClick={handleEditBooking} onAddBooking={() => { setEditingBooking(undefined); setBookingDialogOpen(true); }} /></TabsContent>
+
+          <TabsContent value="buildings" className="space-y-4">
+            <BuildingMaps />
+          </TabsContent>
 
           <TabsContent value="invoices" className="space-y-4">
             <Card className="bg-white dark:bg-stone-900 border-stone-200 dark:border-stone-800">
