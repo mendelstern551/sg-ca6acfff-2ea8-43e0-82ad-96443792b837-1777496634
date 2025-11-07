@@ -11,18 +11,20 @@ export const buildingService = {
     const resp = await fetch("/api/buildings");
 
     if (!resp.ok) {
+      // Improved error handling as you suggested
       const errorBody = await resp.text();
       console.error("Failed to fetch buildings via API:", resp.status, errorBody);
-      throw new Error(`Failed to fetch buildings. Status: ${resp.status}`);
+      throw new Error(`Failed to fetch buildings. Status: ${resp.status}. Body: ${errorBody}`);
     }
     
     const result = await resp.json();
 
-    if (result.error || !Array.isArray(result.data)) {
-        console.error("API returned an error or invalid data structure:", result);
-        throw new Error(result.error || "Invalid data from server");
+    if (result.error) {
+        console.error("API returned an error:", result.error, result.details);
+        throw new Error(result.error);
     }
-
+    
+    // The API now consistently returns a 'data' property
     return result.data as Building[];
   },
 
@@ -40,6 +42,7 @@ export const buildingService = {
 
     if (error) {
       console.error(`Error fetching building ${id}:`, error);
+      // Return null if not found, otherwise throw
       if (error.code === "PGRST116") return null;
       throw error;
     }
