@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
 import { startOfDay, endOfDay, differenceInMinutes } from "date-fns";
@@ -188,11 +187,20 @@ export const timeTrackingService = {
     }
   },
 
-  async getDateRangeEntries(employeeId: string, startDate: Date, endDate: Date): Promise<TimeEntryWithDuration[]> {
+  async getDateRangeEntries(
+    employeeId: string, 
+    startDate: Date, 
+    endDate: Date
+  ): Promise<(TimeEntryWithDuration & { employee_name?: string })[]> {
     try {
       const { data, error } = await supabase
         .from("time_entries")
-        .select("*")
+        .select(`
+          *,
+          employees (
+            full_name
+          )
+        `)
         .eq("employee_id", employeeId)
         .gte("clock_in", startDate.toISOString())
         .lte("clock_in", endDate.toISOString())
@@ -200,8 +208,9 @@ export const timeTrackingService = {
 
       if (error) throw error;
 
-      return (data || []).map(entry => ({
+      return (data || []).map((entry: any) => ({
         ...entry,
+        employee_name: entry.employees?.full_name || "Unknown",
         duration_minutes: entry.clock_out
           ? differenceInMinutes(new Date(entry.clock_out), new Date(entry.clock_in))
           : 0

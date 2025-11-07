@@ -28,6 +28,10 @@ import {
 
 type Employee = Database["public"]["Tables"]["employees"]["Row"];
 
+interface TimeEntryWithEmployeeName extends TimeEntryWithDuration {
+  employee_name: string;
+}
+
 interface TimeReportsProps {
   employees: Employee[];
 }
@@ -60,7 +64,7 @@ export function TimeReports({ employees }: TimeReportsProps) {
     from: startOfMonth(new Date()),
     to: new Date(),
   });
-  const [timeEntries, setTimeEntries] = useState<TimeEntryWithDuration[]>([]);
+  const [timeEntries, setTimeEntries] = useState<TimeEntryWithEmployeeName[]>([]);
   const [totals, setTotals] = useState({ workHours: 0, breakHours: 0 });
   const [loading, setLoading] = useState(false);
 
@@ -88,7 +92,7 @@ export function TimeReports({ employees }: TimeReportsProps) {
       }
 
       // Add employee name to each entry for display
-      const entriesWithNames = allEntries.map(entry => {
+      const entriesWithNames: TimeEntryWithEmployeeName[] = allEntries.map(entry => {
         const employee = employees.find(e => e.id === entry.employee_id);
         return { ...entry, employee_name: employee?.full_name || "Unknown" };
       });

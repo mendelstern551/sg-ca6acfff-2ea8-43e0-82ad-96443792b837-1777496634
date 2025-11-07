@@ -537,6 +537,7 @@ export type Database = {
           created_at: string | null
           effective_date: string
           id: string
+          manager_id: string | null
         }
         Insert: {
           base_salary?: number
@@ -546,6 +547,7 @@ export type Database = {
           created_at?: string | null
           effective_date: string
           id?: string
+          manager_id?: string | null
         }
         Update: {
           base_salary?: number
@@ -555,6 +557,7 @@ export type Database = {
           created_at?: string | null
           effective_date?: string
           id?: string
+          manager_id?: string | null
         }
         Relationships: [
           {
