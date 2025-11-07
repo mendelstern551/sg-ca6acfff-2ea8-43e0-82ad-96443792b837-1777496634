@@ -13,6 +13,8 @@ import { useToast } from "@/hooks/use-toast";
 import { format, differenceInMinutes } from "date-fns";
 import { Building, Room, buildingService } from "@/services/buildingService";
 import { IssueDialog } from "./IssueDialog";
+import { TimeReportDialog } from "./TimeReports";
+import { issueService } from "@/services/issueService";
 
 type Employee = Database["public"]["Tables"]["employees"]["Row"];
 type TimeEntry = Database["public"]["Tables"]["time_entries"]["Row"];

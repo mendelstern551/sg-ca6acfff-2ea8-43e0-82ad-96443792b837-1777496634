@@ -1,8 +1,8 @@
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
 
-type Building = Database["public"]["Tables"]["buildings"]["Row"];
-type Room = Database["public"]["Tables"]["rooms"]["Row"];
+export type Building = Database["public"]["Tables"]["buildings"]["Row"];
+export type Room = Database["public"]["Tables"]["rooms"]["Row"];
 
 export type BuildingWithRooms = Building & {
   rooms: Room[];

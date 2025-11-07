@@ -531,6 +531,7 @@ export type Database = {
       manager_compensation: {
         Row: {
           base_salary: number
+          booking_id: string | null
           calculation_logic: string | null
           commission_rate: number
           created_at: string | null
@@ -539,6 +540,7 @@ export type Database = {
         }
         Insert: {
           base_salary?: number
+          booking_id?: string | null
           calculation_logic?: string | null
           commission_rate?: number
           created_at?: string | null
@@ -547,13 +549,22 @@ export type Database = {
         }
         Update: {
           base_salary?: number
+          booking_id?: string | null
           calculation_logic?: string | null
           commission_rate?: number
           created_at?: string | null
           effective_date?: string
           id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "manager_compensation_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       manager_payments: {
         Row: {
