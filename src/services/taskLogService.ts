@@ -172,7 +172,7 @@ export const taskLogService = {
         .maybeSingle();
 
       if (checkError) {
-        console.error("Error checking if building exists:", checkError);
+        console.error("Error checking if building exists:", checkError.message);
         return [];
       }
 
@@ -189,34 +189,45 @@ export const taskLogService = {
         .order("name", { ascending: true });
 
       if (error) {
-        console.error("Supabase error fetching task types:", error.message, "Building ID:", buildingId);
+        console.error("Supabase error fetching task types:", {
+          message: error.message,
+          buildingId,
+          timestamp: new Date().toISOString()
+        });
         
-        // Retry with exponential backoff for network errors
-        // Avoid retrying on auth/permission errors (typically 401/403)
+        // Check if it's a network error vs API error
+        const isNetworkError = error.message?.includes("fetch") || error.message?.includes("network");
         const isAuthError = error.message?.includes("401") || error.message?.includes("403") || error.message?.includes("Unauthorized") || error.message?.includes("Forbidden");
         
-        if (retries < maxRetries && !isAuthError) {
+        // Retry only on network errors, not auth/permission errors
+        if (retries < maxRetries && (isNetworkError || !isAuthError)) {
           const delay = baseDelay * Math.pow(2, retries);
-          console.log(`Retrying after ${delay}ms (attempt ${retries + 1}/${maxRetries})`);
+          console.log(`Retrying after ${delay}ms (attempt ${retries + 1}/${maxRetries}), error type: ${isNetworkError ? 'network' : 'other'}`);
           await new Promise(resolve => setTimeout(resolve, delay));
           return this.getTaskTypesByBuilding(buildingId, retries + 1);
         }
         
+        console.error("Max retries reached or non-retryable error, returning empty array");
         return [];
       }
       
       return data || [];
     } catch (error) {
-      console.error("Unexpected error in getTaskTypesByBuilding:", error);
+      console.error("Unexpected error in getTaskTypesByBuilding:", {
+        error: error instanceof Error ? error.message : String(error),
+        buildingId,
+        timestamp: new Date().toISOString()
+      });
       
-      // Retry for non-validation errors
+      // Retry for network errors
       if (retries < maxRetries) {
         const delay = baseDelay * Math.pow(2, retries);
-        console.log(`Retrying after ${delay}ms (attempt ${retries + 1}/${maxRetries})`);
+        console.log(`Retrying after ${delay}ms due to exception (attempt ${retries + 1}/${maxRetries})`);
         await new Promise(resolve => setTimeout(resolve, delay));
         return this.getTaskTypesByBuilding(buildingId, retries + 1);
       }
       
+      console.error("Max retries exceeded for getTaskTypesByBuilding");
       return [];
     }
   },

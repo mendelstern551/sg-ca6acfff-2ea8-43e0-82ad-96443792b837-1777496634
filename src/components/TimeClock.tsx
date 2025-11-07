@@ -102,12 +102,18 @@ export function TimeClock({ employees, onRefresh }: TimeClockProps) {
           console.warn("No task types found for building:", selectedBuilding);
           toast({
             title: "No Tasks Configured",
-            description: "This building has no task types set up yet.",
+            description: "This building has no task types set up yet. Please configure tasks in the Building Setup section.",
           });
         }
       } catch (error) {
         console.error("Error loading task types:", error);
         setTaskTypes([]);
+        
+        toast({
+          title: "Network Error",
+          description: "Failed to load tasks. Please check your connection and try again.",
+          variant: "destructive"
+        });
       } finally {
         setLoadingTasks(false);
       }
