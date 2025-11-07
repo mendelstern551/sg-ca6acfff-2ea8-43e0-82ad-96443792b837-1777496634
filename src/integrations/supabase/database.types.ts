@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-empty-object-type */
+ 
 export type Json =
   | string
   | number
@@ -614,6 +614,7 @@ export type Database = {
           email: string | null
           full_name: string | null
           id: string
+          role: string | null
           updated_at: string | null
         }
         Insert: {
@@ -622,6 +623,7 @@ export type Database = {
           email?: string | null
           full_name?: string | null
           id: string
+          role?: string | null
           updated_at?: string | null
         }
         Update: {
@@ -630,6 +632,7 @@ export type Database = {
           email?: string | null
           full_name?: string | null
           id?: string
+          role?: string | null
           updated_at?: string | null
         }
         Relationships: []

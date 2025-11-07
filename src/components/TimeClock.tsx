@@ -3,13 +3,15 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Clock, Play, Square, Coffee, MapPin, CheckCircle2, AlertCircle } from "lucide-react";
+import { Clock, Play, Square, Coffee, MapPin, CheckCircle2, AlertCircle, AlertTriangle, BedDouble, Bed, Info, Image as ImageIcon } from "lucide-react";
 import { timeTrackingService } from "@/services/timeTrackingService";
 import { taskLogService } from "@/services/taskLogService";
 import { supabaseHealthCheck } from "@/services/supabaseHealthCheck";
 import type { Database } from "@/integrations/supabase/types";
 import { useToast } from "@/hooks/use-toast";
 import { format, differenceInMinutes } from "date-fns";
+import { Building, Room, buildingService } from "@/services/buildingService";
+import { IssueDialog } from "./IssueDialog";
 
 type Employee = Database["public"]["Tables"]["employees"]["Row"];
 type TimeEntry = Database["public"]["Tables"]["time_entries"]["Row"];
@@ -20,6 +22,321 @@ type TaskLog = Database["public"]["Tables"]["task_logs"]["Row"];
 interface TimeClockProps {
   employees: Employee[];
   onRefresh?: () => void;
+}
+
+// EmployeeTimeCard component
+interface EmployeeTimeCardProps {
+  employee: Employee;
+  onRefresh: () => void;
+  taskTypes: { id: string; name: string }[];
+  buildings: Building[];
+}
+
+function EmployeeTimeCard({ employee, onRefresh, taskTypes, buildings }: EmployeeTimeCardProps) {
+  const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
+  const [selectedBuildingId, setSelectedBuildingId] = useState<string | null>(null);
+  const [selectedRoomId, setSelectedRoomId] = useState<string | null>(null);
+  const [isSubmittingTask, setIsSubmittingTask] = useState(false);
+  const [taskNotes, setTaskNotes] = useState("");
+
+  const [issueDialogOpen, setIssueDialogOpen] = useState(false);
+  const [issueReportingInfo, setIssueReportingInfo] = useState<{taskLogId: string | null, roomId: string | null} | null>(null);
+
+  useEffect(() => {
+    fetchActiveEntry();
+  }, [employee.id]);
+
+  const fetchActiveEntry = async () => {
+    const [timeEntry, breakEntry, task] = await Promise.all([
+      timeTrackingService.getActiveTimeEntry(employee.id),
+      timeTrackingService.getActiveBreak(employee.id),
+      taskLogService.getActiveTask(employee.id)
+    ]);
+
+    setActiveTimeEntry(timeEntry);
+    setActiveBreak(breakEntry);
+    setActiveTask(task);
+
+    if (timeEntry?.clock_in) {
+      const minutes = differenceInMinutes(new Date(), new Date(timeEntry.clock_in));
+      setElapsedTime(minutes);
+    }
+
+    if (breakEntry?.clock_in) {
+      const minutes = differenceInMinutes(new Date(), new Date(breakEntry.clock_in));
+      setBreakTime(minutes);
+    }
+  };
+
+  const handleStartTask = async () => {
+    if (!activeEntry) {
+      toast({ title: "Clock In First", description: "You must be clocked in to start a task.", variant: "destructive" });
+      return;
+    }
+    setIsSubmittingTask(true);
+    try {
+      await taskLogService.startTask({
+        employee_id: employee.id,
+        task_type_id: selectedTaskId,
+        building_id: selectedBuildingId,
+        room_id: selectedRoomId,
+        time_entry_id: activeEntry.id,
+        notes: taskNotes,
+      });
+      toast({ title: "Task Started!", description: "You can now begin your work." });
+      fetchActiveEntry(); // Refresh data
+      onRefresh();
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to start task",
+        variant: "destructive"
+      });
+    } finally {
+      setIsSubmittingTask(false);
+    }
+  };
+
+  const handleStopTask = async (taskLogId: string) => {
+    try {
+      await taskLogService.completeTask(taskLogId);
+      toast({
+        title: "Task Completed",
+        description: "Task has been marked as complete"
+      });
+      setActiveTask(null);
+      await loadEmployeeStatus();
+      onRefresh();
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to complete task",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleReportIssue = (taskLog: TaskLog & { rooms?: Room | null }) => {
+    setIssueReportingInfo({
+      taskLogId: taskLog.id,
+      roomId: taskLog.room_id
+    });
+    setIssueDialogOpen(true);
+  };
+
+  const selectedBuilding = buildings.find(b => b.id === selectedBuildingId);
+  const selectedRoom = selectedBuilding?.rooms.find(r => r.id === selectedRoomId);
+  const mapUrl = selectedRoom?.map_image_url || selectedBuilding?.map_image_url;
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <Clock className="h-5 w-5" />
+          Time Clock
+        </CardTitle>
+        <CardDescription>Clock in/out and track tasks throughout the day</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-6">
+        <div className="space-y-2">
+          <label className="text-sm font-medium">Select Employee</label>
+          <Select value={selectedEmployeeId} onValueChange={setSelectedEmployeeId}>
+            <SelectTrigger>
+              <SelectValue placeholder="Choose an employee..." />
+            </SelectTrigger>
+            <SelectContent>
+              {employees.filter(e => e.status === "active").map(employee => (
+                <SelectItem key={employee.id} value={employee.id}>
+                  {employee.full_name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        {selectedEmployee && (
+          <>
+            {connectionError && !isConnectionHealthy && (
+              <div className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg flex items-start gap-3 mb-4">
+                <AlertCircle className="h-5 w-5 text-red-600 dark:text-red-400 mt-0.5 flex-shrink-0" />
+                <div className="flex-1">
+                  <h4 className="font-medium text-red-900 dark:text-red-100 mb-1">Connection Error</h4>
+                  <p className="text-sm text-red-800 dark:text-red-200">{connectionError}</p>
+                  <p className="text-xs text-red-700 dark:text-red-300 mt-2">
+                    Please check your internet connection or contact support if the issue persists.
+                  </p>
+                </div>
+              </div>
+            )}
+
+            <div className="p-4 bg-slate-50 dark:bg-slate-800 rounded-lg space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium">Status</span>
+                <Badge variant={activeTimeEntry ? "default" : "secondary"}>
+                  {activeTimeEntry ? "Clocked In" : "Not Working"}
+                </Badge>
+              </div>
+
+              {activeTimeEntry && (
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-slate-600 dark:text-slate-400">Work Time</span>
+                    <span className="text-lg font-bold">{formatTime(elapsedTime)}</span>
+                  </div>
+                  <div className="text-xs text-slate-500">
+                    Started: {format(new Date(activeTimeEntry.clock_in), "h:mm a")}
+                  </div>
+                </div>
+              )}
+
+              {activeBreak && (
+                <div className="flex items-center justify-between p-2 bg-yellow-100 dark:bg-yellow-900/20 rounded">
+                  <div className="flex items-center gap-2">
+                    <Coffee className="h-4 w-4 text-yellow-600" />
+                    <span className="text-sm font-medium">On Break</span>
+                  </div>
+                  <span className="text-sm font-bold">{formatTime(breakTime)}</span>
+                </div>
+              )}
+
+              {activeTask && (
+                <div className="p-2 bg-blue-100 dark:bg-blue-900/20 rounded space-y-1">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium text-blue-900 dark:text-blue-100">
+                      Active Task
+                    </span>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={handleCompleteTask}
+                      disabled={loading}
+                      className="h-7"
+                    >
+                      <CheckCircle2 className="h-4 w-4 mr-1" />
+                      Complete
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="space-y-3">
+              {!activeTimeEntry ? (
+                <Button
+                  onClick={handleClockIn}
+                  disabled={loading}
+                  className="w-full"
+                  size="lg"
+                >
+                  <Play className="h-5 w-5 mr-2" />
+                  Clock In
+                </Button>
+              ) : (
+                <>
+                  {!activeBreak ? (
+                    <div className="grid grid-cols-2 gap-3">
+                      <Button
+                        onClick={handleStartBreak}
+                        disabled={loading}
+                        variant="outline"
+                      >
+                        <Coffee className="h-4 w-4 mr-2" />
+                        Start Break
+                      </Button>
+                      <Button
+                        onClick={handleClockOut}
+                        disabled={loading}
+                        variant="destructive"
+                      >
+                        <Square className="h-4 w-4 mr-2" />
+                        Clock Out
+                      </Button>
+                    </div>
+                  ) : (
+                    <Button
+                      onClick={handleEndBreak}
+                      disabled={loading}
+                      className="w-full"
+                      variant="outline"
+                    >
+                      End Break
+                    </Button>
+                  )}
+
+                  {!activeBreak && !activeTask && (
+                    <div className="p-4 border rounded-lg space-y-3">
+                      <h4 className="font-medium text-sm">Start New Task</h4>
+                      <Select value={selectedBuilding} onValueChange={setSelectedBuilding}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select building..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {buildings.map(building => (
+                            <SelectItem key={building.id} value={building.id}>
+                              {building.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+
+                      {selectedBuilding && (
+                        <div className="space-y-2">
+                          {taskLoadError && (
+                            <div className="p-2 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded text-xs text-red-700 dark:text-red-300 flex items-center justify-between">
+                              <span>{taskLoadError}</span>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => {
+                                  setSelectedBuilding("");
+                                  setTimeout(() => setSelectedBuilding(selectedBuilding), 100);
+                                }}
+                                className="h-6"
+                              >
+                                Retry
+                              </Button>
+                            </div>
+                          )}
+                          <Select value={selectedTaskType} onValueChange={setSelectedTaskType}>
+                            <SelectTrigger disabled={loadingTasks || taskTypes.length === 0}>
+                              <SelectValue placeholder={loadingTasks ? "Loading tasks..." : taskTypes.length === 0 ? "No tasks available" : "Select task..."} />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {taskTypes.map(task => (
+                                <SelectItem key={task.id} value={task.id}>
+                                  {task.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      )}
+
+                      <Button
+                        onClick={handleStartTask}
+                        disabled={loading || !selectedBuilding || !selectedTaskType || loadingTasks}
+                        className="w-full"
+                      >
+                        {loadingTasks ? "Loading Tasks..." : "Start Task"}
+                      </Button>
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+          </>
+        )}
+      </CardContent>
+      <IssueDialog
+        open={issueDialogOpen}
+        onOpenChange={setIssueDialogOpen}
+        taskLogId={issueReportingInfo?.taskLogId}
+        roomId={issueReportingInfo?.roomId}
+        employeeId={employee.id}
+        onSuccess={onRefresh}
+      />
+    </Card>
+  );
 }
 
 export function TimeClock({ employees, onRefresh }: TimeClockProps) {
