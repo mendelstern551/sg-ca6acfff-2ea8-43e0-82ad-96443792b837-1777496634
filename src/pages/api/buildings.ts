@@ -1,5 +1,6 @@
 
 import type { NextApiRequest, NextApiResponse } from "next";
+import { createClient } from "@supabase/supabase-js";
 
 interface ApiResponse {
   data?: unknown;
@@ -38,8 +39,6 @@ export default async function handler(
       });
     }
 
-    const { createClient } = await import("@supabase/supabase-js");
-    
     const supabase = createClient(url, serviceKey, {
       auth: { 
         persistSession: false, 
