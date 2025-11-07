@@ -256,6 +256,7 @@ export type Database = {
           hourly_rate: number | null
           id: string
           id_photo_url: string | null
+          job_title: string | null
           notes: string | null
           pay_rate: number | null
           phone: string | null
@@ -274,6 +275,7 @@ export type Database = {
           hourly_rate?: number | null
           id?: string
           id_photo_url?: string | null
+          job_title?: string | null
           notes?: string | null
           pay_rate?: number | null
           phone?: string | null
@@ -292,6 +294,7 @@ export type Database = {
           hourly_rate?: number | null
           id?: string
           id_photo_url?: string | null
+          job_title?: string | null
           notes?: string | null
           pay_rate?: number | null
           phone?: string | null

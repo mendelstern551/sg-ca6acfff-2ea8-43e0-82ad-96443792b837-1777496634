@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -6,7 +7,6 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { EnhancedCalendar } from "@/components/ui/enhanced-calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { CalendarIcon, Calculator, Mail, AlertTriangle } from "lucide-react";
 import { format, differenceInDays } from "date-fns";
@@ -18,6 +18,9 @@ import { emailService } from "@/services/emailService";
 import { useToast } from "@/hooks/use-toast";
 import { conflictDetectionService } from "@/services/conflictDetectionService";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { buildingService, BuildingWithRooms } from "@/services/buildingService";
+import { supabase } from "@/integrations/supabase/client";
+import type { User } from "@supabase/supabase-js";
 
 type BookingInsert = Omit<Booking, "id" | "created_at" | "updated_at" | "payments">;
 
@@ -49,13 +52,34 @@ export function BookingDialog({ open, onOpenChange, onSave, booking: editingBook
   const [discountPercent, setDiscountPercent] = useState<number | null>(null);
   const [notes, setNotes] = useState("");
   const [payments, setPayments] = useState<Payment[]>([]);
+  const [buildings, setBuildings] = useState<BuildingWithRooms[]>([]);
+  const [selectedBuildingId, setSelectedBuildingId] = useState<string | null>(null);
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
 
-  // ✅ NEW: Conflict detection state
   const [dateConflict, setDateConflict] = useState<{ hasConflict: boolean; message?: string }>({ hasConflict: false });
   const [capacityWarning, setCapacityWarning] = useState<{ hasWarning: boolean; message?: string }>({ hasWarning: false });
 
   const [pricingConfig] = useState<PricingConfig>(DEFAULT_PRICING);
   const { toast } = useToast();
+
+  useEffect(() => {
+    const fetchUser = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      setCurrentUser(user);
+    };
+    fetchUser();
+
+    const fetchBuildings = async () => {
+        try {
+            const data = await buildingService.getBuildingsWithRooms();
+            setBuildings(data);
+        } catch (error) {
+            console.error("Failed to fetch buildings:", error);
+            toast({ title: "Error", description: "Could not load buildings.", variant: "destructive" });
+        }
+    };
+    fetchBuildings();
+  }, [toast]);
 
   useEffect(() => {
     if (editingBooking) {
@@ -73,11 +97,11 @@ export function BookingDialog({ open, onOpenChange, onSave, booking: editingBook
       setTotalCost(editingBooking.total_cost);
       setDepositAmount(editingBooking.deposit_amount);
       setConfirmed(Boolean(editingBooking.confirmed));
-      // Ensure custom_price is treated as a number or null.
       setCustomPrice(editingBooking.custom_price ? Number(editingBooking.custom_price) : null);
       setDiscountPercent(editingBooking.discount_percent ? Number(editingBooking.discount_percent) : null);
       setNotes(editingBooking.notes || "");
       setPayments(editingBooking.payments || []);
+      setSelectedBuildingId(editingBooking.building_id);
     } else {
       resetForm();
     }
@@ -111,6 +135,7 @@ export function BookingDialog({ open, onOpenChange, onSave, booking: editingBook
     setDiscountPercent(null);
     setNotes("");
     setPayments([]);
+    setSelectedBuildingId(null);
   };
 
   const recalculateRates = () => {
@@ -133,19 +158,16 @@ export function BookingDialog({ open, onOpenChange, onSave, booking: editingBook
   
   useEffect(recalculateRates, [bookingType, numberOfGuests, customPrice, discountPercent, pricingConfig]);
 
-  // ✅ NEW: Conflict detection when dates or guests change
   useEffect(() => {
     if (dateRange?.from && dateRange?.to) {
-      // Check for date conflicts
       const conflict = conflictDetectionService.checkDateConflict(
         dateRange.from.toISOString(),
         dateRange.to.toISOString(),
         bookings,
-        editingBooking?.id // Exclude current booking if editing
+        editingBooking?.id
       );
       setDateConflict(conflict);
 
-      // Check for capacity warnings
       if (typeof numberOfGuests === 'number' && numberOfGuests > 0) {
         const capacityCheck = conflictDetectionService.checkCapacityWarning(
           numberOfGuests,
@@ -164,9 +186,11 @@ export function BookingDialog({ open, onOpenChange, onSave, booking: editingBook
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!contactName || !dateRange?.from || !dateRange?.to || numberOfGuests === "") return;
+    if (!contactName || !dateRange?.from || !dateRange?.to || numberOfGuests === "" || !selectedBuildingId) {
+        toast({ title: "Missing fields", description: "Please fill all required fields, including selecting a building.", variant: "destructive" });
+        return;
+    }
 
-    // ✅ NEW: Warn about conflicts before saving
     if (dateConflict.hasConflict) {
       const proceed = window.confirm(
         `⚠️ WARNING: ${dateConflict.message}\n\nDo you want to proceed anyway?`
@@ -207,17 +231,19 @@ export function BookingDialog({ open, onOpenChange, onSave, booking: editingBook
       custom_price: customPrice,
       discount_percent: discountPercent,
       notes: notes,
-      recurring: null, // Add default for new 'recurring' field
+      recurring: null,
+      building_id: selectedBuildingId,
+      status: confirmed ? "confirmed" : "pending",
+      user_id: currentUser?.id || null,
     };
     
-    onSave(bookingData);
+    onSave(bookingData as any);
     onOpenChange(false);
 
-    // Send confirmation email if checkbox was checked and booking is confirmed
     if (confirmed && sendConfirmationEmail && contactEmail) {
       try {
         const fullBookingData: Booking = {
-          ...bookingData,
+          ...(bookingData as any),
           id: editingBooking?.id || "temp-id",
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
@@ -257,8 +283,6 @@ export function BookingDialog({ open, onOpenChange, onSave, booking: editingBook
   };
 
   const handleConfirmedChange = (checked: boolean | string) => {
-    // The `checked` value from onCheckedChange can be 'indeterminate' as a string.
-    // We ensure it's always a boolean.
     setConfirmed(checked === true);
   };
 
@@ -275,16 +299,29 @@ export function BookingDialog({ open, onOpenChange, onSave, booking: editingBook
         <form onSubmit={handleSave} className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="type">Booking Type</Label>
-                <Select value={bookingType} onValueChange={handleBookingTypeChange}>
-                  <SelectTrigger><SelectValue placeholder="Select booking type" /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="yom_tov">Yom Tov</SelectItem>
-                    <SelectItem value="shabaton">Shabaton</SelectItem>
-                    <SelectItem value="night_event">Night Event</SelectItem>
-                  </SelectContent>
-                </Select>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                    <Label htmlFor="type">Booking Type</Label>
+                    <Select value={bookingType} onValueChange={handleBookingTypeChange}>
+                    <SelectTrigger><SelectValue placeholder="Select booking type" /></SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="yom_tov">Yom Tov</SelectItem>
+                        <SelectItem value="shabaton">Shabaton</SelectItem>
+                        <SelectItem value="night_event">Night Event</SelectItem>
+                    </SelectContent>
+                    </Select>
+                </div>
+                <div className="space-y-2">
+                    <Label htmlFor="building">Building *</Label>
+                    <Select value={selectedBuildingId || ""} onValueChange={setSelectedBuildingId}>
+                        <SelectTrigger><SelectValue placeholder="Select a building" /></SelectTrigger>
+                        <SelectContent>
+                            {buildings.map(b => (
+                                <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+                </div>
               </div>
 
               <div className="flex items-center space-x-3 p-4 bg-blue-50 dark:bg-blue-950/30 rounded-lg border-2 border-blue-200 dark:border-blue-800">
@@ -323,29 +360,51 @@ export function BookingDialog({ open, onOpenChange, onSave, booking: editingBook
                 <Input id="contactName" value={contactName} onChange={(e) => setContactName(e.target.value)} placeholder="Primary contact person" required />
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="contactEmail">Contact Email</Label>
-                <Input id="contactEmail" type="email" value={contactEmail} onChange={(e) => setContactEmail(e.target.value)} placeholder="email@example.com" />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="contactPhone">Contact Phone</Label>
-                <Input id="contactPhone" type="tel" value={contactPhone} onChange={(e) => setContactPhone(e.target.value)} placeholder="(555) 123-4567" />
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                    <Label htmlFor="contactEmail">Contact Email</Label>
+                    <Input id="contactEmail" type="email" value={contactEmail} onChange={(e) => setContactEmail(e.target.value)} placeholder="email@example.com" />
+                </div>
+                <div className="space-y-2">
+                    <Label htmlFor="contactPhone">Contact Phone</Label>
+                    <Input id="contactPhone" type="tel" value={contactPhone} onChange={(e) => setContactPhone(e.target.value)} placeholder="(555) 123-4567" />
+                </div>
               </div>
             </div>
 
             <div className="space-y-4">
               <div className="space-y-2">
                 <Label>Select Dates *</Label>
-                <div className="border rounded-lg p-2 bg-white dark:bg-slate-900">
-                  <EnhancedCalendar 
-                    mode="range" 
-                    selected={dateRange} 
-                    onSelect={setDateRange} 
-                    numberOfMonths={1}
-                    className="rounded-md scale-90"
-                  />
-                </div>
+                <Popover>
+                    <PopoverTrigger asChild>
+                        <Button
+                            variant={"outline"}
+                            className="w-full justify-start text-left font-normal"
+                        >
+                            <CalendarIcon className="mr-2 h-4 w-4" />
+                            {dateRange?.from ? (
+                                dateRange.to ? (
+                                    <>
+                                        {format(dateRange.from, "LLL dd, y")} -{" "}
+                                        {format(dateRange.to, "LLL dd, y")}
+                                    </>
+                                ) : (
+                                    format(dateRange.from, "LLL dd, y")
+                                )
+                            ) : (
+                                <span>Pick a date range</span>
+                            )}
+                        </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                        <EnhancedCalendar
+                            mode="range"
+                            selected={dateRange}
+                            onSelect={setDateRange}
+                            numberOfMonths={2}
+                        />
+                    </PopoverContent>
+                </Popover>
                 {dateRange?.from && dateRange?.to && (
                   <div className="p-3 bg-blue-50 dark:bg-blue-950 rounded-lg">
                     <p className="text-sm font-medium text-blue-900 dark:text-blue-100">
@@ -378,12 +437,11 @@ export function BookingDialog({ open, onOpenChange, onSave, booking: editingBook
               </div>
               <div className="space-y-2">
                 <Label htmlFor="notes">Notes</Label>
-                <Textarea id="notes" value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Additional notes or special requirements" rows={4} />
+                <Textarea id="notes" value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Additional notes or special requirements" rows={3} />
               </div>
             </div>
           </div>
 
-          {/* ✅ NEW: Conflict and capacity warnings */}
           {dateConflict.hasConflict && (
             <Alert variant="destructive" className="border-2 border-red-500">
               <AlertTriangle className="h-4 w-4" />

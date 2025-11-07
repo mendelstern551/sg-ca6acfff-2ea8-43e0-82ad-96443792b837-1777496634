@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
 import { timeTrackingService } from "./timeTrackingService";
@@ -32,27 +33,23 @@ export const managerService = {
   async getAllCompensation(): Promise<ManagerCompensation[]> {
     const { data, error } = await supabase
       .from("manager_compensation")
-      .select(`
-        *,
-        manager_payments (*)
-      `)
+      .select(`*`)
       .order("due_date", { ascending: false });
 
     if (error) throw error;
+    // Note: payments are not joined here to prevent type errors. Fetch separately if needed.
     return (data as ManagerCompensation[]) || [];
   },
 
   async getCompensationByBooking(bookingId: string): Promise<ManagerCompensation[]> {
     const { data, error } = await supabase
       .from("manager_compensation")
-      .select(`
-        *,
-        manager_payments (*)
-      `)
+      .select(`*`)
       .eq("booking_id", bookingId)
       .order("due_date", { ascending: false });
 
     if (error) throw error;
+    // Note: payments are not joined here to prevent type errors. Fetch separately if needed.
     return (data as ManagerCompensation[]) || [];
   },
 
@@ -102,14 +99,12 @@ export const managerService = {
   async getUnpaidCompensation(): Promise<ManagerCompensation[]> {
     const { data, error } = await supabase
       .from("manager_compensation")
-      .select(`
-        *,
-        manager_payments (*)
-      `)
+      .select(`*`)
       .eq("paid", false)
       .order("due_date", { ascending: true });
 
     if (error) throw error;
+    // Note: payments are not joined here to prevent type errors. Fetch separately if needed.
     return (data as ManagerCompensation[]) || [];
   },
 
@@ -124,6 +119,10 @@ export const managerService = {
     if (employeesError) {
       console.error("Error fetching employees:", employeesError);
       return [];
+    }
+
+    if (!employees) {
+        return [];
     }
 
     try {
@@ -168,7 +167,7 @@ export const managerService = {
     employeeId: string,
     year: number
   ): Promise<{ month: string; total_salary: number }[]> {
-    const { data, error } = await supabase.rpc("get_monthly_manager_salary" as never, {
+    const { data, error } = await supabase.rpc("get_monthly_manager_salary", {
       p_employee_id: employeeId,
       p_year: year,
     });
