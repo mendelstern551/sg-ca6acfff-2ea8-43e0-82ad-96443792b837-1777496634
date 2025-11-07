@@ -6,15 +6,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(405).json({ error: 'Method Not Allowed' });
   }
 
+  // This is a public endpoint, so we don't need to check for a session.
+  // The RLS policy on the 'task_types' table allows public read access.
   const supabaseServerClient = createServerSupabaseClient({ req, res });
-  const { data: { session } } = await supabaseServerClient.auth.getSession();
-
-  if (!session) {
-    return res.status(401).json({ error: "Not authorized" });
-  }
 
   try {
-    // This route now fetches ALL task types, as they are global.
     const { data, error } = await supabaseServerClient
       .from("task_types")
       .select("id, name")
