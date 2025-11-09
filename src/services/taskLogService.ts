@@ -135,10 +135,12 @@ export const taskLogService = {
         .eq("employee_id", employeeId)
         .is("completed_at", null)
         .order("started_at", { ascending: false })
-        .single();
+        .limit(1)
+        .maybeSingle();
 
-      if (error && error.code !== 'PGRST116') {
-        throw error;
+      if (error) {
+        console.error("Error fetching active task:", error);
+        return null;
       }
       return data;
     } catch (error) {
