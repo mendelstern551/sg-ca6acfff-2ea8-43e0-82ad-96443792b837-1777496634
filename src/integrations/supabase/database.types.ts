@@ -280,7 +280,9 @@ export type Database = {
           hourly_rate: number | null
           id: string
           id_photo_url: string | null
+          is_manager: boolean | null
           job_title: string | null
+          monthly_salary: number | null
           notes: string | null
           pay_rate: number | null
           phone: string | null
@@ -299,7 +301,9 @@ export type Database = {
           hourly_rate?: number | null
           id?: string
           id_photo_url?: string | null
+          is_manager?: boolean | null
           job_title?: string | null
+          monthly_salary?: number | null
           notes?: string | null
           pay_rate?: number | null
           phone?: string | null
@@ -318,7 +322,9 @@ export type Database = {
           hourly_rate?: number | null
           id?: string
           id_photo_url?: string | null
+          is_manager?: boolean | null
           job_title?: string | null
+          monthly_salary?: number | null
           notes?: string | null
           pay_rate?: number | null
           phone?: string | null
@@ -1245,13 +1251,15 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      get_monthly_manager_salary: {
-        Args: { p_employee_id: string; p_year: number }
-        Returns: {
-          month: string
-          total_salary: number
-        }[]
-      }
+      get_monthly_manager_salary:
+        | {
+            Args: { p_employee_id: string; p_year: number }
+            Returns: {
+              month: string
+              total_salary: number
+            }[]
+          }
+        | { Args: { manager_id: string }; Returns: number }
     }
     Enums: {
       [_ in never]: never
