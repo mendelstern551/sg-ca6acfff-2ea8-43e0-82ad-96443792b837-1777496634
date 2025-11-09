@@ -1,3 +1,4 @@
+
 import { NextApiRequest, NextApiResponse } from "next";
 import { createClient } from "@supabase/supabase-js";
 
@@ -12,15 +13,29 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
         const supabase = createClient(url, key);
 
-        // ✅ Simple test query
-        const { data, error } = await supabase.from("buildings").select("*").limit(1);
+        // Fetch all buildings with their rooms
+        const { data: buildings, error } = await supabase
+            .from("buildings")
+            .select(`
+                *,
+                rooms (
+                    *
+                )
+            `)
+            .order("name");
 
         if (error) {
             console.error("Supabase error:", error);
-            return res.status(500).json({ error: error.message });
+            return res.status(500).json({ error: error.message, details: error });
         }
 
-        return res.status(200).json({ success: true, data });
+        // Transform the data to ensure rooms is always an array
+        const buildingsWithRooms = (buildings || []).map(building => ({
+            ...building,
+            rooms: Array.isArray(building.rooms) ? building.rooms : []
+        }));
+
+        return res.status(200).json({ success: true, data: buildingsWithRooms });
     } catch (err: any) {
         console.error("Server error:", err);
         return res.status(500).json({ error: err.message || "Unknown error" });
