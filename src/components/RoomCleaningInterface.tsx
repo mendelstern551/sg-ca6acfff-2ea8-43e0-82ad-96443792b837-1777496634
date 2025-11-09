@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -142,7 +143,6 @@ export function RoomCleaningInterface({ employeeId, employeeName }: RoomCleaning
 
     try {
       const roomData = activeSession.room as any;
-      const buildingData = roomData?.buildings || roomData?.building;
       
       await issueService.createIssue({
         room_id: activeSession.room_id,
@@ -222,6 +222,7 @@ export function RoomCleaningInterface({ employeeId, employeeName }: RoomCleaning
     const buildingName = Array.isArray(buildingData) ? buildingData[0]?.name : buildingData?.name || "Unknown Building";
     const targetHeating = Array.isArray(buildingData) ? buildingData[0]?.target_heating_level : buildingData?.target_heating_level;
     
+    const currentRoom = rooms.find(r => r.id === activeSession.room_id);
     const completedCount = tasks.filter(t => t.completed).length;
     const totalCount = tasks.length;
     const progress = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
@@ -256,7 +257,7 @@ export function RoomCleaningInterface({ employeeId, employeeName }: RoomCleaning
               {targetHeating && (
                 <span className="flex items-center gap-1">
                   <Thermometer className="h-4 w-4" />
-                  Target: {targetHeating}°C
+                  Target: {Number(targetHeating).toFixed(0)}°C
                 </span>
               )}
             </div>
@@ -269,6 +270,18 @@ export function RoomCleaningInterface({ employeeId, employeeName }: RoomCleaning
               <CheckCircle2 className="h-5 w-5" />
               Cleaning Checklist ({completedCount}/{totalCount})
             </CardTitle>
+            {currentRoom && (
+              <div className="flex items-center gap-3 mt-2">
+                <Badge variant="outline" className="gap-1">
+                  <Bed className="h-3 w-3" />
+                  {currentRoom.bed_count} Single
+                </Badge>
+                <Badge variant="outline" className="gap-1">
+                  <BedDouble className="h-3 w-3" />
+                  {currentRoom.bunk_bed_count} Bunk
+                </Badge>
+              </div>
+            )}
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
@@ -299,9 +312,6 @@ export function RoomCleaningInterface({ employeeId, employeeName }: RoomCleaning
                           </Badge>
                         )}
                       </div>
-                      <p className="text-sm text-stone-600 dark:text-stone-400 mt-1">
-                        {task.task_description}
-                      </p>
                       {task.notes && (
                         <Alert className="mt-2">
                           <AlertCircle className="h-4 w-4" />
@@ -376,215 +386,49 @@ export function RoomCleaningInterface({ employeeId, employeeName }: RoomCleaning
   }
 
   return (
-    <div className="space-y-6">
-      {!activeSession ? (
-        <Card className="bg-white dark:bg-stone-900 border-stone-200 dark:border-stone-800">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Home className="h-5 w-5 text-orange-600" />
-              Start Room Cleaning
-            </CardTitle>
-            <CardDescription>
-              Select a room to begin cleaning and track your tasks
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div>
-              <label className="text-sm font-medium text-stone-700 dark:text-stone-300 mb-2 block">
-                Select Room
-              </label>
-              <Select value={selectedRoom} onValueChange={setSelectedRoom}>
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Choose a room to clean..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {rooms.map((room) => (
-                    <SelectItem key={room.id} value={room.id}>
-                      <div className="flex items-center gap-2">
-                        <span className="font-medium">{room.name}</span>
-                        <span className="text-xs text-stone-500">
-                          ({room.building_name} • Floor {room.floor ?? "N/A"})
-                        </span>
-                      </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <Button
-              className="w-full bg-orange-600 hover:bg-orange-700"
-              onClick={startCleaning}
-              disabled={!selectedRoom || loading}
-            >
-              <PlayCircle className="h-4 w-4 mr-2" />
-              {loading ? "Starting..." : "Start Cleaning"}
-            </Button>
-          </CardContent>
-        </Card>
-      ) : (
-        <Card className="bg-white dark:bg-stone-900 border-stone-200 dark:border-stone-800">
-          <CardHeader className="bg-gradient-to-r from-orange-50 to-amber-50 dark:from-orange-950/30 dark:to-amber-950/30">
-            <div className="flex items-start justify-between">
-              <div className="flex-1">
-                <CardTitle className="flex items-center gap-2 mb-2">
-                  <Home className="h-5 w-5 text-orange-600" />
-                  {currentRoom?.name}
-                </CardTitle>
-                <CardDescription className="flex flex-wrap gap-2 items-center">
-                  <Badge variant="outline">{currentRoom?.building_name}</Badge>
-                  <Badge variant="outline">Floor {currentRoom?.floor ?? "N/A"}</Badge>
-                  <span className="text-xs text-stone-500">
-                    Started {activeSession.clock_in_time ? formatDistanceToNow(new Date(activeSession.clock_in_time), { addSuffix: true }) : ""}
-                  </span>
-                </CardDescription>
-              </div>
-              {currentRoom?.target_heating_level && (
-                <Badge variant="secondary" className="gap-1">
-                  <Thermometer className="h-3 w-3" />
-                  {Number(currentRoom.target_heating_level).toFixed(0)}°C
-                </Badge>
-              )}
-            </div>
-
-            <div className="mt-4">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-sm font-medium text-stone-700 dark:text-stone-300">
-                  Progress: {completedCount} / {totalTasks} tasks
-                </span>
-                <span className="text-sm font-bold text-orange-600">{progress.toFixed(0)}%</span>
-              </div>
-              <div className="w-full bg-stone-200 dark:bg-stone-700 rounded-full h-2">
-                <div
-                  className="bg-orange-600 h-2 rounded-full transition-all duration-500"
-                  style={{ width: `${progress}%` }}
-                />
-              </div>
-            </div>
-          </CardHeader>
-
-          <CardContent className="space-y-3 pt-6">
-            <div className="grid gap-2 mb-6 p-3 bg-slate-50 dark:bg-slate-800 rounded-lg">
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-stone-600 dark:text-stone-400">Single Beds:</span>
-                <span className="font-semibold flex items-center gap-1">
-                  <Bed className="h-4 w-4" />
-                  {currentRoom?.bed_count || 0}
-                </span>
-              </div>
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-stone-600 dark:text-stone-400">Bunk Beds:</span>
-                <span className="font-semibold flex items-center gap-1">
-                  <BedDouble className="h-4 w-4" />
-                  {currentRoom?.bunk_bed_count || 0}
-                </span>
-              </div>
-            </div>
-
-            <h4 className="font-semibold text-sm text-stone-900 dark:text-stone-100 flex items-center gap-2 mb-3">
-              <CheckCircle2 className="h-4 w-4 text-orange-600" />
-              Cleaning Tasks
-            </h4>
-
-            <div className="space-y-2">
-              {tasks.map((task, index) => (
-                <div
-                  key={task.id}
-                  className={`flex items-start gap-3 p-3 rounded-lg border transition-all ${
-                    task.completed
-                      ? "bg-green-50 dark:bg-green-950/20 border-green-200 dark:border-green-800"
-                      : "bg-white dark:bg-stone-800 border-stone-200 dark:border-stone-700 hover:border-orange-300 dark:hover:border-orange-600"
-                  }`}
-                >
-                  <Checkbox
-                    checked={task.completed}
-                    onCheckedChange={() => handleCompleteTask(task)}
-                    className="mt-1"
-                  />
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="text-xs font-mono text-stone-500 dark:text-stone-400">
-                        {index + 1}.
-                      </span>
-                      <span className={`text-sm font-medium ${task.completed ? "line-through text-stone-500 dark:text-stone-400" : "text-stone-900 dark:text-stone-100"}`}>
-                        {task.task_name}
-                      </span>
-                      {task.issue_reported && (
-                        <Badge variant="destructive" className="text-xs gap-1">
-                          <AlertCircle className="h-3 w-3" />
-                          Issue
-                        </Badge>
-                      )}
-                    </div>
-                    {task.notes && (
-                      <p className="text-xs text-stone-600 dark:text-stone-400 mt-1 pl-6">
-                        Note: {task.notes}
-                      </p>
-                    )}
+    <Card className="bg-white dark:bg-stone-900 border-stone-200 dark:border-stone-800">
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <Home className="h-5 w-5 text-orange-600" />
+          Start Room Cleaning
+        </CardTitle>
+        <CardDescription>
+          Select a room to begin cleaning and track your tasks
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div>
+          <label className="text-sm font-medium text-stone-700 dark:text-stone-300 mb-2 block">
+            Select Room
+          </label>
+          <Select value={selectedRoom} onValueChange={setSelectedRoom}>
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder="Choose a room to clean..." />
+            </SelectTrigger>
+            <SelectContent>
+              {rooms.map((room) => (
+                <SelectItem key={room.id} value={room.id}>
+                  <div className="flex items-center gap-2">
+                    <span className="font-medium">{room.name}</span>
+                    <span className="text-xs text-stone-500">
+                      ({room.building_name} • Floor {room.floor ?? "N/A"})
+                    </span>
                   </div>
-                  {!task.completed && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleCompleteTask(task, true)}
-                      className="text-orange-600 border-orange-300 hover:bg-orange-50"
-                    >
-                      <AlertCircle className="h-4 w-4 mr-1" />
-                      Report Issue
-                    </Button>
-                  )}
-                </div>
+                </SelectItem>
               ))}
-            </div>
+            </SelectContent>
+          </Select>
+        </div>
 
-            <Button
-              className="w-full bg-green-600 hover:bg-green-700 mt-6"
-              onClick={handleFinishCleaning}
-              disabled={completedCount < totalTasks}
-            >
-              <StopCircle className="h-4 w-4 mr-2" />
-              Finish Room Cleaning
-            </Button>
-          </CardContent>
-        </Card>
-      )}
-
-      <Dialog open={issueDialogOpen} onOpenChange={setIssueDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <AlertCircle className="h-5 w-5 text-orange-600" />
-              Report Issue
-            </DialogTitle>
-            <DialogDescription>
-              {currentTaskForIssue?.task_name} - Describe the problem
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="space-y-4 py-4">
-            <Textarea
-              placeholder="Describe the issue in detail (e.g., 'Toilet won't stop running', 'Light fixture broken')"
-              value={issueNotes}
-              onChange={(e) => setIssueNotes(e.target.value)}
-              rows={4}
-              className="w-full"
-            />
-          </div>
-
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIssueDialogOpen(false)}>
-              Cancel
-            </Button>
-            <Button
-              className="bg-orange-600 hover:bg-orange-700"
-              onClick={handleReportIssue}
-              disabled={!issueNotes.trim()}
-            >
-              Report & Mark Complete
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </div>
+        <Button
+          className="w-full bg-orange-600 hover:bg-orange-700"
+          onClick={startCleaning}
+          disabled={!selectedRoom || loading}
+        >
+          <PlayCircle className="h-4 w-4 mr-2" />
+          {loading ? "Starting..." : "Start Cleaning"}
+        </Button>
+      </CardContent>
+    </Card>
   );
 }
