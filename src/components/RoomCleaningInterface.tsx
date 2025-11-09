@@ -8,52 +8,97 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { roomCleaningService, RoomWithBuilding, TaskWithCompletion, CleaningSessionWithDetails } from "@/services/roomCleaningService";
 import { issueService } from "@/services/issueService";
-import { Home, CheckCircle2, AlertCircle, Clock, Thermometer, Bed, BedDouble, PlayCircle, StopCircle } from "lucide-react";
+import { Home, CheckCircle2, AlertCircle, Clock, Thermometer, Bed, BedDouble, PlayCircle, StopCircle, LogOut, AlertTriangle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { formatDistanceToNow } from "date-fns";
+import { Label } from "@/components/ui/label";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 interface RoomCleaningInterfaceProps {
   employeeId: string;
   employeeName: string;
-  onComplete?: () => void;
 }
 
-export function RoomCleaningInterface({ employeeId, employeeName, onComplete }: RoomCleaningInterfaceProps) {
+export function RoomCleaningInterface({ employeeId, employeeName }: RoomCleaningInterfaceProps) {
   const [rooms, setRooms] = useState<RoomWithBuilding[]>([]);
   const [activeSession, setActiveSession] = useState<CleaningSessionWithDetails | null>(null);
   const [tasks, setTasks] = useState<TaskWithCompletion[]>([]);
   const [selectedRoom, setSelectedRoom] = useState<string>("");
-  const [loading, setLoading] = useState(true);
-  const [starting, setStarting] = useState(false);
+  const [loading, setLoading] = useState(false);
   const [issueDialogOpen, setIssueDialogOpen] = useState(false);
   const [currentTaskForIssue, setCurrentTaskForIssue] = useState<TaskWithCompletion | null>(null);
-  const [issueNotes, setIssueNotes] = useState("");
+  const [issueDescription, setIssueDescription] = useState("");
   const { toast } = useToast();
 
   useEffect(() => {
-    loadData();
+    loadRooms();
+    checkActiveSession();
   }, [employeeId]);
 
-  const loadData = async () => {
+  useEffect(() => {
+    if (activeSession) {
+      loadTasks();
+    }
+  }, [activeSession]);
+
+  const loadRooms = async () => {
     try {
-      setLoading(true);
-      const [roomsData, sessionData] = await Promise.all([
-        roomCleaningService.getRoomsWithBuildings(),
-        roomCleaningService.getActiveSession(employeeId)
-      ]);
-
-      setRooms(roomsData);
-      setActiveSession(sessionData);
-
-      if (sessionData) {
-        const tasksData = await roomCleaningService.getTasksWithCompletions(sessionData.id);
-        setTasks(tasksData);
-      }
+      const data = await roomCleaningService.getRoomsWithBuildings();
+      setRooms(data);
     } catch (error) {
-      console.error("Error loading room cleaning data:", error);
       toast({
         title: "Error",
-        description: "Failed to load room cleaning data",
+        description: "Failed to load rooms",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const checkActiveSession = async () => {
+    try {
+      const session = await roomCleaningService.getActiveSession(employeeId);
+      setActiveSession(session);
+    } catch (error) {
+      console.error("Error checking active session:", error);
+    }
+  };
+
+  const loadTasks = async () => {
+    if (!activeSession) return;
+    try {
+      const tasksData = await roomCleaningService.getTasksWithCompletions(activeSession.id);
+      setTasks(tasksData);
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to load tasks",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const startCleaning = async () => {
+    if (!selectedRoom) {
+      toast({
+        title: "No Room Selected",
+        description: "Please select a room to start cleaning",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const session = await roomCleaningService.startCleaningSession(employeeId, selectedRoom);
+      setActiveSession(session);
+      toast({
+        title: "Clock In Successful",
+        description: "Started cleaning session"
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to start cleaning session",
         variant: "destructive"
       });
     } finally {
@@ -61,66 +106,17 @@ export function RoomCleaningInterface({ employeeId, employeeName, onComplete }: 
     }
   };
 
-  const handleStartCleaning = async () => {
-    if (!selectedRoom) {
-      toast({
-        title: "Select a Room",
-        description: "Please select a room before starting",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    try {
-      setStarting(true);
-      const session = await roomCleaningService.startCleaningSession(employeeId, selectedRoom);
-      const tasksData = await roomCleaningService.getTasksWithCompletions(session.id);
-      
-      setActiveSession(session);
-      setTasks(tasksData);
-      setSelectedRoom("");
-
-      toast({
-        title: "🧹 Cleaning Started",
-        description: "You've clocked in for this room. Complete all tasks to finish."
-      });
-    } catch (error) {
-      console.error("Error starting cleaning session:", error);
-      toast({
-        title: "Error",
-        description: "Failed to start cleaning session",
-        variant: "destructive"
-      });
-    } finally {
-      setStarting(false);
-    }
-  };
-
-  const handleCompleteTask = async (task: TaskWithCompletion, withIssue = false) => {
+  const handleTaskToggle = async (task: TaskWithCompletion, checked: boolean) => {
     if (!activeSession) return;
 
-    if (withIssue) {
-      setCurrentTaskForIssue(task);
-      setIssueDialogOpen(true);
-      return;
-    }
-
     try {
-      if (task.completed && task.completion_id) {
-        await roomCleaningService.uncompleteTask(task.completion_id);
-      } else {
+      if (checked) {
         await roomCleaningService.completeTask(activeSession.id, task.id);
+      } else if (task.completion_id) {
+        await roomCleaningService.uncompleteTask(task.completion_id);
       }
-
-      const updatedTasks = await roomCleaningService.getTasksWithCompletions(activeSession.id);
-      setTasks(updatedTasks);
-
-      toast({
-        title: task.completed ? "Task Unchecked" : "✓ Task Complete",
-        description: task.task_name
-      });
+      await loadTasks();
     } catch (error) {
-      console.error("Error toggling task:", error);
       toast({
         title: "Error",
         description: "Failed to update task",
@@ -129,44 +125,54 @@ export function RoomCleaningInterface({ employeeId, employeeName, onComplete }: 
     }
   };
 
-  const handleReportIssue = async () => {
-    if (!currentTaskForIssue || !activeSession) return;
+  const openIssueDialog = (task: TaskWithCompletion) => {
+    setCurrentTaskForIssue(task);
+    setIssueDialogOpen(true);
+  };
+
+  const reportIssue = async () => {
+    if (!activeSession || !currentTaskForIssue || !issueDescription.trim()) {
+      toast({
+        title: "Missing Information",
+        description: "Please provide issue details",
+        variant: "destructive"
+      });
+      return;
+    }
 
     try {
-      await roomCleaningService.completeTask(
-        activeSession.id,
-        currentTaskForIssue.id,
-        issueNotes,
-        true
-      );
+      const roomData = activeSession.room as any;
+      const buildingData = roomData?.buildings || roomData?.building;
+      
+      await issueService.createIssue({
+        room_id: activeSession.room_id,
+        employee_id: employeeId,
+        session_id: activeSession.id,
+        task_name: currentTaskForIssue.task_name,
+        description: issueDescription,
+        status: "open",
+        priority: "medium"
+      });
 
-      const room = rooms.find(r => r.id === activeSession.room_id);
-      if (room && issueNotes.trim()) {
-        await issueService.createIssue({
-          room_id: activeSession.room_id,
-          building_id: room.building_id,
-          reported_by_id: employeeId,
-          title: `Issue in ${room.name}: ${currentTaskForIssue.task_name}`,
-          description: issueNotes,
-          status: "open",
-          priority: "medium"
-        });
+      if (!currentTaskForIssue.completed) {
+        await roomCleaningService.completeTask(
+          activeSession.id,
+          currentTaskForIssue.id,
+          issueDescription,
+          true
+        );
       }
 
-      const updatedTasks = await roomCleaningService.getTasksWithCompletions(activeSession.id);
-      setTasks(updatedTasks);
-
+      await loadTasks();
       setIssueDialogOpen(false);
-      setIssueNotes("");
+      setIssueDescription("");
       setCurrentTaskForIssue(null);
 
       toast({
-        title: "⚠️ Issue Reported",
-        description: "Admin has been notified. Task marked complete.",
-        variant: "default"
+        title: "Issue Reported",
+        description: "Admin has been notified"
       });
     } catch (error) {
-      console.error("Error reporting issue:", error);
       toast({
         title: "Error",
         description: "Failed to report issue",
@@ -175,57 +181,199 @@ export function RoomCleaningInterface({ employeeId, employeeName, onComplete }: 
     }
   };
 
-  const handleFinishCleaning = async () => {
+  const endSession = async () => {
     if (!activeSession) return;
 
     const incompleteTasks = tasks.filter(t => !t.completed);
     if (incompleteTasks.length > 0) {
       toast({
-        title: "Tasks Incomplete",
-        description: `Please complete all ${incompleteTasks.length} remaining task(s) before finishing`,
+        title: "Incomplete Tasks",
+        description: `Please complete all ${incompleteTasks.length} remaining tasks before clocking out`,
         variant: "destructive"
       });
       return;
     }
 
     try {
+      setLoading(true);
       await roomCleaningService.endCleaningSession(activeSession.id);
-      
-      toast({
-        title: "✓ Room Complete!",
-        description: "Great job! You've finished cleaning this room.",
-      });
-
       setActiveSession(null);
       setTasks([]);
-      if (onComplete) onComplete();
-      await loadData();
+      setSelectedRoom("");
+      toast({
+        title: "Clock Out Successful",
+        description: "Cleaning session completed"
+      });
     } catch (error) {
-      console.error("Error ending session:", error);
       toast({
         title: "Error",
-        description: "Failed to end cleaning session",
+        description: "Failed to end session",
         variant: "destructive"
       });
+    } finally {
+      setLoading(false);
     }
   };
 
-  if (loading) {
+  if (activeSession) {
+    const roomData = activeSession.room as any;
+    const buildingData = roomData?.buildings || roomData?.building;
+    const roomName = roomData?.name || "Unknown Room";
+    const buildingName = Array.isArray(buildingData) ? buildingData[0]?.name : buildingData?.name || "Unknown Building";
+    const targetHeating = Array.isArray(buildingData) ? buildingData[0]?.target_heating_level : buildingData?.target_heating_level;
+    
+    const completedCount = tasks.filter(t => t.completed).length;
+    const totalCount = tasks.length;
+    const progress = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
+
     return (
-      <Card className="bg-white dark:bg-stone-900 border-stone-200 dark:border-stone-800">
-        <CardContent className="py-8">
-          <div className="text-center text-stone-500 dark:text-stone-400">
-            Loading rooms...
-          </div>
-        </CardContent>
-      </Card>
+      <div className="space-y-6">
+        <Card className="bg-gradient-to-br from-orange-50 to-amber-50 dark:from-orange-950/30 dark:to-amber-950/30 border-orange-200 dark:border-orange-800">
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="text-xl flex items-center gap-2">
+                  <Clock className="h-5 w-5 text-orange-600" />
+                  Currently Cleaning
+                </CardTitle>
+                <CardDescription className="mt-2">
+                  <span className="font-medium text-orange-900 dark:text-orange-100">{roomName}</span>
+                  <span className="mx-2">•</span>
+                  <span>{buildingName}</span>
+                </CardDescription>
+              </div>
+              <Badge variant="secondary" className="text-lg px-4 py-2">
+                {progress}% Complete
+              </Badge>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center gap-4 text-sm text-orange-800 dark:text-orange-200">
+              <span className="flex items-center gap-1">
+                <Clock className="h-4 w-4" />
+                Started: {new Date(activeSession.clock_in_time).toLocaleTimeString()}
+              </span>
+              {targetHeating && (
+                <span className="flex items-center gap-1">
+                  <Thermometer className="h-4 w-4" />
+                  Target: {targetHeating}°C
+                </span>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <CheckCircle2 className="h-5 w-5" />
+              Cleaning Checklist ({completedCount}/{totalCount})
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {tasks.map((task) => (
+                <div
+                  key={task.id}
+                  className={`p-4 rounded-lg border transition-all ${
+                    task.completed
+                      ? "bg-green-50 dark:bg-green-950/20 border-green-200 dark:border-green-800"
+                      : "bg-white dark:bg-stone-900 border-stone-200 dark:border-stone-700"
+                  }`}
+                >
+                  <div className="flex items-start gap-3">
+                    <Checkbox
+                      checked={task.completed}
+                      onCheckedChange={(checked) => handleTaskToggle(task, checked as boolean)}
+                      className="mt-1"
+                    />
+                    <div className="flex-1">
+                      <div className="flex items-center justify-between">
+                        <Label className={`font-medium cursor-pointer ${task.completed ? "line-through text-green-700 dark:text-green-300" : ""}`}>
+                          {task.task_name}
+                        </Label>
+                        {task.issue_reported && (
+                          <Badge variant="destructive" className="text-xs">
+                            <AlertTriangle className="h-3 w-3 mr-1" />
+                            Issue Reported
+                          </Badge>
+                        )}
+                      </div>
+                      <p className="text-sm text-stone-600 dark:text-stone-400 mt-1">
+                        {task.task_description}
+                      </p>
+                      {task.notes && (
+                        <Alert className="mt-2">
+                          <AlertCircle className="h-4 w-4" />
+                          <AlertDescription className="text-xs">{task.notes}</AlertDescription>
+                        </Alert>
+                      )}
+                      {!task.completed && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => openIssueDialog(task)}
+                          className="mt-2 text-xs"
+                        >
+                          <AlertTriangle className="h-3 w-3 mr-1" />
+                          Report Issue
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <Button
+              onClick={endSession}
+              disabled={loading || completedCount < totalCount}
+              className="w-full mt-6 bg-orange-600 hover:bg-orange-700"
+              size="lg"
+            >
+              <LogOut className="h-4 w-4 mr-2" />
+              Clock Out & Complete Session
+            </Button>
+          </CardContent>
+        </Card>
+
+        <Dialog open={issueDialogOpen} onOpenChange={setIssueDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <AlertTriangle className="h-5 w-5 text-orange-600" />
+                Report Issue
+              </DialogTitle>
+              <DialogDescription>
+                {currentTaskForIssue?.task_name}
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div>
+                <Label htmlFor="issue-description">Issue Description</Label>
+                <Textarea
+                  id="issue-description"
+                  value={issueDescription}
+                  onChange={(e) => setIssueDescription(e.target.value)}
+                  placeholder="Describe the issue in detail..."
+                  rows={4}
+                  className="mt-2"
+                />
+              </div>
+              <div className="flex gap-2">
+                <Button variant="outline" onClick={() => setIssueDialogOpen(false)} className="flex-1">
+                  Cancel
+                </Button>
+                <Button onClick={reportIssue} className="flex-1 bg-orange-600 hover:bg-orange-700">
+                  Submit Issue
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+      </div>
     );
   }
-
-  const currentRoom = activeSession ? rooms.find(r => r.id === activeSession.room_id) : null;
-  const completedCount = tasks.filter(t => t.completed).length;
-  const totalTasks = tasks.length;
-  const progress = totalTasks > 0 ? (completedCount / totalTasks) * 100 : 0;
 
   return (
     <div className="space-y-6">
@@ -266,11 +414,11 @@ export function RoomCleaningInterface({ employeeId, employeeName, onComplete }: 
 
             <Button
               className="w-full bg-orange-600 hover:bg-orange-700"
-              onClick={handleStartCleaning}
-              disabled={!selectedRoom || starting}
+              onClick={startCleaning}
+              disabled={!selectedRoom || loading}
             >
               <PlayCircle className="h-4 w-4 mr-2" />
-              {starting ? "Starting..." : "Start Cleaning"}
+              {loading ? "Starting..." : "Start Cleaning"}
             </Button>
           </CardContent>
         </Card>
