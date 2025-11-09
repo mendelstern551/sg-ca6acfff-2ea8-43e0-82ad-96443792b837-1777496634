@@ -6,6 +6,7 @@ import { buildingService, BuildingWithRooms, Room } from "@/services/buildingSer
 import { Bed, BedDouble, Home, AlertCircle, CheckCircle2, Clock, Thermometer } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
+import { BuildingFloorPlan } from "./BuildingFloorPlan";
 
 function roomTotalBeds(room: Room): number {
   const singles = Number(room.bed_count || 0);
@@ -141,13 +142,13 @@ export function BuildingMaps() {
         </CardContent>
       </Card>
 
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className="grid gap-6">
         {buildings.map((building) => {
           const totals = buildingTotals(building);
           const rooms = Array.isArray(building.rooms) ? building.rooms : [];
           
           return (
-            <Card key={building.id} className="overflow-hidden bg-white dark:bg-stone-900 border-stone-200 dark:border-stone-800 hover:shadow-lg transition-all">
+            <Card key={building.id} className="overflow-hidden bg-white dark:bg-stone-900 border-stone-200 dark:border-stone-800">
               <CardHeader className="bg-gradient-to-r from-orange-50 to-amber-50 dark:from-orange-950/30 dark:to-amber-950/30 pb-4">
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
@@ -179,67 +180,18 @@ export function BuildingMaps() {
                 </div>
               </CardHeader>
               
-              <CardContent className="p-4">
-                {building.map_image_url && (
-                  <div className="rounded-lg overflow-hidden border border-slate-200 dark:border-slate-700 mb-4 bg-slate-50 dark:bg-slate-800">
-                    <img
-                      src={building.map_image_url}
-                      alt={`${building.name} floor plan`}
-                      className="w-full object-contain max-h-80"
+              <CardContent className="p-6">
+                {rooms.length === 0 ? (
+                  <p className="text-sm text-slate-500 py-4 text-center">No rooms configured</p>
+                ) : (
+                  <div className="bg-white dark:bg-stone-950 rounded-lg border border-slate-200 dark:border-slate-700 p-4">
+                    <BuildingFloorPlan
+                      buildingName={building.name}
+                      rooms={rooms}
+                      onRoomClick={(room) => handleRoomClick(room, building)}
                     />
                   </div>
                 )}
-
-                <div className="space-y-2">
-                  <h4 className="font-semibold text-sm text-stone-900 dark:text-stone-100 flex items-center gap-2">
-                    <Home className="h-4 w-4" />
-                    Rooms ({totals.totalRooms})
-                  </h4>
-                  {rooms.length === 0 ? (
-                    <p className="text-sm text-slate-500 py-4 text-center">No rooms configured</p>
-                  ) : (
-                    <div className="grid gap-2 sm:grid-cols-2">
-                      {rooms.map((room) => {
-                        const totalBeds = roomTotalBeds(room);
-                        const hasBunks = Number(room.bunk_bed_count || 0) > 0;
-                        
-                        return (
-                          <button
-                            key={room.id}
-                            onClick={() => handleRoomClick(room, building)}
-                            className="text-left p-3 rounded-md bg-slate-50 dark:bg-slate-800/50 hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:border-orange-300 dark:hover:border-orange-600 transition-all group"
-                          >
-                            <div className="flex items-center justify-between mb-2">
-                              <span className="font-medium text-sm text-stone-900 dark:text-stone-100 group-hover:text-orange-600 dark:group-hover:text-orange-400">
-                                {room.name}
-                              </span>
-                              {room.floor !== null && (
-                                <Badge variant="outline" className="text-xs">
-                                  Floor {room.floor}
-                                </Badge>
-                              )}
-                            </div>
-                            <div className="flex items-center gap-3 text-xs text-stone-600 dark:text-stone-400">
-                              <span className="flex items-center gap-1">
-                                <Bed className="h-3 w-3" />
-                                {Number(room.bed_count || 0)}
-                              </span>
-                              {hasBunks && (
-                                <span className="flex items-center gap-1 text-orange-600 dark:text-orange-400">
-                                  <BedDouble className="h-3 w-3" />
-                                  {Number(room.bunk_bed_count || 0)} bunk
-                                </span>
-                              )}
-                              <Badge variant="secondary" className="text-xs ml-auto">
-                                {totalBeds} beds
-                              </Badge>
-                            </div>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
               </CardContent>
             </Card>
           );

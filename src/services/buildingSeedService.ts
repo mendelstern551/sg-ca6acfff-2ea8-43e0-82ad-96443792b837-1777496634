@@ -13,22 +13,27 @@ interface BuildingSeedData {
   }[];
 }
 
+// Updated with correct room counts and bunk bed tracking (red beds = bunk beds)
 const BUILDING_SEEDS: BuildingSeedData[] = [
   {
     name: "Building #1 (661)",
     map_image_url: "/661_building_1.jpg",
     target_heating_level: 20,
     rooms: [
+      // Floor 1 - 6 rooms
       { name: "Room 101", floor: 1, bed_count: 2, bunk_bed_count: 0 },
       { name: "Room 102", floor: 1, bed_count: 0, bunk_bed_count: 2 },
       { name: "Room 103", floor: 1, bed_count: 1, bunk_bed_count: 1 },
       { name: "Room 104", floor: 1, bed_count: 2, bunk_bed_count: 1 },
       { name: "Room 105", floor: 1, bed_count: 0, bunk_bed_count: 2 },
       { name: "Room 106", floor: 1, bed_count: 1, bunk_bed_count: 0 },
+      // Floor 2 - 6 rooms (12 total)
       { name: "Room 201", floor: 2, bed_count: 2, bunk_bed_count: 0 },
       { name: "Room 202", floor: 2, bed_count: 1, bunk_bed_count: 1 },
       { name: "Room 203", floor: 2, bed_count: 0, bunk_bed_count: 2 },
-      { name: "Room 204", floor: 2, bed_count: 2, bunk_bed_count: 1 }
+      { name: "Room 204", floor: 2, bed_count: 2, bunk_bed_count: 1 },
+      { name: "Room 205", floor: 2, bed_count: 1, bunk_bed_count: 0 },
+      { name: "Room 206", floor: 2, bed_count: 0, bunk_bed_count: 1 }
     ]
   },
   {
@@ -119,40 +124,31 @@ export const buildingSeedService = {
           buildingId = newBuilding.id;
         }
 
-        for (const roomData of buildingData.rooms) {
-          const { data: existingRoom } = await supabase
-            .from("rooms")
-            .select("id")
-            .eq("building_id", buildingId)
-            .eq("name", roomData.name)
-            .maybeSingle();
+        // Delete existing rooms for this building to avoid duplicates
+        await supabase
+          .from("rooms")
+          .delete()
+          .eq("building_id", buildingId);
 
-          if (existingRoom) {
-            await supabase
-              .from("rooms")
-              .update({
-                floor: roomData.floor,
-                bed_count: roomData.bed_count,
-                bunk_bed_count: roomData.bunk_bed_count
-              })
-              .eq("id", existingRoom.id);
-          } else {
-            await supabase
-              .from("rooms")
-              .insert([{
-                building_id: buildingId,
-                name: roomData.name,
-                floor: roomData.floor,
-                bed_count: roomData.bed_count,
-                bunk_bed_count: roomData.bunk_bed_count
-              }]);
-          }
-        }
+        // Insert all rooms fresh
+        const roomsToInsert = buildingData.rooms.map(roomData => ({
+          building_id: buildingId,
+          name: roomData.name,
+          floor: roomData.floor,
+          bed_count: roomData.bed_count,
+          bunk_bed_count: roomData.bunk_bed_count
+        }));
+
+        const { error: roomsError } = await supabase
+          .from("rooms")
+          .insert(roomsToInsert);
+
+        if (roomsError) throw roomsError;
       }
 
       return {
         success: true,
-        message: `Successfully seeded ${BUILDING_SEEDS.length} buildings with their rooms`
+        message: `Successfully seeded ${BUILDING_SEEDS.length} buildings with their rooms (Building #1 now has 12 rooms)`
       };
     } catch (error) {
       console.error("Error seeding buildings:", error);
