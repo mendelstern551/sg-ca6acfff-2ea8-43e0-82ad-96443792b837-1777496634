@@ -368,7 +368,7 @@ function EmployeeTimeCard({ employee, onRefresh, taskTypes, buildings }: {
               <RoomCleaningInterface
                 employeeId={employee.id}
                 employeeName={employee.full_name}
-                onComplete={() => {
+                onCleaningComplete={() => {
                   fetchEmployeeStatus();
                   onRefresh();
                 }}

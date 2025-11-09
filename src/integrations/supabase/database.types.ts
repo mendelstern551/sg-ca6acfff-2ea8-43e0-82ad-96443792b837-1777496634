@@ -486,39 +486,45 @@ export type Database = {
           building_id: string
           created_at: string | null
           description: string | null
+          employee_id: string | null
           id: string
           priority: string | null
-          reported_by_id: string | null
           resolved_at: string | null
           room_id: string | null
+          session_id: string | null
           status: string
           task_log_id: string | null
+          task_name: string | null
           title: string
         }
         Insert: {
           building_id: string
           created_at?: string | null
           description?: string | null
+          employee_id?: string | null
           id?: string
           priority?: string | null
-          reported_by_id?: string | null
           resolved_at?: string | null
           room_id?: string | null
+          session_id?: string | null
           status?: string
           task_log_id?: string | null
+          task_name?: string | null
           title: string
         }
         Update: {
           building_id?: string
           created_at?: string | null
           description?: string | null
+          employee_id?: string | null
           id?: string
           priority?: string | null
-          reported_by_id?: string | null
           resolved_at?: string | null
           room_id?: string | null
+          session_id?: string | null
           status?: string
           task_log_id?: string | null
+          task_name?: string | null
           title?: string
         }
         Relationships: [
@@ -530,8 +536,8 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "issues_reported_by_id_fkey"
-            columns: ["reported_by_id"]
+            foreignKeyName: "issues_employee_id_fkey"
+            columns: ["employee_id"]
             isOneToOne: false
             referencedRelation: "employees"
             referencedColumns: ["id"]
@@ -541,6 +547,13 @@ export type Database = {
             columns: ["room_id"]
             isOneToOne: false
             referencedRelation: "rooms"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "issues_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "room_cleaning_sessions"
             referencedColumns: ["id"]
           },
           {

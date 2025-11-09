@@ -11,10 +11,10 @@ export type IssueWithRelations = Issue & {
 };
 
 export const issueService = {
-  async createIssue(issueData: IssueInsert): Promise<Issue> {
+  async createIssue(issue: IssueInsert): Promise<Issue> {
     const { data, error } = await supabase
       .from("issues")
-      .insert(issueData)
+      .insert([issue])
       .select()
       .single();
 
@@ -60,7 +60,7 @@ export const issueService = {
     return data;
   },
 
-  async getOpenIssues(): Promise<(Issue & { rooms: { name: string | null, building_id: string | null } | null, employees: { full_name: string | null } | null })[]> {
+  async getOpenIssues(limit = 10): Promise<(Issue & { rooms: { name: string | null, building_id: string | null } | null, employees: { full_name: string | null } | null })[]> {
     const { data, error } = await supabase
       .from("issues")
       .select(`

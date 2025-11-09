@@ -18,9 +18,10 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 interface RoomCleaningInterfaceProps {
   employeeId: string;
   employeeName: string;
+  onCleaningComplete: () => void;
 }
 
-export function RoomCleaningInterface({ employeeId, employeeName }: RoomCleaningInterfaceProps) {
+export function RoomCleaningInterface({ employeeId, employeeName, onCleaningComplete }: RoomCleaningInterfaceProps) {
   const [rooms, setRooms] = useState<RoomWithBuilding[]>([]);
   const [activeSession, setActiveSession] = useState<CleaningSessionWithDetails | null>(null);
   const [tasks, setTasks] = useState<TaskWithCompletion[]>([]);
@@ -204,6 +205,7 @@ export function RoomCleaningInterface({ employeeId, employeeName }: RoomCleaning
         title: "Clock Out Successful",
         description: "Cleaning session completed"
       });
+      onCleaningComplete();
     } catch (error) {
       toast({
         title: "Error",
