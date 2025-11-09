@@ -193,16 +193,24 @@ export function AdminBuildingSettings() {
               <li>• Building #5 Basement - 4 rooms</li>
               <li>• Building #5 Upper Floor - 6 rooms</li>
             </ul>
+            <p className="text-xs text-orange-700 dark:text-orange-300 mt-3 font-medium">
+              💡 This will create or update buildings and rooms. Existing data will be preserved and updated.
+            </p>
           </div>
           
           <Button
             onClick={seedBuildings}
             disabled={seeding}
-            className="w-full bg-orange-600 hover:bg-orange-700"
+            className="w-full bg-orange-600 hover:bg-orange-700 text-lg py-6"
+            size="lg"
           >
-            <RefreshCw className={`h-4 w-4 mr-2 ${seeding ? "animate-spin" : ""}`} />
-            {seeding ? "Seeding Buildings..." : "Seed All Buildings & Rooms"}
+            <RefreshCw className={`h-5 w-5 mr-2 ${seeding ? "animate-spin" : ""}`} />
+            {seeding ? "Seeding Buildings..." : "🏗️ Seed All Buildings & Rooms"}
           </Button>
+          
+          <p className="text-xs text-center text-slate-600 dark:text-slate-400">
+            Click the button above to populate all 5 buildings with their room data
+          </p>
         </CardContent>
       </Card>
     </div>
