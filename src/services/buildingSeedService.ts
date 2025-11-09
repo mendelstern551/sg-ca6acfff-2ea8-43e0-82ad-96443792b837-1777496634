@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 
 interface BuildingSeedData {
@@ -22,18 +21,18 @@ const BUILDING_SEEDS: BuildingSeedData[] = [
     rooms: [
       // Floor 1 - 6 rooms
       { name: "Room 101", floor: 1, bed_count: 2, bunk_bed_count: 0 },
-      { name: "Room 102", floor: 1, bed_count: 0, bunk_bed_count: 2 },
+      { name: "Room 102", floor: 1, bed_count: 0, bunk_bed_count: 2 }, // 2 bunk beds (red on map)
       { name: "Room 103", floor: 1, bed_count: 1, bunk_bed_count: 1 },
       { name: "Room 104", floor: 1, bed_count: 2, bunk_bed_count: 1 },
-      { name: "Room 105", floor: 1, bed_count: 0, bunk_bed_count: 2 },
-      { name: "Room 106", floor: 1, bed_count: 1, bunk_bed_count: 0 },
+      { name: "Room 105", floor: 1, bed_count: 0, bunk_bed_count: 2 }, // 2 bunk beds (red on map)
+      { name: "Room 106", floor: 1, bed_count: 1, bunk_bed_count: 1 },
       // Floor 2 - 6 rooms (12 total)
       { name: "Room 201", floor: 2, bed_count: 2, bunk_bed_count: 0 },
       { name: "Room 202", floor: 2, bed_count: 1, bunk_bed_count: 1 },
-      { name: "Room 203", floor: 2, bed_count: 0, bunk_bed_count: 2 },
+      { name: "Room 203", floor: 2, bed_count: 0, bunk_bed_count: 2 }, // 2 bunk beds (red on map)
       { name: "Room 204", floor: 2, bed_count: 2, bunk_bed_count: 1 },
-      { name: "Room 205", floor: 2, bed_count: 1, bunk_bed_count: 0 },
-      { name: "Room 206", floor: 2, bed_count: 0, bunk_bed_count: 1 }
+      { name: "Room 205", floor: 2, bed_count: 1, bunk_bed_count: 1 },
+      { name: "Room 206", floor: 2, bed_count: 0, bunk_bed_count: 2 }  // 2 bunk beds (red on map)
     ]
   },
   {
@@ -43,10 +42,10 @@ const BUILDING_SEEDS: BuildingSeedData[] = [
     rooms: [
       { name: "Room 301", floor: 1, bed_count: 2, bunk_bed_count: 0 },
       { name: "Room 302", floor: 1, bed_count: 1, bunk_bed_count: 1 },
-      { name: "Room 303", floor: 1, bed_count: 0, bunk_bed_count: 2 },
+      { name: "Room 303", floor: 1, bed_count: 0, bunk_bed_count: 2 }, // red beds = bunk
       { name: "Room 304", floor: 1, bed_count: 2, bunk_bed_count: 0 },
-      { name: "Room 305", floor: 1, bed_count: 1, bunk_bed_count: 0 },
-      { name: "Room 306", floor: 1, bed_count: 0, bunk_bed_count: 1 }
+      { name: "Room 305", floor: 1, bed_count: 1, bunk_bed_count: 1 },
+      { name: "Room 306", floor: 1, bed_count: 0, bunk_bed_count: 1 }  // 1 bunk bed (red on map)
     ]
   },
   {
@@ -54,11 +53,11 @@ const BUILDING_SEEDS: BuildingSeedData[] = [
     map_image_url: "/building_4.jpg",
     target_heating_level: 20,
     rooms: [
-      { name: "Room 401", floor: 1, bed_count: 0, bunk_bed_count: 2 },
+      { name: "Room 401", floor: 1, bed_count: 0, bunk_bed_count: 2 }, // red beds = bunk
       { name: "Room 402", floor: 1, bed_count: 1, bunk_bed_count: 1 },
       { name: "Room 403", floor: 1, bed_count: 2, bunk_bed_count: 0 },
-      { name: "Room 404", floor: 1, bed_count: 0, bunk_bed_count: 3 },
-      { name: "Room 405", floor: 1, bed_count: 1, bunk_bed_count: 0 },
+      { name: "Room 404", floor: 1, bed_count: 0, bunk_bed_count: 3 }, // 3 bunk beds (red on map)
+      { name: "Room 405", floor: 1, bed_count: 1, bunk_bed_count: 1 },
       { name: "Room 406", floor: 1, bed_count: 2, bunk_bed_count: 1 }
     ]
   },
@@ -68,7 +67,7 @@ const BUILDING_SEEDS: BuildingSeedData[] = [
     target_heating_level: 19,
     rooms: [
       { name: "Room B01", floor: 0, bed_count: 1, bunk_bed_count: 1 },
-      { name: "Room B02", floor: 0, bed_count: 0, bunk_bed_count: 2 },
+      { name: "Room B02", floor: 0, bed_count: 0, bunk_bed_count: 2 }, // red beds = bunk
       { name: "Room B03", floor: 0, bed_count: 2, bunk_bed_count: 0 },
       { name: "Room B04", floor: 0, bed_count: 1, bunk_bed_count: 0 }
     ]
@@ -79,10 +78,10 @@ const BUILDING_SEEDS: BuildingSeedData[] = [
     target_heating_level: 20,
     rooms: [
       { name: "Room 501", floor: 1, bed_count: 2, bunk_bed_count: 0 },
-      { name: "Room 502", floor: 1, bed_count: 0, bunk_bed_count: 2 },
+      { name: "Room 502", floor: 1, bed_count: 0, bunk_bed_count: 2 }, // red beds = bunk
       { name: "Room 503", floor: 1, bed_count: 1, bunk_bed_count: 1 },
       { name: "Room 504", floor: 1, bed_count: 2, bunk_bed_count: 1 },
-      { name: "Room 505", floor: 1, bed_count: 0, bunk_bed_count: 1 },
+      { name: "Room 505", floor: 1, bed_count: 0, bunk_bed_count: 1 }, // 1 bunk bed (red on map)
       { name: "Room 506", floor: 1, bed_count: 1, bunk_bed_count: 0 }
     ]
   }
