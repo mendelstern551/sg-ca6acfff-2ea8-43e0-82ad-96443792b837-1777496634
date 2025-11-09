@@ -36,6 +36,7 @@ import { buildingService } from "@/services/buildingService";
 import { OpenIssuesNotifier } from "@/components/OpenIssuesNotifier";
 import { RealtimeActivityFeed } from "@/components/RealtimeActivityFeed";
 import { BuildingMaps } from "@/components/BuildingMaps";
+import { AdminBuildingSettings } from "@/components/AdminBuildingSettings";
 
 type InvoiceRow = Database["public"]["Tables"]["invoices"]["Row"];
 type ExpenseInsert = Database["public"]["Tables"]["expenses"]["Insert"];
@@ -597,7 +598,7 @@ export default function HomePage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-amber-50 via-rose-50 to-blue-50 dark:from-stone-950 dark:via-slate-900 dark:to-indigo-950">
+    <div className="min-h-screen bg-slate-50 dark:bg-stone-950">
       <OpenIssuesNotifier />
       <RealtimeActivityFeed />
       <header className="border-b border-stone-200 dark:border-stone-800 bg-white/95 dark:bg-stone-900/95 backdrop-blur-sm sticky top-0 z-50 shadow-sm">
@@ -650,17 +651,15 @@ export default function HomePage() {
           </Card>
         </div>
 
-        <Tabs value={activeTab} onValueChange={(value) => { setActiveTab(value); if (value !== "expenses") setFilteredBookingId(undefined); }} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-8 lg:w-[1200px] bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 p-1">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+          <TabsList className="grid w-full grid-cols-7">
             <TabsTrigger value="bookings">Bookings</TabsTrigger>
-            <TabsTrigger value="calendar">Calendar</TabsTrigger>
-            <TabsTrigger value="buildings">Buildings</TabsTrigger>
             <TabsTrigger value="invoices">Invoices</TabsTrigger>
             <TabsTrigger value="budget">Budget</TabsTrigger>
-            <TabsTrigger value="expenses">Expenses</TabsTrigger>
-            <TabsTrigger value="receipts">Receipts</TabsTrigger>
-            <TabsTrigger value="manager">Manager</TabsTrigger>
-            <TabsTrigger value="emails">Email History</TabsTrigger>
+            <TabsTrigger value="time-tracking">Time Tracking</TabsTrigger>
+            <TabsTrigger value="building-maps">Building Maps</TabsTrigger>
+            <TabsTrigger value="activity">Activity</TabsTrigger>
+            <TabsTrigger value="settings">Settings</TabsTrigger>
           </TabsList>
 
           <TabsContent value="bookings" className="space-y-4">
@@ -702,6 +701,10 @@ export default function HomePage() {
           </TabsContent>
 
           <TabsContent value="emails"><EmailHistory bookings={bookings.map(b => ({ id: b.id, name: b.name, contact_name: b.contact_name }))} /></TabsContent>
+
+          <TabsContent value="settings" className="space-y-6">
+            <AdminBuildingSettings />
+          </TabsContent>
         </Tabs>
       </main>
 
