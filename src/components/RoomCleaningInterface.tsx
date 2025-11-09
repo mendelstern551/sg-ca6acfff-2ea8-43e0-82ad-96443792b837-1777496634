@@ -143,9 +143,15 @@ export function RoomCleaningInterface({ employeeId, employeeName, onCleaningComp
     }
 
     try {
-      const roomData = activeSession.room as any;
+      const currentRoom = rooms.find(r => r.id === activeSession.room_id);
+      if (!currentRoom) {
+        toast({ title: "Error", description: "Could not find room data to report issue.", variant: "destructive" });
+        return;
+      }
       
       await issueService.createIssue({
+        building_id: currentRoom.building_id,
+        title: `Issue with '${currentTaskForIssue.task_name}' in ${currentRoom.name}`,
         room_id: activeSession.room_id,
         employee_id: employeeId,
         session_id: activeSession.id,

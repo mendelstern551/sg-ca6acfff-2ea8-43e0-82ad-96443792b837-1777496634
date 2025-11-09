@@ -12,6 +12,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { issueService } from "@/services/issueService";
+import { buildingService, BuildingWithRooms } from "@/services/buildingService";
 
 interface IssueDialogProps {
   open: boolean;
@@ -34,7 +35,33 @@ export function IssueDialog({
 }: IssueDialogProps) {
   const [description, setDescription] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [buildings, setBuildings] = useState<BuildingWithRooms[]>([]);
+  const [selectedBuildingId, setSelectedBuildingId] = useState<string | null>(null);
   const { toast } = useToast();
+
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        const buildingsData = await buildingService.getBuildingsWithRooms();
+        setBuildings(buildingsData);
+
+        // Pre-select building if room is known
+        if (roomId) {
+          for (const building of buildingsData) {
+            if (building.rooms.some(r => r.id === roomId)) {
+              setSelectedBuildingId(building.id);
+              break;
+            }
+          }
+        }
+      } catch (error) {
+        console.error("Failed to load buildings for issue dialog", error);
+      }
+    };
+    if (open) {
+      loadData();
+    }
+  }, [open, roomId]);
 
   useEffect(() => {
     if (!open) {
@@ -68,8 +95,8 @@ export function IssueDialog({
         description,
         task_log_id: taskLogId,
         room_id: roomId,
-        building_id: buildingId,
-        reported_by_id: employeeId,
+        building_id: selectedBuildingId,
+        employee_id: employeeId,
         status: 'new',
         title: description.substring(0, 50),
       });

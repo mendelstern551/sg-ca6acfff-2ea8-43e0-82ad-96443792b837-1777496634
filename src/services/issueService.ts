@@ -28,7 +28,7 @@ export const issueService = {
       .select(`
         *,
         rooms ( name, building_id ),
-        employees:reported_by_id ( full_name )
+        employees ( full_name )
       `);
 
     if (filters.status) {
@@ -42,7 +42,7 @@ export const issueService = {
       throw error;
     }
     
-    return data as IssueWithRelations[];
+    return data as any[];
   },
 
   async updateIssueStatus(issueId: string, status: string): Promise<Issue> {
@@ -60,21 +60,21 @@ export const issueService = {
     return data;
   },
 
-  async getOpenIssues(limit = 10): Promise<(Issue & { rooms: { name: string | null, building_id: string | null } | null, employees: { full_name: string | null } | null })[]> {
+  async getOpenIssues(limit = 10): Promise<IssueWithRelations[]> {
     const { data, error } = await supabase
       .from("issues")
       .select(`
         *,
         rooms ( name, building_id ),
-        employees:reported_by_id ( full_name )
+        employees ( full_name )
       `)
-      .in('status', ['new', 'open'])
+      .in('status', ['new', 'open', 'Open'])
       .order('created_at', { ascending: false });
 
     if (error) {
       console.error("Error fetching open issues:", error);
       throw error;
     }
-    return data || [];
+    return (data || []) as IssueWithRelations[];
   },
 };
