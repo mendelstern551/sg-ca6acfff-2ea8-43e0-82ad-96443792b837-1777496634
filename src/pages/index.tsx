@@ -656,7 +656,7 @@ export default function HomePage() {
             <TabsTrigger value="bookings">Bookings</TabsTrigger>
             <TabsTrigger value="invoices">Invoices</TabsTrigger>
             <TabsTrigger value="budget">Budget</TabsTrigger>
-            <TabsTrigger value="time-tracking">Time Tracking</TabsTrigger>
+            <TabsTrigger value="calendar">Calendar</TabsTrigger>
             <TabsTrigger value="building-maps">Building Maps</TabsTrigger>
             <TabsTrigger value="activity">Activity</TabsTrigger>
             <TabsTrigger value="settings">Settings</TabsTrigger>
@@ -671,7 +671,7 @@ export default function HomePage() {
 
           <TabsContent value="calendar" className="space-y-4"><BookingCalendar key={`calendar-${refreshKey}-${bookings.length}`} bookings={bookings} onBookingClick={handleEditBooking} onAddBooking={() => { setEditingBooking(undefined); setBookingDialogOpen(true); }} /></TabsContent>
 
-          <TabsContent value="buildings" className="space-y-4">
+          <TabsContent value="building-maps" className="space-y-4">
             <BuildingMaps />
           </TabsContent>
 
