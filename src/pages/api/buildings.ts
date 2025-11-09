@@ -1,51 +1,33 @@
-
 import { NextApiRequest, NextApiResponse } from "next";
-import { supabase } from "@/integrations/supabase/client";
+import { createClient } from "@supabase/supabase-js";
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+    res.setHeader("Content-Type", "application/json");
+
     try {
-        console.log("[/api/buildings] Starting request...");
+        const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+        const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-        // Fetch all buildings with their rooms using client-side supabase
-        const { data: buildings, error } = await supabase
-            .from("buildings")
-            .select(`
-                *,
-                rooms (
-                    *
-                )
-            `)
-            .order("name");
-
-        if (error) {
-            console.error("[/api/buildings] Supabase error:", error);
-            return res.status(500).json({ 
-                success: false,
-                error: error.message, 
-                details: error.details || "No additional details",
-                hint: error.hint || "Check database connection"
+        if (!url || !serviceKey) {
+            console.error("Missing Supabase credentials", { hasUrl: !!url, hasKey: !!serviceKey });
+            return res.status(500).json({
+                error: "Server configuration error",
+                details: "Missing Supabase credentials"
             });
         }
 
-        console.log(`[/api/buildings] Found ${buildings?.length || 0} buildings`);
+        const supabase = createClient(url, serviceKey);
 
-        // Transform the data to ensure rooms is always an array
-        const buildingsWithRooms = (buildings || []).map(building => ({
-            ...building,
-            rooms: Array.isArray(building.rooms) ? building.rooms : []
-        }));
+        const { data, error } = await supabase.from("buildings").select("*");
 
-        return res.status(200).json({ 
-            success: true, 
-            data: buildingsWithRooms 
-        });
+        if (error) {
+            console.error("Supabase error:", error);
+            return res.status(500).json({ error: error.message });
+        }
+
+        res.status(200).json({ data });
     } catch (err: any) {
-        console.error("[/api/buildings] Unexpected error:", err);
-        return res.status(500).json({ 
-            success: false,
-            error: "Internal server error",
-            message: err.message || "Unknown error",
-            stack: process.env.NODE_ENV === "development" ? err.stack : undefined
-        });
+        console.error("Unhandled error:", err);
+        return res.status(500).json({ error: err.message || "Unknown error" });
     }
 }
