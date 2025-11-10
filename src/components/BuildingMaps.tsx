@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -7,6 +6,7 @@ import { buildingService, BuildingWithRooms, Room } from "@/services/buildingSer
 import { Bed, BedDouble, Home, AlertCircle, CheckCircle2, Clock, Thermometer, Image as ImageIcon } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
+import { BuildingFloorPlan } from "./BuildingFloorPlan";
 
 function roomTotalBeds(room: Room): number {
   const singles = Number(room.bed_count || 0);
@@ -185,24 +185,16 @@ export function BuildingMaps() {
                   <p className="text-sm text-slate-500 py-4 text-center">No rooms configured</p>
                 ) : (
                   <div className="space-y-4">
-                    {/* Floor Plan Image */}
-                    {building.map_image_url ? (
-                      <div className="bg-white dark:bg-stone-950 rounded-lg border border-slate-200 dark:border-slate-700 p-4 overflow-hidden">
-                        <img 
-                          src={building.map_image_url} 
-                          alt={`${building.name} floor plan`}
-                          className="w-full h-auto rounded-md"
-                          style={{ maxHeight: "600px", objectFit: "contain" }}
-                        />
-                      </div>
-                    ) : (
-                      <div className="flex flex-col items-center justify-center h-48 text-slate-500 bg-slate-50 dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-700">
-                        <ImageIcon className="h-12 w-12 mb-2 opacity-50" />
-                        <p className="text-sm">No floor plan image available</p>
-                      </div>
-                    )}
+                    {/* Custom SVG Floor Plan */}
+                    <div className="bg-white dark:bg-stone-950 rounded-lg border border-slate-200 dark:border-slate-700 p-4 overflow-hidden">
+                      <BuildingFloorPlan
+                        buildingName={building.name}
+                        rooms={rooms}
+                        onRoomClick={(room) => handleRoomClick(room, building)}
+                      />
+                    </div>
 
-                    {/* Room List */}
+                    {/* Room Statistics Summary */}
                     <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
                       {rooms.map((room) => {
                         const totalBeds = roomTotalBeds(room);
