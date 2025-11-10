@@ -89,7 +89,6 @@ export function BuildingFloorPlan({ buildingName, rooms, onRoomClick }: Building
               style={{ 
                 fontSize: "18px", 
                 fontWeight: "600",
-                writingMode: "tb",
                 transform: `rotate(-90deg)`,
                 transformOrigin: `20px ${floorY + roomHeight / 2}px`
               }}
