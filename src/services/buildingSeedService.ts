@@ -12,21 +12,21 @@ interface BuildingSeedData {
   }[];
 }
 
-// Updated with correct room counts - Building #1 split into Left and Right sides, NO bunk beds
+// Updated Building #1 with correct 36 bed count from floor plan - all single beds, no bunk beds
 const BUILDING_SEEDS: BuildingSeedData[] = [
   {
     name: "Building #1 - Left Side",
     map_image_url: "/661_building_1.jpg",
     target_heating_level: 20,
     rooms: [
-      // Upper Floor Left - 3 rooms, 2 beds each
-      { name: "Room L101", floor: 2, bed_count: 2, bunk_bed_count: 0 },
-      { name: "Room L102", floor: 2, bed_count: 2, bunk_bed_count: 0 },
-      { name: "Room L103", floor: 2, bed_count: 2, bunk_bed_count: 0 },
-      // Lower Floor Left - 3 rooms, 2 beds each
-      { name: "Room L201", floor: 1, bed_count: 2, bunk_bed_count: 0 },
-      { name: "Room L202", floor: 1, bed_count: 2, bunk_bed_count: 0 },
-      { name: "Room L203", floor: 1, bed_count: 2, bunk_bed_count: 0 },
+      // Upper Floor Left - 3 rooms, 3 beds each
+      { name: "Room L101", floor: 2, bed_count: 3, bunk_bed_count: 0 },
+      { name: "Room L102", floor: 2, bed_count: 3, bunk_bed_count: 0 },
+      { name: "Room L103", floor: 2, bed_count: 3, bunk_bed_count: 0 },
+      // Lower Floor Left - 3 rooms, 3 beds each
+      { name: "Room L201", floor: 1, bed_count: 3, bunk_bed_count: 0 },
+      { name: "Room L202", floor: 1, bed_count: 3, bunk_bed_count: 0 },
+      { name: "Room L203", floor: 1, bed_count: 3, bunk_bed_count: 0 },
     ]
   },
   {
@@ -34,14 +34,14 @@ const BUILDING_SEEDS: BuildingSeedData[] = [
     map_image_url: "/661_building_1.jpg",
     target_heating_level: 20,
     rooms: [
-      // Upper Floor Right - 3 rooms, 2 beds each
-      { name: "Room R101", floor: 2, bed_count: 2, bunk_bed_count: 0 },
-      { name: "Room R102", floor: 2, bed_count: 2, bunk_bed_count: 0 },
-      { name: "Room R103", floor: 2, bed_count: 2, bunk_bed_count: 0 },
-      // Lower Floor Right - 3 rooms, 2 beds each
-      { name: "Room R201", floor: 1, bed_count: 2, bunk_bed_count: 0 },
-      { name: "Room R202", floor: 1, bed_count: 2, bunk_bed_count: 0 },
-      { name: "Room R203", floor: 1, bed_count: 2, bunk_bed_count: 0 },
+      // Upper Floor Right - 3 rooms, 3 beds each
+      { name: "Room R101", floor: 2, bed_count: 3, bunk_bed_count: 0 },
+      { name: "Room R102", floor: 2, bed_count: 3, bunk_bed_count: 0 },
+      { name: "Room R103", floor: 2, bed_count: 3, bunk_bed_count: 0 },
+      // Lower Floor Right - 3 rooms, 3 beds each
+      { name: "Room R201", floor: 1, bed_count: 3, bunk_bed_count: 0 },
+      { name: "Room R202", floor: 1, bed_count: 3, bunk_bed_count: 0 },
+      { name: "Room R203", floor: 1, bed_count: 3, bunk_bed_count: 0 },
     ]
   },
   {
