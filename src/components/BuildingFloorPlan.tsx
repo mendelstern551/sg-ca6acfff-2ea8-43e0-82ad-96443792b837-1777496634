@@ -7,6 +7,10 @@ interface BuildingFloorPlanProps {
 }
 
 export function BuildingFloorPlan({ buildingName, rooms, onRoomClick }: BuildingFloorPlanProps) {
+  // Detect if this is a split building (Left Side / Right Side)
+  const isSplitBuilding = buildingName.includes("Left Side") || buildingName.includes("Right Side");
+  const isLeftSide = buildingName.includes("Left Side");
+  
   // Sort rooms by floor and name for consistent layout
   const sortedRooms = [...rooms].sort((a, b) => {
     const floorDiff = (a.floor || 0) - (b.floor || 0);
@@ -30,7 +34,7 @@ export function BuildingFloorPlan({ buildingName, rooms, onRoomClick }: Building
   const roomHeight = 140;
   const roomSpacing = 20;
   const floorSpacing = 60;
-  const headerHeight = 80;
+  const headerHeight = isSplitBuilding ? 100 : 80;
   const sideMargin = 40;
   
   const svgWidth = sideMargin * 2 + maxRoomsPerFloor * roomWidth + (maxRoomsPerFloor - 1) * roomSpacing;
@@ -45,7 +49,7 @@ export function BuildingFloorPlan({ buildingName, rooms, onRoomClick }: Building
 
   // Extract room number from room name
   const getRoomNumber = (roomName: string) => {
-    const match = roomName.match(/(\d+|B\d+)/);
+    const match = roomName.match(/([LR]?\d+|B\d+)/);
     return match ? match[1] : roomName;
   };
 
@@ -73,6 +77,19 @@ export function BuildingFloorPlan({ buildingName, rooms, onRoomClick }: Building
       >
         {buildingName}
       </text>
+
+      {/* Side indicator for split buildings */}
+      {isSplitBuilding && (
+        <text
+          x={svgWidth / 2}
+          y="60"
+          textAnchor="middle"
+          className={`${isLeftSide ? 'fill-blue-600 dark:fill-blue-400' : 'fill-orange-600 dark:fill-orange-400'}`}
+          style={{ fontSize: "18px", fontWeight: "600" }}
+        >
+          {isLeftSide ? "◄ LEFT SIDE" : "RIGHT SIDE ►"}
+        </text>
+      )}
 
       {/* Render each floor */}
       {floors.map((floor, floorIndex) => {
