@@ -75,20 +75,45 @@ export function BuildingFloorPlan({ buildingName, rooms, onRoomClick }: Building
         className="fill-stone-900 dark:fill-stone-100"
         style={{ fontSize: "28px", fontWeight: "bold" }}
       >
-        {buildingName}
+        {buildingName.replace(" - Left Side", "").replace(" - Right Side", "")}
       </text>
 
       {/* Side indicator for split buildings */}
       {isSplitBuilding && (
-        <text
-          x={svgWidth / 2}
-          y="60"
-          textAnchor="middle"
-          className={`${isLeftSide ? 'fill-blue-600 dark:fill-blue-400' : 'fill-orange-600 dark:fill-orange-400'}`}
-          style={{ fontSize: "18px", fontWeight: "600" }}
-        >
-          {isLeftSide ? "◄ LEFT SIDE" : "RIGHT SIDE ►"}
-        </text>
+        <>
+          <text
+            x={svgWidth / 2}
+            y="60"
+            textAnchor="middle"
+            className={`${isLeftSide ? 'fill-blue-600 dark:fill-blue-400' : 'fill-orange-600 dark:fill-orange-400'}`}
+            style={{ fontSize: "18px", fontWeight: "600" }}
+          >
+            {isLeftSide ? "◄ LEFT SIDE" : "RIGHT SIDE ►"}
+          </text>
+          
+          {/* Vertical divider line to show building split */}
+          <line
+            x1={svgWidth / 2}
+            y1={headerHeight - 10}
+            x2={svgWidth / 2}
+            y2={svgHeight - 50}
+            stroke="#ef4444"
+            strokeWidth="4"
+            className="dark:stroke-red-500"
+            opacity="0.6"
+          />
+          
+          {/* "BUILDING SPLIT" label on the divider */}
+          <text
+            x={svgWidth / 2}
+            y={headerHeight + 20}
+            textAnchor="middle"
+            className="fill-red-600 dark:fill-red-400"
+            style={{ fontSize: "12px", fontWeight: "700", transform: `rotate(-90deg)`, transformOrigin: `${svgWidth / 2}px ${headerHeight + 20}px` }}
+          >
+            BUILDING SPLIT
+          </text>
+        </>
       )}
 
       {/* Render each floor */}
