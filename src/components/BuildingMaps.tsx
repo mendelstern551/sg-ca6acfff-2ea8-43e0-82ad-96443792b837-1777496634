@@ -3,7 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { buildingService, BuildingWithRooms, Room } from "@/services/buildingService";
-import { Bed, BedDouble, Home, AlertCircle, CheckCircle2, Clock, Thermometer, Image as ImageIcon } from "lucide-react";
+import { Bed, BedDouble, Home, AlertCircle, CheckCircle2, Clock, Thermometer } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { BuildingFloorPlan } from "./BuildingFloorPlan";
@@ -39,7 +39,30 @@ export function BuildingMaps() {
     try {
       setLoading(true);
       const data = await buildingService.getBuildingsWithRooms();
-      setBuildings(Array.isArray(data) ? data : []);
+      const list = Array.isArray(data) ? data : [];
+
+      // Combine Building #1 - Left Side and Building #1 - Right Side into a single logical building
+      const building1Parts = list.filter(b => b.name.startsWith("Building #1"));
+      const otherBuildings = list.filter(b => !b.name.startsWith("Building #1"));
+
+      let combined: BuildingWithRooms[] = otherBuildings;
+
+      if (building1Parts.length > 0) {
+        const allRooms: Room[] = building1Parts.flatMap(b =>
+          Array.isArray(b.rooms) ? b.rooms : []
+        );
+
+        const base = building1Parts[0];
+        const combinedBuilding: BuildingWithRooms = {
+          ...base,
+          name: "Building #1 (661)",
+          rooms: allRooms
+        };
+
+        combined = [combinedBuilding, ...otherBuildings];
+      }
+
+      setBuildings(combined);
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
       setError(msg);
@@ -185,7 +208,6 @@ export function BuildingMaps() {
                   <p className="text-sm text-slate-500 py-4 text-center">No rooms configured</p>
                 ) : (
                   <div className="space-y-4">
-                    {/* Custom SVG Floor Plan */}
                     <div className="bg-white dark:bg-stone-950 rounded-lg border border-slate-200 dark:border-slate-700 p-4 overflow-hidden">
                       <BuildingFloorPlan
                         buildingName={building.name}
@@ -193,8 +215,6 @@ export function BuildingMaps() {
                         onRoomClick={(room) => handleRoomClick(room, building)}
                       />
                     </div>
-
-                    {/* Room Statistics Summary */}
                     <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
                       {rooms.map((room) => {
                         const totalBeds = roomTotalBeds(room);
