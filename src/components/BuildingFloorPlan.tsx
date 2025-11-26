@@ -13,7 +13,7 @@ export function BuildingFloorPlan({ buildingName, rooms, onRoomClick }: Building
   
   // Sort rooms by floor and name for consistent layout
   const sortedRooms = [...rooms].sort((a, b) => {
-    const floorDiff = (a.floor || 0) - (b.floor || 0);
+    const floorDiff = (b.floor || 0) - (a.floor || 0); // Higher floors first (Floor 2 on top)
     if (floorDiff !== 0) return floorDiff;
     return a.name.localeCompare(b.name);
   });
@@ -26,7 +26,7 @@ export function BuildingFloorPlan({ buildingName, rooms, onRoomClick }: Building
     return acc;
   }, {} as Record<number, Room[]>);
 
-  const floors = Object.keys(roomsByFloor).map(Number).sort((a, b) => b - a); // Top floor first
+  const floors = Object.keys(roomsByFloor).map(Number).sort((a, b) => b - a); // Floor 2 first, then Floor 1
   const maxRoomsPerFloor = Math.max(...floors.map(f => roomsByFloor[f].length));
   
   // Calculate SVG dimensions
