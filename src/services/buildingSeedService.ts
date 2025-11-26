@@ -14,7 +14,7 @@ interface BuildingSeedData {
 
 // Building #1 split into Left and Right sides with bed counts matching the floor plan
 // Upper floors (Floor 2): 4 beds per room
-// Lower floors (Floor 1): 3 beds per room
+// Lower floors (Floor 1): 2 beds per room
 const BUILDING_SEEDS: BuildingSeedData[] = [
   {
     name: "Building #1 - Left Side",
@@ -25,10 +25,10 @@ const BUILDING_SEEDS: BuildingSeedData[] = [
       { name: "Room L201", floor: 2, bed_count: 4, bunk_bed_count: 0 },
       { name: "Room L202", floor: 2, bed_count: 4, bunk_bed_count: 0 },
       { name: "Room L203", floor: 2, bed_count: 4, bunk_bed_count: 0 },
-      // Lower Floor Left - 3 rooms, 3 beds each (as marked on floor plan)
-      { name: "Room L101", floor: 1, bed_count: 3, bunk_bed_count: 0 },
-      { name: "Room L102", floor: 1, bed_count: 3, bunk_bed_count: 0 },
-      { name: "Room L103", floor: 1, bed_count: 3, bunk_bed_count: 0 },
+      // Lower Floor Left - 3 rooms, 2 beds each (as marked on floor plan)
+      { name: "Room L101", floor: 1, bed_count: 2, bunk_bed_count: 0 },
+      { name: "Room L102", floor: 1, bed_count: 2, bunk_bed_count: 0 },
+      { name: "Room L103", floor: 1, bed_count: 2, bunk_bed_count: 0 },
     ]
   },
   {
@@ -40,10 +40,10 @@ const BUILDING_SEEDS: BuildingSeedData[] = [
       { name: "Room R201", floor: 2, bed_count: 4, bunk_bed_count: 0 },
       { name: "Room R202", floor: 2, bed_count: 4, bunk_bed_count: 0 },
       { name: "Room R203", floor: 2, bed_count: 4, bunk_bed_count: 0 },
-      // Lower Floor Right - 3 rooms, 3 beds each (as marked on floor plan)
-      { name: "Room R101", floor: 1, bed_count: 3, bunk_bed_count: 0 },
-      { name: "Room R102", floor: 1, bed_count: 3, bunk_bed_count: 0 },
-      { name: "Room R103", floor: 1, bed_count: 3, bunk_bed_count: 0 },
+      // Lower Floor Right - 3 rooms, 2 beds each (as marked on floor plan)
+      { name: "Room R101", floor: 1, bed_count: 2, bunk_bed_count: 0 },
+      { name: "Room R102", floor: 1, bed_count: 2, bunk_bed_count: 0 },
+      { name: "Room R103", floor: 1, bed_count: 2, bunk_bed_count: 0 },
     ]
   },
   {
@@ -156,7 +156,7 @@ export const buildingSeedService = {
 
       return {
         success: true,
-        message: `Successfully seeded ${BUILDING_SEEDS.length} buildings with correct bed counts (Building #1: 42 beds total - Floor 2: 24 beds, Floor 1: 18 beds)`
+        message: `Successfully seeded ${BUILDING_SEEDS.length} buildings with correct bed counts (Building #1: 36 beds total - Floor 2: 24 beds, Floor 1: 12 beds)`
       };
     } catch (error) {
       console.error("Error seeding buildings:", error);
