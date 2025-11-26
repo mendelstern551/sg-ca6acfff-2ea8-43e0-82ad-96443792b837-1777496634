@@ -39,7 +39,42 @@ export function BuildingMaps() {
     try {
       setLoading(true);
       const data = await buildingService.getBuildingsWithRooms();
-      setBuildings(Array.isArray(data) ? data : []);
+      
+      // Combine Building #1 Left Side and Right Side into a single entry
+      const processedBuildings: BuildingWithRooms[] = [];
+      let building1Left: BuildingWithRooms | null = null;
+      let building1Right: BuildingWithRooms | null = null;
+      
+      for (const building of data) {
+        if (building.name === "Building #1 - Left Side") {
+          building1Left = building;
+        } else if (building.name === "Building #1 - Right Side") {
+          building1Right = building;
+        } else {
+          processedBuildings.push(building);
+        }
+      }
+      
+      // If we have both sides of Building #1, combine them
+      if (building1Left && building1Right) {
+        const combinedBuilding: BuildingWithRooms = {
+          id: building1Left.id,
+          name: "Building #1 (661)",
+          map_image_url: building1Left.map_image_url,
+          target_heating_level: building1Left.target_heating_level,
+          rooms: [
+            ...(Array.isArray(building1Left.rooms) ? building1Left.rooms : []),
+            ...(Array.isArray(building1Right.rooms) ? building1Right.rooms : [])
+          ]
+        };
+        processedBuildings.unshift(combinedBuilding);
+      } else if (building1Left) {
+        processedBuildings.unshift({ ...building1Left, name: "Building #1 (661)" });
+      } else if (building1Right) {
+        processedBuildings.unshift({ ...building1Right, name: "Building #1 (661)" });
+      }
+      
+      setBuildings(processedBuildings);
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
       setError(msg);
