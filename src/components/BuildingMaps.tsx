@@ -11,7 +11,7 @@ import { BuildingFloorPlan } from "./BuildingFloorPlan";
 function roomTotalBeds(room: Room): number {
   const singles = Number(room.bed_count || 0);
   const bunks = Number(room.bunk_bed_count || 0);
-  return singles + bunks;
+  return singles + bunks * 2;
 }
 
 function buildingTotals(building: BuildingWithRooms) {
@@ -19,7 +19,7 @@ function buildingTotals(building: BuildingWithRooms) {
   const totalRooms = rooms.length;
   const totalSingles = rooms.reduce((sum, r) => sum + Number(r.bed_count || 0), 0);
   const totalBunksUnits = rooms.reduce((sum, r) => sum + Number(r.bunk_bed_count || 0), 0);
-  const totalBeds = totalSingles + totalBunksUnits;
+  const totalBeds = totalSingles + totalBunksUnits * 2;
   return { totalRooms, totalSingles, totalBunksUnits, totalBeds };
 }
 
@@ -58,10 +58,8 @@ export function BuildingMaps() {
       // If we have both sides of Building #1, combine them
       if (building1Left && building1Right) {
         const combinedBuilding: BuildingWithRooms = {
-          id: building1Left.id,
-          name: "Building #1 (661)",
-          map_image_url: building1Left.map_image_url,
-          target_heating_level: building1Left.target_heating_level,
+          ...building1Left,
+          name: "Building #1",
           rooms: [
             ...(Array.isArray(building1Left.rooms) ? building1Left.rooms : []),
             ...(Array.isArray(building1Right.rooms) ? building1Right.rooms : [])
@@ -69,9 +67,9 @@ export function BuildingMaps() {
         };
         processedBuildings.unshift(combinedBuilding);
       } else if (building1Left) {
-        processedBuildings.unshift({ ...building1Left, name: "Building #1 (661)" });
+        processedBuildings.unshift({ ...building1Left, name: "Building #1" });
       } else if (building1Right) {
-        processedBuildings.unshift({ ...building1Right, name: "Building #1 (661)" });
+        processedBuildings.unshift({ ...building1Right, name: "Building #1" });
       }
       
       setBuildings(processedBuildings);
