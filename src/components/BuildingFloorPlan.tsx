@@ -10,9 +10,23 @@ export function BuildingFloorPlan({ buildingName, rooms, onRoomClick }: Building
   // Detect if this is Building #1 (should show both sides together)
   const isBuilding1 = buildingName.includes("Building #1");
   
-  // Group rooms by side (L for left, R for right) based on room name prefix
-  const leftRooms = rooms.filter(room => room.name.includes("L"));
-  const rightRooms = rooms.filter(room => room.name.includes("R"));
+  // Extract room number from room name (e.g., "Room L101" -> "L101")
+  const getRoomNumber = (roomName: string) => {
+    const match = roomName.match(/([LR]\d+)/);
+    return match ? match[1] : roomName;
+  };
+  
+  // Group rooms by side (L for left, R for right) based on room number prefix
+  // This is more precise than checking if "L" appears anywhere in the name
+  const leftRooms = rooms.filter(room => {
+    const roomNum = getRoomNumber(room.name);
+    return roomNum.startsWith("L");
+  });
+  
+  const rightRooms = rooms.filter(room => {
+    const roomNum = getRoomNumber(room.name);
+    return roomNum.startsWith("R");
+  });
   
   // Sort rooms by floor (higher floors first) and then by room number
   const sortRooms = (roomList: Room[]) => {
@@ -63,7 +77,7 @@ export function BuildingFloorPlan({ buildingName, rooms, onRoomClick }: Building
   const svgWidth = sideMargin + leftSideWidth + centerDividerWidth + rightSideWidth + sideMargin;
   const svgHeight = headerHeight + floors.length * (roomHeight + verticalSpacing) + 80;
 
-  // Get room position in grid - FIXED to prevent duplicates
+  // Get room position in grid - renders each room exactly ONCE
   const getRoomPosition = (side: "left" | "right", floorIndex: number, roomIndex: number) => {
     const x = side === "left" 
       ? sideMargin + roomIndex * (roomWidth + roomSpacing)
@@ -71,12 +85,6 @@ export function BuildingFloorPlan({ buildingName, rooms, onRoomClick }: Building
     
     const y = headerHeight + floorIndex * (roomHeight + verticalSpacing);
     return { x, y };
-  };
-
-  // Extract room number from room name
-  const getRoomNumber = (roomName: string) => {
-    const match = roomName.match(/([LR]?\d+)/);
-    return match ? match[1] : roomName;
   };
 
   // Render individual bed icons in a room based on bed count
@@ -224,6 +232,7 @@ export function BuildingFloorPlan({ buildingName, rooms, onRoomClick }: Building
 
         return (
           <g key={`floor-${floor}`}>
+            {/* Render LEFT side rooms - each room rendered ONCE */}
             {leftFloorRooms.map((room, roomIndex) => {
               const pos = getRoomPosition("left", floorIndex, roomIndex);
               const roomNumber = getRoomNumber(room.name);
@@ -289,6 +298,7 @@ export function BuildingFloorPlan({ buildingName, rooms, onRoomClick }: Building
               );
             })}
 
+            {/* Render RIGHT side rooms - each room rendered ONCE */}
             {rightFloorRooms.map((room, roomIndex) => {
               const pos = getRoomPosition("right", floorIndex, roomIndex);
               const roomNumber = getRoomNumber(room.name);
