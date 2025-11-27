@@ -1,4 +1,3 @@
-
 import { Room } from "@/services/buildingService";
 
 interface BuildingFloorPlanProps {
@@ -8,34 +7,33 @@ interface BuildingFloorPlanProps {
 }
 
 export function BuildingFloorPlan({ buildingName, rooms, onRoomClick }: BuildingFloorPlanProps) {
-  // Detect if this is Building #1
+  // Detect if this is Building #1 (should show both sides together)
   const isBuilding1 = buildingName.includes("Building #1");
   
-  // Extract room number from room name (e.g., "Room 101" -> "101")
+  // Extract room number from room name (e.g., "Room L101" -> "L101")
   const getRoomNumber = (roomName: string) => {
-    const match = roomName.match(/(\d+)/);
+    const match = roomName.match(/([LR]\d+)/);
     return match ? match[1] : roomName;
   };
   
-  // For Building #1, split rooms by number range
-  // Rooms 101-106 go on the left side (Floor 1)
-  // Rooms 107-112 go on the right side (Floor 2)
+  // Group rooms by side (L for left, R for right) based on room number prefix
+  // This is more precise than checking if "L" appears anywhere in the name
   const leftRooms = rooms.filter(room => {
-    const roomNum = parseInt(getRoomNumber(room.name));
-    return roomNum >= 101 && roomNum <= 106;
+    const roomNum = getRoomNumber(room.name);
+    return roomNum.startsWith("L");
   });
   
   const rightRooms = rooms.filter(room => {
-    const roomNum = parseInt(getRoomNumber(room.name));
-    return roomNum >= 107 && roomNum <= 112;
+    const roomNum = getRoomNumber(room.name);
+    return roomNum.startsWith("R");
   });
   
-  // Sort rooms by room number
+  // Sort rooms by floor (higher floors first) and then by room number
   const sortRooms = (roomList: Room[]) => {
     return [...roomList].sort((a, b) => {
-      const numA = parseInt(getRoomNumber(a.name));
-      const numB = parseInt(getRoomNumber(b.name));
-      return numA - numB;
+      const floorDiff = (b.floor || 0) - (a.floor || 0);
+      if (floorDiff !== 0) return floorDiff;
+      return a.name.localeCompare(b.name);
     });
   };
 
@@ -56,7 +54,7 @@ export function BuildingFloorPlan({ buildingName, rooms, onRoomClick }: Building
   const rightRoomsByFloor = groupByFloor(sortedRightRooms);
   
   // Get all floor numbers
-  const floors = [1, 2]; // Building #1 has floors 1 and 2
+  const floors = Object.keys(leftRoomsByFloor).map(Number).sort((a, b) => b - a);
   
   // Calculate SVG dimensions for Building #1 layout
   const roomWidth = 160;
@@ -79,7 +77,7 @@ export function BuildingFloorPlan({ buildingName, rooms, onRoomClick }: Building
   const svgWidth = sideMargin + leftSideWidth + centerDividerWidth + rightSideWidth + sideMargin;
   const svgHeight = headerHeight + floors.length * (roomHeight + verticalSpacing) + 80;
 
-  // Get room position in grid
+  // Get room position in grid - renders each room exactly ONCE
   const getRoomPosition = (side: "left" | "right", floorIndex: number, roomIndex: number) => {
     const x = side === "left" 
       ? sideMargin + roomIndex * (roomWidth + roomSpacing)
@@ -189,7 +187,7 @@ export function BuildingFloorPlan({ buildingName, rooms, onRoomClick }: Building
         className="fill-blue-600 dark:fill-blue-400"
         style={{ fontSize: "20px", fontWeight: "700" }}
       >
-        ◄ LEFT SIDE (101-106)
+        ◄ LEFT SIDE
       </text>
       
       <text
@@ -199,7 +197,7 @@ export function BuildingFloorPlan({ buildingName, rooms, onRoomClick }: Building
         className="fill-orange-600 dark:fill-orange-400"
         style={{ fontSize: "20px", fontWeight: "700" }}
       >
-        RIGHT SIDE (107-112) ►
+        RIGHT SIDE ►
       </text>
 
       <line
@@ -234,7 +232,7 @@ export function BuildingFloorPlan({ buildingName, rooms, onRoomClick }: Building
 
         return (
           <g key={`floor-${floor}`}>
-            {/* Render LEFT side rooms (101-106) */}
+            {/* Render LEFT side rooms - each room rendered ONCE */}
             {leftFloorRooms.map((room, roomIndex) => {
               const pos = getRoomPosition("left", floorIndex, roomIndex);
               const roomNumber = getRoomNumber(room.name);
@@ -300,7 +298,7 @@ export function BuildingFloorPlan({ buildingName, rooms, onRoomClick }: Building
               );
             })}
 
-            {/* Render RIGHT side rooms (107-112) */}
+            {/* Render RIGHT side rooms - each room rendered ONCE */}
             {rightFloorRooms.map((room, roomIndex) => {
               const pos = getRoomPosition("right", floorIndex, roomIndex);
               const roomNumber = getRoomNumber(room.name);
