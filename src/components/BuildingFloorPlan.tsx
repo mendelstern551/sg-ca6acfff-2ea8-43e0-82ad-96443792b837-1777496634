@@ -10,7 +10,6 @@ export function BuildingFloorPlan({ buildingName, rooms, onRoomClick }: Building
   // Detect if this is Building #1 (should show both sides together)
   const isBuilding1 = buildingName.includes("Building #1");
   
-  // For Building #1, we need to show all rooms from both sides together
   // Group rooms by side (L for left, R for right) based on room name prefix
   const leftRooms = rooms.filter(room => room.name.includes("L"));
   const rightRooms = rooms.filter(room => room.name.includes("R"));
@@ -47,30 +46,29 @@ export function BuildingFloorPlan({ buildingName, rooms, onRoomClick }: Building
   const roomWidth = 160;
   const roomHeight = 180;
   const roomSpacing = 15;
-  const verticalSpacing = 20; // Reduced spacing between floor rows
+  const verticalSpacing = 20;
   const headerHeight = 80;
   const sideMargin = 40;
   const centerDividerWidth = 60;
   
-  // Calculate width: left side rooms + divider + right side rooms
-  const maxRoomsPerRow = Math.max(
-    ...floors.map(f => Math.max(
-      leftRoomsByFloor[f]?.length || 0,
-      rightRoomsByFloor[f]?.length || 0
-    ))
-  );
+  // Calculate the maximum number of rooms per row on each side
+  const maxLeftRoomsPerRow = Math.max(...floors.map(f => (leftRoomsByFloor[f]?.length || 0)));
+  const maxRightRoomsPerRow = Math.max(...floors.map(f => (rightRoomsByFloor[f]?.length || 0)));
   
-  const sideWidth = maxRoomsPerRow * roomWidth + (maxRoomsPerRow - 1) * roomSpacing;
-  const svgWidth = sideMargin * 2 + sideWidth * 2 + centerDividerWidth;
+  // Calculate width for each side independently
+  const leftSideWidth = maxLeftRoomsPerRow * roomWidth + (maxLeftRoomsPerRow - 1) * roomSpacing;
+  const rightSideWidth = maxRightRoomsPerRow * roomWidth + (maxRightRoomsPerRow - 1) * roomSpacing;
+  
+  // Total SVG width: left margin + left side + divider + right side + right margin
+  const svgWidth = sideMargin + leftSideWidth + centerDividerWidth + rightSideWidth + sideMargin;
   const svgHeight = headerHeight + floors.length * (roomHeight + verticalSpacing) + 80;
 
-  // Get room position in grid (no floor labels, just vertical positioning)
+  // Get room position in grid - FIXED to prevent duplicates
   const getRoomPosition = (side: "left" | "right", floorIndex: number, roomIndex: number) => {
-    const baseX = side === "left" 
-      ? sideMargin 
-      : sideMargin + sideWidth + centerDividerWidth;
+    const x = side === "left" 
+      ? sideMargin + roomIndex * (roomWidth + roomSpacing)
+      : sideMargin + leftSideWidth + centerDividerWidth + roomIndex * (roomWidth + roomSpacing);
     
-    const x = baseX + roomIndex * (roomWidth + roomSpacing);
     const y = headerHeight + floorIndex * (roomHeight + verticalSpacing);
     return { x, y };
   };
@@ -175,7 +173,7 @@ export function BuildingFloorPlan({ buildingName, rooms, onRoomClick }: Building
       </text>
 
       <text
-        x={sideMargin + sideWidth / 2}
+        x={sideMargin + leftSideWidth / 2}
         y="65"
         textAnchor="middle"
         className="fill-blue-600 dark:fill-blue-400"
@@ -185,7 +183,7 @@ export function BuildingFloorPlan({ buildingName, rooms, onRoomClick }: Building
       </text>
       
       <text
-        x={sideMargin + sideWidth + centerDividerWidth + sideWidth / 2}
+        x={sideMargin + leftSideWidth + centerDividerWidth + rightSideWidth / 2}
         y="65"
         textAnchor="middle"
         className="fill-orange-600 dark:fill-orange-400"
@@ -195,9 +193,9 @@ export function BuildingFloorPlan({ buildingName, rooms, onRoomClick }: Building
       </text>
 
       <line
-        x1={sideMargin + sideWidth + centerDividerWidth / 2}
+        x1={sideMargin + leftSideWidth + centerDividerWidth / 2}
         y1={headerHeight - 10}
-        x2={sideMargin + sideWidth + centerDividerWidth / 2}
+        x2={sideMargin + leftSideWidth + centerDividerWidth / 2}
         y2={svgHeight - 60}
         stroke="#ef4444"
         strokeWidth="5"
@@ -206,7 +204,7 @@ export function BuildingFloorPlan({ buildingName, rooms, onRoomClick }: Building
       />
 
       <text
-        x={sideMargin + sideWidth + centerDividerWidth / 2 + 8}
+        x={sideMargin + leftSideWidth + centerDividerWidth / 2 + 8}
         y={(headerHeight + svgHeight - 60) / 2}
         textAnchor="middle"
         className="fill-red-600 dark:fill-red-400"
