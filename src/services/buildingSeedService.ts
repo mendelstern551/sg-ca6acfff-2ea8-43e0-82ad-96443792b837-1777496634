@@ -22,22 +22,20 @@ const BUILDING_SEEDS: BuildingSeedData[] = [
     map_image_url: "/661_building_1.jpg",
     target_heating_level: 20,
     rooms: [
-      // Upper Floor Left - 3 rooms, 4 beds each
-      { name: "Room L201", floor: 2, bed_count: 4, bunk_bed_count: 0 },
-      { name: "Room L202", floor: 2, bed_count: 4, bunk_bed_count: 0 },
-      { name: "Room L203", floor: 2, bed_count: 4, bunk_bed_count: 0 },
-      // Upper Floor Right - 3 rooms, 4 beds each
-      { name: "Room R201", floor: 2, bed_count: 4, bunk_bed_count: 0 },
-      { name: "Room R202", floor: 2, bed_count: 4, bunk_bed_count: 0 },
-      { name: "Room R203", floor: 2, bed_count: 4, bunk_bed_count: 0 },
-      // Lower Floor Left - 3 rooms, 4 beds each
-      { name: "Room L101", floor: 1, bed_count: 4, bunk_bed_count: 0 },
-      { name: "Room L102", floor: 1, bed_count: 4, bunk_bed_count: 0 },
-      { name: "Room L103", floor: 1, bed_count: 4, bunk_bed_count: 0 },
-      // Lower Floor Right - 3 rooms, 4 beds each
-      { name: "Room R101", floor: 1, bed_count: 4, bunk_bed_count: 0 },
-      { name: "Room R102", floor: 1, bed_count: 4, bunk_bed_count: 0 },
-      { name: "Room R103", floor: 1, bed_count: 4, bunk_bed_count: 0 },
+      // Floor 1 (Lower) - Rooms 101-106
+      { name: "Room 101", floor: 1, bed_count: 4, bunk_bed_count: 0 },
+      { name: "Room 102", floor: 1, bed_count: 4, bunk_bed_count: 0 },
+      { name: "Room 103", floor: 1, bed_count: 4, bunk_bed_count: 0 },
+      { name: "Room 104", floor: 1, bed_count: 4, bunk_bed_count: 0 },
+      { name: "Room 105", floor: 1, bed_count: 4, bunk_bed_count: 0 },
+      { name: "Room 106", floor: 1, bed_count: 4, bunk_bed_count: 0 },
+      // Floor 2 (Upper) - Rooms 107-112
+      { name: "Room 107", floor: 2, bed_count: 4, bunk_bed_count: 0 },
+      { name: "Room 108", floor: 2, bed_count: 4, bunk_bed_count: 0 },
+      { name: "Room 109", floor: 2, bed_count: 4, bunk_bed_count: 0 },
+      { name: "Room 110", floor: 2, bed_count: 4, bunk_bed_count: 0 },
+      { name: "Room 111", floor: 2, bed_count: 4, bunk_bed_count: 0 },
+      { name: "Room 112", floor: 2, bed_count: 4, bunk_bed_count: 0 },
     ]
   },
   {
