@@ -1,71 +1,202 @@
 
 import React from "react";
 
-export const RoomTypeA: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
-  <svg width={320} height={220} viewBox="0 0 320 220" {...props}>
-    {/* Room Type A Layout */}
-    <rect x="2" y="2" width="316" height="216" stroke="black" fill="white" strokeWidth="3" />
+interface RoomLayoutProps extends React.SVGProps<SVGSVGElement> {
+  roomNumber?: number;
+  side?: "left" | "right";
+}
 
-    {/* Beds - placeholders */}
-    <rect x="20" y="20" width="80" height="40" stroke="black" fill="none" strokeWidth="2" />
-    <rect x="220" y="20" width="80" height="40" stroke="black" fill="none" strokeWidth="2" />
-    <rect x="20" y="80" width="80" height="40" stroke="black" fill="none" strokeWidth="2" />
-    <rect x="220" y="80" width="80" height="40" stroke="black" fill="none" strokeWidth="2" />
+export const RoomTypeA: React.FC<RoomLayoutProps> = ({ roomNumber, side, ...props }) => {
+  const bedCount = 4;
+  const bgColor = side === "left" ? "#007bff" : "#ff6600";
+  
+  return (
+    <svg width={320} height={220} viewBox="0 0 320 220" {...props}>
+      {/* Room border */}
+      <rect x="2" y="2" width="316" height="216" stroke="currentColor" fill="white" strokeWidth="3" rx="8" />
 
-    {/* Toilet */}
-    <circle cx="40" cy="180" r="16" stroke="black" fill="none" strokeWidth="2" />
+      {/* Top-left bed */}
+      <g transform="translate(30, 30)">
+        <rect x="0" y="0" width="70" height="40" rx="4" ry="4" fill="none" stroke="currentColor" strokeWidth="2"/>
+        <rect x="0" y="-10" width="70" height="10" fill="none" stroke="currentColor" strokeWidth="2" rx="2"/>
+      </g>
 
-    {/* Closet */}
-    <rect x="240" y="160" width="60" height="40" stroke="black" fill="none" strokeWidth="2" />
+      {/* Top-right bed */}
+      <g transform="translate(220, 30)">
+        <rect x="0" y="0" width="70" height="40" rx="4" ry="4" fill="none" stroke="currentColor" strokeWidth="2"/>
+        <rect x="0" y="-10" width="70" height="10" fill="none" stroke="currentColor" strokeWidth="2" rx="2"/>
+      </g>
 
-    {/* Door (bottom center, swinging left) */}
-    <line x1="140" y1="218" x2="200" y2="218" stroke="black" strokeWidth="4" />
-    <path d="M140 218 A 60 60 0 0 0 200 158" stroke="black" fill="none" strokeWidth="2" />
-  </svg>
-);
+      {/* Bottom-left bed */}
+      <g transform="translate(30, 100)">
+        <rect x="0" y="0" width="70" height="40" rx="4" ry="4" fill="none" stroke="currentColor" strokeWidth="2"/>
+        <rect x="0" y="-10" width="70" height="10" fill="none" stroke="currentColor" strokeWidth="2" rx="2"/>
+      </g>
 
-export const RoomTypeB: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
-  <svg width={320} height={220} viewBox="0 0 320 220" {...props}>
-    {/* Room Type B Layout */}
-    <rect x="2" y="2" width="316" height="216" stroke="black" fill="white" strokeWidth="3" />
+      {/* Bottom-right bed */}
+      <g transform="translate(220, 100)">
+        <rect x="0" y="0" width="70" height="40" rx="4" ry="4" fill="none" stroke="currentColor" strokeWidth="2"/>
+        <rect x="0" y="-10" width="70" height="10" fill="none" stroke="currentColor" strokeWidth="2" rx="2"/>
+      </g>
 
-    {/* Beds */}
-    <rect x="80" y="160" width="70" height="40" stroke="black" fill="none" strokeWidth="2" />
-    <rect x="170" y="160" width="70" height="40" stroke="black" fill="none" strokeWidth="2" />
+      {/* Toilet (bottom-left corner) */}
+      <g transform="translate(35, 175)">
+        <circle cx="15" cy="15" r="12" fill="none" stroke="currentColor" strokeWidth="2"/>
+        <rect x="8" y="2" width="14" height="6" fill="none" stroke="currentColor" strokeWidth="2" rx="1"/>
+      </g>
 
-    {/* Toilet */}
-    <circle cx="260" cy="40" r="16" stroke="black" fill="none" strokeWidth="2" />
+      {/* Closet (bottom-right corner) */}
+      <g transform="translate(250, 170)">
+        <rect x="0" y="0" width="40" height="35" fill="none" stroke="currentColor" strokeWidth="2" rx="2"/>
+        <line x1="20" y1="0" x2="20" y2="35" stroke="currentColor" strokeWidth="2"/>
+      </g>
 
-    {/* Closet */}
-    <rect x="20" y="20" width="60" height="40" stroke="black" fill="none" strokeWidth="2" />
+      {/* Door (bottom center) */}
+      <g transform="translate(130, 218)">
+        <line x1="0" y1="0" x2="60" y2="0" stroke="currentColor" strokeWidth="4"/>
+        <path d="M 0 0 A 60 60 0 0 0 60 -60" fill="none" stroke="currentColor" strokeWidth="2"/>
+      </g>
 
-    {/* Door (top center, swinging left) */}
-    <line x1="140" y1="2" x2="200" y2="2" stroke="black" strokeWidth="4" />
-    <path d="M140 2 A 60 60 0 0 1 200 62" stroke="black" fill="none" strokeWidth="2" />
-  </svg>
-);
+      {/* Room number label (centered) */}
+      {roomNumber && (
+        <g transform="translate(160, 110)">
+          <rect x="-28" y="-16" width="56" height="32" fill={bgColor} rx="8" ry="8"/>
+          <text 
+            x="0" 
+            y="6" 
+            textAnchor="middle" 
+            fill="white"
+            fontSize="18"
+            fontWeight="700"
+          >
+            {roomNumber}
+          </text>
+        </g>
+      )}
+    </svg>
+  );
+};
 
-export const RoomTypeC: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
-  <svg width={320} height={220} viewBox="0 0 320 220" {...props}>
-    {/* Room Type C Layout (Type B + Internal Door) */}
-    <rect x="2" y="2" width="316" height="216" stroke="black" fill="white" strokeWidth="3" />
+export const RoomTypeB: React.FC<RoomLayoutProps> = ({ roomNumber, side, ...props }) => {
+  const bedCount = 2;
+  const bgColor = side === "left" ? "#007bff" : "#ff6600";
+  
+  return (
+    <svg width={320} height={220} viewBox="0 0 320 220" {...props}>
+      {/* Room border */}
+      <rect x="2" y="2" width="316" height="216" stroke="currentColor" fill="white" strokeWidth="3" rx="8" />
 
-    {/* Beds */}
-    <rect x="80" y="160" width="70" height="40" stroke="black" fill="none" strokeWidth="2" />
-    <rect x="170" y="160" width="70" height="40" stroke="black" fill="none" strokeWidth="2" />
+      {/* Left bed (bottom) */}
+      <g transform="translate(70, 160)">
+        <rect x="0" y="0" width="70" height="40" rx="4" ry="4" fill="none" stroke="currentColor" strokeWidth="2"/>
+        <rect x="0" y="-10" width="70" height="10" fill="none" stroke="currentColor" strokeWidth="2" rx="2"/>
+      </g>
 
-    {/* Toilet */}
-    <circle cx="260" cy="40" r="16" stroke="black" fill="none" strokeWidth="2" />
+      {/* Right bed (bottom) */}
+      <g transform="translate(180, 160)">
+        <rect x="0" y="0" width="70" height="40" rx="4" ry="4" fill="none" stroke="currentColor" strokeWidth="2"/>
+        <rect x="0" y="-10" width="70" height="10" fill="none" stroke="currentColor" strokeWidth="2" rx="2"/>
+      </g>
 
-    {/* Closet */}
-    <rect x="20" y="20" width="60" height="40" stroke="black" fill="none" strokeWidth="2" />
+      {/* Toilet (top-right corner) */}
+      <g transform="translate(260, 25)">
+        <circle cx="15" cy="15" r="12" fill="none" stroke="currentColor" strokeWidth="2"/>
+        <rect x="8" y="2" width="14" height="6" fill="none" stroke="currentColor" strokeWidth="2" rx="1"/>
+      </g>
 
-    {/* Door (top center, swinging left) */}
-    <line x1="140" y1="2" x2="200" y2="2" stroke="black" strokeWidth="4" />
-    <path d="M140 2 A 60 60 0 0 1 200 62" stroke="black" fill="none" strokeWidth="2" />
+      {/* Closet (top-left corner) */}
+      <g transform="translate(30, 25)">
+        <rect x="0" y="0" width="40" height="35" fill="none" stroke="currentColor" strokeWidth="2" rx="2"/>
+        <line x1="20" y1="0" x2="20" y2="35" stroke="currentColor" strokeWidth="2"/>
+      </g>
 
-    {/* Interior Connection Door */}
-    <line x1="318" y1="110" x2="318" y2="150" stroke="black" strokeWidth="4" />
-    <path d="M318 110 A 40 40 0 0 1 278 150" stroke="black" fill="none" strokeWidth="2" />
-  </svg>
-);
+      {/* Door (top center) */}
+      <g transform="translate(130, 2)">
+        <line x1="0" y1="0" x2="60" y2="0" stroke="currentColor" strokeWidth="4"/>
+        <path d="M 0 0 A 60 60 0 0 1 60 60" fill="none" stroke="currentColor" strokeWidth="2"/>
+      </g>
+
+      {/* Room number label (centered) */}
+      {roomNumber && (
+        <g transform="translate(160, 110)">
+          <rect x="-28" y="-16" width="56" height="32" fill={bgColor} rx="8" ry="8"/>
+          <text 
+            x="0" 
+            y="6" 
+            textAnchor="middle" 
+            fill="white"
+            fontSize="18"
+            fontWeight="700"
+          >
+            {roomNumber}
+          </text>
+        </g>
+      )}
+    </svg>
+  );
+};
+
+export const RoomTypeC: React.FC<RoomLayoutProps> = ({ roomNumber, side, ...props }) => {
+  const bedCount = 2;
+  const bgColor = side === "left" ? "#007bff" : "#ff6600";
+  
+  return (
+    <svg width={320} height={220} viewBox="0 0 320 220" {...props}>
+      {/* Room border */}
+      <rect x="2" y="2" width="316" height="216" stroke="currentColor" fill="white" strokeWidth="3" rx="8" />
+
+      {/* Left bed (bottom) */}
+      <g transform="translate(70, 160)">
+        <rect x="0" y="0" width="70" height="40" rx="4" ry="4" fill="none" stroke="currentColor" strokeWidth="2"/>
+        <rect x="0" y="-10" width="70" height="10" fill="none" stroke="currentColor" strokeWidth="2" rx="2"/>
+      </g>
+
+      {/* Right bed (bottom) */}
+      <g transform="translate(180, 160)">
+        <rect x="0" y="0" width="70" height="40" rx="4" ry="4" fill="none" stroke="currentColor" strokeWidth="2"/>
+        <rect x="0" y="-10" width="70" height="10" fill="none" stroke="currentColor" strokeWidth="2" rx="2"/>
+      </g>
+
+      {/* Toilet (top-right corner) */}
+      <g transform="translate(260, 25)">
+        <circle cx="15" cy="15" r="12" fill="none" stroke="currentColor" strokeWidth="2"/>
+        <rect x="8" y="2" width="14" height="6" fill="none" stroke="currentColor" strokeWidth="2" rx="1"/>
+      </g>
+
+      {/* Closet (top-left corner) */}
+      <g transform="translate(30, 25)">
+        <rect x="0" y="0" width="40" height="35" fill="none" stroke="currentColor" strokeWidth="2" rx="2"/>
+        <line x1="20" y1="0" x2="20" y2="35" stroke="currentColor" strokeWidth="2"/>
+      </g>
+
+      {/* Main door (top center) */}
+      <g transform="translate(130, 2)">
+        <line x1="0" y1="0" x2="60" y2="0" stroke="currentColor" strokeWidth="4"/>
+        <path d="M 0 0 A 60 60 0 0 1 60 60" fill="none" stroke="currentColor" strokeWidth="2"/>
+      </g>
+
+      {/* Interior connection door (right side) */}
+      <g transform="translate(318, 90)">
+        <line x1="0" y1="0" x2="0" y2="40" stroke="currentColor" strokeWidth="4"/>
+        <path d="M 0 0 A 40 40 0 0 1 -40 40" fill="none" stroke="currentColor" strokeWidth="2"/>
+      </g>
+
+      {/* Room number label (centered) */}
+      {roomNumber && (
+        <g transform="translate(160, 110)">
+          <rect x="-28" y="-16" width="56" height="32" fill={bgColor} rx="8" ry="8"/>
+          <text 
+            x="0" 
+            y="6" 
+            textAnchor="middle" 
+            fill="white"
+            fontSize="18"
+            fontWeight="700"
+          >
+            {roomNumber}
+          </text>
+        </g>
+      )}
+    </svg>
+  );
+};
