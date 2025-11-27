@@ -1020,6 +1020,7 @@ export type Database = {
           id: string
           map_image_url: string | null
           name: string
+          room_type: string | null
           updated_at: string | null
         }
         Insert: {
@@ -1033,6 +1034,7 @@ export type Database = {
           id?: string
           map_image_url?: string | null
           name: string
+          room_type?: string | null
           updated_at?: string | null
         }
         Update: {
@@ -1046,6 +1048,7 @@ export type Database = {
           id?: string
           map_image_url?: string | null
           name?: string
+          room_type?: string | null
           updated_at?: string | null
         }
         Relationships: [

@@ -1,4 +1,6 @@
+
 import { Room } from "@/services/buildingService";
+import { RoomTypeA, RoomTypeB, RoomTypeC } from "./RoomLayouts";
 
 interface BuildingFloorPlanProps {
   buildingName: string;
@@ -7,19 +9,34 @@ interface BuildingFloorPlanProps {
 }
 
 export function BuildingFloorPlan({ buildingName, rooms, onRoomClick }: BuildingFloorPlanProps) {
-  // Detect if this is Building #1 (should show both sides together)
+  // Detect if this is Building #1
   const isBuilding1 = buildingName.includes("Building #1");
   
-  // Group rooms by side (L for left, R for right) based on room name prefix
-  const leftRooms = rooms.filter(room => room.name.includes("L"));
-  const rightRooms = rooms.filter(room => room.name.includes("R"));
+  // Extract room number from room name (e.g., "Room 101" -> "101")
+  const getRoomNumber = (roomName: string) => {
+    const match = roomName.match(/(\d+)/);
+    return match ? match[1] : roomName;
+  };
   
-  // Sort rooms by floor (higher floors first) and then by room number
+  // For Building #1, split rooms by number range
+  // Rooms 101-106 go on the left side (Floor 1)
+  // Rooms 107-112 go on the right side (Floor 2)
+  const leftRooms = rooms.filter(room => {
+    const roomNum = parseInt(getRoomNumber(room.name));
+    return roomNum >= 101 && roomNum <= 106;
+  });
+  
+  const rightRooms = rooms.filter(room => {
+    const roomNum = parseInt(getRoomNumber(room.name));
+    return roomNum >= 107 && roomNum <= 112;
+  });
+  
+  // Sort rooms by room number
   const sortRooms = (roomList: Room[]) => {
     return [...roomList].sort((a, b) => {
-      const floorDiff = (b.floor || 0) - (a.floor || 0);
-      if (floorDiff !== 0) return floorDiff;
-      return a.name.localeCompare(b.name);
+      const numA = parseInt(getRoomNumber(a.name));
+      const numB = parseInt(getRoomNumber(b.name));
+      return numA - numB;
     });
   };
 
@@ -40,11 +57,11 @@ export function BuildingFloorPlan({ buildingName, rooms, onRoomClick }: Building
   const rightRoomsByFloor = groupByFloor(sortedRightRooms);
   
   // Get all floor numbers
-  const floors = Object.keys(leftRoomsByFloor).map(Number).sort((a, b) => b - a);
+  const floors = [1, 2]; // Building #1 has floors 1 and 2
   
   // Calculate SVG dimensions for Building #1 layout
   const roomWidth = 160;
-  const roomHeight = 180;
+  const roomHeight = 110;
   const roomSpacing = 15;
   const verticalSpacing = 20;
   const headerHeight = 80;
@@ -63,7 +80,7 @@ export function BuildingFloorPlan({ buildingName, rooms, onRoomClick }: Building
   const svgWidth = sideMargin + leftSideWidth + centerDividerWidth + rightSideWidth + sideMargin;
   const svgHeight = headerHeight + floors.length * (roomHeight + verticalSpacing) + 80;
 
-  // Get room position in grid - FIXED to prevent duplicates
+  // Get room position in grid
   const getRoomPosition = (side: "left" | "right", floorIndex: number, roomIndex: number) => {
     const x = side === "left" 
       ? sideMargin + roomIndex * (roomWidth + roomSpacing)
@@ -73,80 +90,17 @@ export function BuildingFloorPlan({ buildingName, rooms, onRoomClick }: Building
     return { x, y };
   };
 
-  // Extract room number from room name
-  const getRoomNumber = (roomName: string) => {
-    const match = roomName.match(/([LR]?\d+)/);
-    return match ? match[1] : roomName;
-  };
-
-  // Render individual bed icons in a room based on bed count
-  const renderBeds = (x: number, y: number, bedCount: number, bunkBedCount: number) => {
-    const beds = [];
-    const bedIconWidth = 35;
-    const bedIconHeight = 20;
-    const bedSpacing = 8;
-    
-    const bedsPerRow = 2;
-    const totalBeds = bedCount;
-    
-    const totalRows = Math.ceil(totalBeds / bedsPerRow);
-    const gridWidth = bedsPerRow * bedIconWidth + (bedsPerRow - 1) * bedSpacing;
-    const startX = x + (roomWidth - gridWidth) / 2;
-    const startY = y + 80;
-
-    for (let i = 0; i < totalBeds; i++) {
-      const row = Math.floor(i / bedsPerRow);
-      const col = i % bedsPerRow;
-      const bedX = startX + col * (bedIconWidth + bedSpacing);
-      const bedY = startY + row * (bedIconHeight + bedSpacing);
-
-      beds.push(
-        <g key={`bed-${i}`}>
-          <rect
-            x={bedX}
-            y={bedY}
-            width={bedIconWidth}
-            height={bedIconHeight}
-            rx="3"
-            className="fill-blue-100 dark:fill-blue-900/40 stroke-blue-400 dark:stroke-blue-600"
-            strokeWidth="2"
-          />
-          <rect
-            x={bedX + 2}
-            y={bedY + 2}
-            width={10}
-            height={bedIconHeight - 4}
-            className="fill-blue-400 dark:fill-blue-600"
-          />
-          <line
-            x1={bedX + 14}
-            y1={bedY + 5}
-            x2={bedX + bedIconWidth - 4}
-            y2={bedY + 5}
-            className="stroke-blue-300 dark:stroke-blue-700"
-            strokeWidth="1"
-          />
-          <line
-            x1={bedX + 14}
-            y1={bedY + 10}
-            x2={bedX + bedIconWidth - 4}
-            y2={bedY + 10}
-            className="stroke-blue-300 dark:stroke-blue-700"
-            strokeWidth="1"
-          />
-          <line
-            x1={bedX + 14}
-            y1={bedY + 15}
-            x2={bedX + bedIconWidth - 4}
-            y2={bedY + 15}
-            className="stroke-blue-300 dark:stroke-blue-700"
-            strokeWidth="1"
-          />
-        </g>
-      );
+  // Get the appropriate room layout component based on room_type
+  const getRoomLayoutComponent = (roomType: string | null) => {
+    switch (roomType) {
+      case "A":
+        return RoomTypeA;
+      case "C":
+        return RoomTypeC;
+      case "B":
+      default:
+        return RoomTypeB;
     }
-
-    return beds;
   };
 
   return (
@@ -179,7 +133,7 @@ export function BuildingFloorPlan({ buildingName, rooms, onRoomClick }: Building
         className="fill-blue-600 dark:fill-blue-400"
         style={{ fontSize: "20px", fontWeight: "700" }}
       >
-        ◄ LEFT SIDE
+        ◄ LEFT SIDE (101-106)
       </text>
       
       <text
@@ -189,7 +143,7 @@ export function BuildingFloorPlan({ buildingName, rooms, onRoomClick }: Building
         className="fill-orange-600 dark:fill-orange-400"
         style={{ fontSize: "20px", fontWeight: "700" }}
       >
-        RIGHT SIDE ►
+        RIGHT SIDE (107-112) ►
       </text>
 
       <line
@@ -224,9 +178,11 @@ export function BuildingFloorPlan({ buildingName, rooms, onRoomClick }: Building
 
         return (
           <g key={`floor-${floor}`}>
+            {/* Render LEFT side rooms (101-106) */}
             {leftFloorRooms.map((room, roomIndex) => {
               const pos = getRoomPosition("left", floorIndex, roomIndex);
               const roomNumber = getRoomNumber(room.name);
+              const RoomLayout = getRoomLayoutComponent(room.room_type);
               const singleBeds = room.bed_count || 0;
               const bunkBeds = room.bunk_bed_count || 0;
               const totalBeds = singleBeds + (bunkBeds * 2);
@@ -237,16 +193,12 @@ export function BuildingFloorPlan({ buildingName, rooms, onRoomClick }: Building
                   onClick={() => onRoomClick(room)}
                   className="cursor-pointer group"
                 >
-                  <rect
-                    x={pos.x}
-                    y={pos.y}
-                    width={roomWidth}
-                    height={roomHeight}
-                    rx="12"
-                    className="fill-white dark:fill-stone-900 stroke-stone-300 dark:stroke-stone-700 transition-all group-hover:stroke-blue-500 dark:group-hover:stroke-blue-400 group-hover:stroke-3"
-                    strokeWidth="2"
-                  />
-                  
+                  {/* Room layout SVG */}
+                  <g transform={`translate(${pos.x}, ${pos.y}) scale(0.5)`}>
+                    <RoomLayout className="stroke-stone-300 dark:stroke-stone-700 group-hover:stroke-blue-500 dark:group-hover:stroke-blue-400 transition-all" />
+                  </g>
+
+                  {/* Hover overlay */}
                   <rect
                     x={pos.x}
                     y={pos.y}
@@ -256,32 +208,32 @@ export function BuildingFloorPlan({ buildingName, rooms, onRoomClick }: Building
                     className="fill-blue-500 opacity-0 group-hover:opacity-5 transition-opacity pointer-events-none"
                   />
 
+                  {/* Room number label */}
                   <text
                     x={pos.x + roomWidth / 2}
-                    y={pos.y + 45}
+                    y={pos.y - 8}
                     textAnchor="middle"
                     className="fill-stone-900 dark:fill-stone-100 font-bold"
-                    style={{ fontSize: "36px", fontWeight: "900" }}
+                    style={{ fontSize: "20px", fontWeight: "900" }}
                   >
                     {roomNumber}
                   </text>
 
-                  {renderBeds(pos.x, pos.y, singleBeds, bunkBeds)}
-
+                  {/* Bed count badge */}
                   <rect
                     x={pos.x + roomWidth / 2 - 30}
-                    y={pos.y + roomHeight - 35}
+                    y={pos.y + roomHeight + 5}
                     width="60"
-                    height="26"
-                    rx="13"
+                    height="20"
+                    rx="10"
                     className="fill-blue-600 group-hover:fill-blue-700 transition-colors"
                   />
                   <text
                     x={pos.x + roomWidth / 2}
-                    y={pos.y + roomHeight - 16}
+                    y={pos.y + roomHeight + 18}
                     textAnchor="middle"
                     className="fill-white"
-                    style={{ fontSize: "15px", fontWeight: "800" }}
+                    style={{ fontSize: "12px", fontWeight: "800" }}
                   >
                     {totalBeds} BEDS
                   </text>
@@ -289,9 +241,11 @@ export function BuildingFloorPlan({ buildingName, rooms, onRoomClick }: Building
               );
             })}
 
+            {/* Render RIGHT side rooms (107-112) */}
             {rightFloorRooms.map((room, roomIndex) => {
               const pos = getRoomPosition("right", floorIndex, roomIndex);
               const roomNumber = getRoomNumber(room.name);
+              const RoomLayout = getRoomLayoutComponent(room.room_type);
               const singleBeds = room.bed_count || 0;
               const bunkBeds = room.bunk_bed_count || 0;
               const totalBeds = singleBeds + (bunkBeds * 2);
@@ -302,16 +256,12 @@ export function BuildingFloorPlan({ buildingName, rooms, onRoomClick }: Building
                   onClick={() => onRoomClick(room)}
                   className="cursor-pointer group"
                 >
-                  <rect
-                    x={pos.x}
-                    y={pos.y}
-                    width={roomWidth}
-                    height={roomHeight}
-                    rx="12"
-                    className="fill-white dark:fill-stone-900 stroke-stone-300 dark:stroke-stone-700 transition-all group-hover:stroke-orange-500 dark:group-hover:stroke-orange-400 group-hover:stroke-3"
-                    strokeWidth="2"
-                  />
-                  
+                  {/* Room layout SVG */}
+                  <g transform={`translate(${pos.x}, ${pos.y}) scale(0.5)`}>
+                    <RoomLayout className="stroke-stone-300 dark:stroke-stone-700 group-hover:stroke-orange-500 dark:group-hover:stroke-orange-400 transition-all" />
+                  </g>
+
+                  {/* Hover overlay */}
                   <rect
                     x={pos.x}
                     y={pos.y}
@@ -321,32 +271,32 @@ export function BuildingFloorPlan({ buildingName, rooms, onRoomClick }: Building
                     className="fill-orange-500 opacity-0 group-hover:opacity-5 transition-opacity pointer-events-none"
                   />
 
+                  {/* Room number label */}
                   <text
                     x={pos.x + roomWidth / 2}
-                    y={pos.y + 45}
+                    y={pos.y - 8}
                     textAnchor="middle"
                     className="fill-stone-900 dark:fill-stone-100 font-bold"
-                    style={{ fontSize: "36px", fontWeight: "900" }}
+                    style={{ fontSize: "20px", fontWeight: "900" }}
                   >
                     {roomNumber}
                   </text>
 
-                  {renderBeds(pos.x, pos.y, singleBeds, bunkBeds)}
-
+                  {/* Bed count badge */}
                   <rect
                     x={pos.x + roomWidth / 2 - 30}
-                    y={pos.y + roomHeight - 35}
+                    y={pos.y + roomHeight + 5}
                     width="60"
-                    height="26"
-                    rx="13"
+                    height="20"
+                    rx="10"
                     className="fill-orange-600 group-hover:fill-orange-700 transition-colors"
                   />
                   <text
                     x={pos.x + roomWidth / 2}
-                    y={pos.y + roomHeight - 16}
+                    y={pos.y + roomHeight + 18}
                     textAnchor="middle"
                     className="fill-white"
-                    style={{ fontSize: "15px", fontWeight: "800" }}
+                    style={{ fontSize: "12px", fontWeight: "800" }}
                   >
                     {totalBeds} BEDS
                   </text>
@@ -357,7 +307,7 @@ export function BuildingFloorPlan({ buildingName, rooms, onRoomClick }: Building
         );
       })}
 
-      <g transform={`translate(${svgWidth / 2 - 100}, ${svgHeight - 50})`}>
+      <g transform={`translate(${svgWidth / 2 - 150}, ${svgHeight - 50})`}>
         <text
           x="0"
           y="0"
@@ -369,27 +319,54 @@ export function BuildingFloorPlan({ buildingName, rooms, onRoomClick }: Building
         
         <rect
           x="80"
-          y="-15"
-          width="30"
-          height="18"
-          rx="3"
-          className="fill-blue-100 dark:fill-blue-900/40 stroke-blue-400 dark:stroke-blue-600"
+          y="-12"
+          width="25"
+          height="15"
+          rx="2"
+          className="fill-none stroke-stone-600 dark:stroke-stone-400"
           strokeWidth="2"
         />
-        <rect
-          x="82"
-          y="-13"
-          width="8"
-          height="14"
-          className="fill-blue-400 dark:fill-blue-600"
-        />
         <text
-          x="115"
+          x="110"
           y="0"
           className="fill-stone-700 dark:fill-stone-300"
-          style={{ fontSize: "13px", fontWeight: "600" }}
+          style={{ fontSize: "11px", fontWeight: "600" }}
         >
-          = Single Bed
+          = Bed
+        </text>
+        
+        <circle
+          cx="175"
+          cy="-5"
+          r="8"
+          className="fill-none stroke-stone-600 dark:stroke-stone-400"
+          strokeWidth="2"
+        />
+        <text
+          x="188"
+          y="0"
+          className="fill-stone-700 dark:fill-stone-300"
+          style={{ fontSize: "11px", fontWeight: "600" }}
+        >
+          = Toilet
+        </text>
+        
+        <rect
+          x="250"
+          y="-12"
+          width="25"
+          height="15"
+          rx="2"
+          className="fill-none stroke-stone-600 dark:stroke-stone-400"
+          strokeWidth="2"
+        />
+        <text
+          x="280"
+          y="0"
+          className="fill-stone-700 dark:fill-stone-300"
+          style={{ fontSize: "11px", fontWeight: "600" }}
+        >
+          = Closet
         </text>
       </g>
     </svg>
