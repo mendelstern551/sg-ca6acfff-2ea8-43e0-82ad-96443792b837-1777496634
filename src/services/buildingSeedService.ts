@@ -13,22 +13,25 @@ interface BuildingSeedData {
 }
 
 // Building #1 split into Left and Right sides with bed counts matching the floor plan
-// Upper floors (Floor 2): 4 beds per room
-// Lower floors (Floor 1): 2 beds per room
+// Upper floors (Floor 2): 4 beds per room, 4 rooms per side = 8 rooms total on Floor 2
+// Lower floors (Floor 1): 2 beds per room, 4 rooms per side = 8 rooms total on Floor 1
+// TOTAL: 16 rooms (8 per side)
 const BUILDING_SEEDS: BuildingSeedData[] = [
   {
     name: "Building #1 - Left Side",
     map_image_url: "/661_building_1.jpg",
     target_heating_level: 20,
     rooms: [
-      // Upper Floor Left - 3 rooms, 4 beds each (as marked on floor plan)
+      // Upper Floor Left - 4 rooms, 4 beds each (as marked on floor plan)
       { name: "Room L201", floor: 2, bed_count: 4, bunk_bed_count: 0 },
       { name: "Room L202", floor: 2, bed_count: 4, bunk_bed_count: 0 },
       { name: "Room L203", floor: 2, bed_count: 4, bunk_bed_count: 0 },
-      // Lower Floor Left - 3 rooms, 2 beds each (as marked on floor plan)
+      { name: "Room L204", floor: 2, bed_count: 4, bunk_bed_count: 0 },
+      // Lower Floor Left - 4 rooms, 2 beds each (as marked on floor plan)
       { name: "Room L101", floor: 1, bed_count: 2, bunk_bed_count: 0 },
       { name: "Room L102", floor: 1, bed_count: 2, bunk_bed_count: 0 },
       { name: "Room L103", floor: 1, bed_count: 2, bunk_bed_count: 0 },
+      { name: "Room L104", floor: 1, bed_count: 2, bunk_bed_count: 0 },
     ]
   },
   {
@@ -36,14 +39,16 @@ const BUILDING_SEEDS: BuildingSeedData[] = [
     map_image_url: "/661_building_1.jpg",
     target_heating_level: 20,
     rooms: [
-      // Upper Floor Right - 3 rooms, 4 beds each (as marked on floor plan)
+      // Upper Floor Right - 4 rooms, 4 beds each (as marked on floor plan)
       { name: "Room R201", floor: 2, bed_count: 4, bunk_bed_count: 0 },
       { name: "Room R202", floor: 2, bed_count: 4, bunk_bed_count: 0 },
       { name: "Room R203", floor: 2, bed_count: 4, bunk_bed_count: 0 },
-      // Lower Floor Right - 3 rooms, 2 beds each (as marked on floor plan)
+      { name: "Room R204", floor: 2, bed_count: 4, bunk_bed_count: 0 },
+      // Lower Floor Right - 4 rooms, 2 beds each (as marked on floor plan)
       { name: "Room R101", floor: 1, bed_count: 2, bunk_bed_count: 0 },
       { name: "Room R102", floor: 1, bed_count: 2, bunk_bed_count: 0 },
       { name: "Room R103", floor: 1, bed_count: 2, bunk_bed_count: 0 },
+      { name: "Room R104", floor: 1, bed_count: 2, bunk_bed_count: 0 },
     ]
   },
   {
@@ -156,7 +161,7 @@ export const buildingSeedService = {
 
       return {
         success: true,
-        message: `Successfully seeded ${BUILDING_SEEDS.length} buildings with correct bed counts (Building #1: 36 beds total - Floor 2: 24 beds, Floor 1: 12 beds)`
+        message: `Successfully seeded ${BUILDING_SEEDS.length} buildings with correct bed counts (Building #1: 48 beds total - Floor 2: 32 beds, Floor 1: 16 beds, 16 rooms total)`
       };
     } catch (error) {
       console.error("Error seeding buildings:", error);
