@@ -8,107 +8,183 @@ interface BuildingFloorPlanProps {
   onRoomClick: (room: Room) => void;
 }
 
+// Hardcoded room type mapping as specified
+const ROOM_TYPES: Record<number, "A" | "B" | "C"> = {
+  101: "A",
+  102: "A",
+  103: "A",
+  104: "B",
+  105: "B",
+  106: "B",
+  107: "A",
+  108: "A",
+  109: "A",
+  110: "C",
+  111: "B",
+  112: "B"
+};
+
 export function BuildingFloorPlan({ buildingName, rooms, onRoomClick }: BuildingFloorPlanProps) {
-  // Detect if this is Building #1
   const isBuilding1 = buildingName.includes("Building #1");
   
-  // Extract room number from room name (e.g., "Room 101" -> "101")
-  const getRoomNumber = (roomName: string) => {
+  // Extract room number from room name (e.g., "Room 101" -> 101)
+  const getRoomNumber = (roomName: string): number => {
     const match = roomName.match(/(\d+)/);
-    return match ? match[1] : roomName;
+    return match ? parseInt(match[1]) : 0;
   };
   
-  // For Building #1, split rooms by number range
-  // Rooms 101-106 go on the left side (Floor 1)
-  // Rooms 107-112 go on the right side (Floor 2)
-  const leftRooms = rooms.filter(room => {
-    const roomNum = parseInt(getRoomNumber(room.name));
-    return roomNum >= 101 && roomNum <= 106;
-  });
-  
-  const rightRooms = rooms.filter(room => {
-    const roomNum = parseInt(getRoomNumber(room.name));
-    return roomNum >= 107 && roomNum <= 112;
-  });
-  
-  // Sort rooms by room number
-  const sortRooms = (roomList: Room[]) => {
-    return [...roomList].sort((a, b) => {
-      const numA = parseInt(getRoomNumber(a.name));
-      const numB = parseInt(getRoomNumber(b.name));
-      return numA - numB;
-    });
+  // Get room type component based on room number
+  const getRoomComponent = (roomNumber: number) => {
+    const type = ROOM_TYPES[roomNumber] || "B";
+    if (type === "A") return RoomTypeA;
+    if (type === "C") return RoomTypeC;
+    return RoomTypeB;
   };
 
-  const sortedLeftRooms = sortRooms(leftRooms);
-  const sortedRightRooms = sortRooms(rightRooms);
-
-  // Group by floor for layout positioning
-  const groupByFloor = (roomList: Room[]) => {
-    return roomList.reduce((acc, room) => {
-      const floor = room.floor || 0;
-      if (!acc[floor]) acc[floor] = [];
-      acc[floor].push(room);
-      return acc;
-    }, {} as Record<number, Room[]>);
-  };
-
-  const leftRoomsByFloor = groupByFloor(sortedLeftRooms);
-  const rightRoomsByFloor = groupByFloor(sortedRightRooms);
+  // For Building #1, organize rooms into the correct 3×2 layout
+  // LEFT SIDE: 101-106 (Top: 101,102,103 | Bottom: 104,105,106)
+  // RIGHT SIDE: 107-112 (Top: 107,108,109 | Bottom: 110,111,112)
   
-  // Get all floor numbers
-  const floors = [1, 2]; // Building #1 has floors 1 and 2
+  const leftTopRooms = rooms.filter(r => {
+    const num = getRoomNumber(r.name);
+    return num >= 101 && num <= 103;
+  }).sort((a, b) => getRoomNumber(a.name) - getRoomNumber(b.name));
   
-  // Calculate SVG dimensions for Building #1 layout
+  const leftBottomRooms = rooms.filter(r => {
+    const num = getRoomNumber(r.name);
+    return num >= 104 && num <= 106;
+  }).sort((a, b) => getRoomNumber(a.name) - getRoomNumber(b.name));
+  
+  const rightTopRooms = rooms.filter(r => {
+    const num = getRoomNumber(r.name);
+    return num >= 107 && num <= 109;
+  }).sort((a, b) => getRoomNumber(a.name) - getRoomNumber(b.name));
+  
+  const rightBottomRooms = rooms.filter(r => {
+    const num = getRoomNumber(r.name);
+    return num >= 110 && num <= 112;
+  }).sort((a, b) => getRoomNumber(a.name) - getRoomNumber(b.name));
+
+  // Layout constants for 3×2 grid arrangement
   const roomWidth = 160;
   const roomHeight = 110;
-  const roomSpacing = 15;
-  const verticalSpacing = 20;
-  const headerHeight = 80;
+  const roomSpacing = 20;
+  const verticalSpacing = 30;
+  const headerHeight = 100;
   const sideMargin = 40;
-  const centerDividerWidth = 60;
+  const centerDividerWidth = 80;
   
-  // Calculate the maximum number of rooms per row on each side
-  const maxLeftRoomsPerRow = Math.max(...floors.map(f => (leftRoomsByFloor[f]?.length || 0)));
-  const maxRightRoomsPerRow = Math.max(...floors.map(f => (rightRoomsByFloor[f]?.length || 0)));
+  // Each side has 3 rooms per row
+  const sideWidth = 3 * roomWidth + 2 * roomSpacing;
   
-  // Calculate width for each side independently
-  const leftSideWidth = maxLeftRoomsPerRow * roomWidth + (maxLeftRoomsPerRow - 1) * roomSpacing;
-  const rightSideWidth = maxRightRoomsPerRow * roomWidth + (maxRightRoomsPerRow - 1) * roomSpacing;
-  
-  // Total SVG width: left margin + left side + divider + right side + right margin
-  const svgWidth = sideMargin + leftSideWidth + centerDividerWidth + rightSideWidth + sideMargin;
-  const svgHeight = headerHeight + floors.length * (roomHeight + verticalSpacing) + 80;
+  // Total SVG dimensions
+  const svgWidth = sideMargin + sideWidth + centerDividerWidth + sideWidth + sideMargin;
+  const svgHeight = headerHeight + 2 * (roomHeight + verticalSpacing) + 100;
 
-  // Get room position in grid
-  const getRoomPosition = (side: "left" | "right", floorIndex: number, roomIndex: number) => {
-    const x = side === "left" 
-      ? sideMargin + roomIndex * (roomWidth + roomSpacing)
-      : sideMargin + leftSideWidth + centerDividerWidth + roomIndex * (roomWidth + roomSpacing);
+  // Calculate position for a room in the grid
+  const getRoomPosition = (side: "left" | "right", row: "top" | "bottom", columnIndex: number) => {
+    const baseX = side === "left" 
+      ? sideMargin + columnIndex * (roomWidth + roomSpacing)
+      : sideMargin + sideWidth + centerDividerWidth + columnIndex * (roomWidth + roomSpacing);
     
-    const y = headerHeight + floorIndex * (roomHeight + verticalSpacing);
-    return { x, y };
+    const baseY = headerHeight + (row === "top" ? 0 : roomHeight + verticalSpacing);
+    
+    return { x: baseX, y: baseY };
   };
 
-  // Get the appropriate room layout component based on room_type
-  const getRoomLayoutComponent = (roomType: string | null) => {
-    switch (roomType) {
-      case "A":
-        return RoomTypeA;
-      case "C":
-        return RoomTypeC;
-      case "B":
-      default:
-        return RoomTypeB;
-    }
+  const renderRoom = (room: Room, side: "left" | "right", row: "top" | "bottom", columnIndex: number) => {
+    const pos = getRoomPosition(side, row, columnIndex);
+    const roomNumber = getRoomNumber(room.name);
+    const RoomLayout = getRoomComponent(roomNumber);
+    const singleBeds = room.bed_count || 0;
+    const bunkBeds = room.bunk_bed_count || 0;
+    const totalBeds = singleBeds + (bunkBeds * 2);
+    const roomType = ROOM_TYPES[roomNumber] || "B";
+
+    return (
+      <g
+        key={room.id}
+        onClick={() => onRoomClick(room)}
+        className="cursor-pointer group"
+      >
+        {/* Room layout SVG */}
+        <g transform={`translate(${pos.x}, ${pos.y}) scale(0.5)`}>
+          <RoomLayout 
+            className={`${side === "left" 
+              ? "stroke-blue-400 dark:stroke-blue-600 group-hover:stroke-blue-600 dark:group-hover:stroke-blue-400" 
+              : "stroke-orange-400 dark:stroke-orange-600 group-hover:stroke-orange-600 dark:group-hover:stroke-orange-400"
+            } transition-all`} 
+          />
+        </g>
+
+        {/* Hover overlay */}
+        <rect
+          x={pos.x}
+          y={pos.y}
+          width={roomWidth}
+          height={roomHeight}
+          rx="8"
+          className={`${side === "left" ? "fill-blue-500" : "fill-orange-500"} opacity-0 group-hover:opacity-10 transition-opacity pointer-events-none`}
+        />
+
+        {/* Room number label (above room) */}
+        <text
+          x={pos.x + roomWidth / 2}
+          y={pos.y - 10}
+          textAnchor="middle"
+          className="fill-stone-900 dark:fill-stone-100 font-bold pointer-events-none"
+          style={{ fontSize: "22px", fontWeight: "900" }}
+        >
+          {roomNumber}
+        </text>
+
+        {/* Room type badge (top-right corner) */}
+        <circle
+          cx={pos.x + roomWidth - 20}
+          cy={pos.y + 20}
+          r="14"
+          className={`${side === "left" ? "fill-blue-600" : "fill-orange-600"} group-hover:opacity-90 transition-opacity`}
+        />
+        <text
+          x={pos.x + roomWidth - 20}
+          y={pos.y + 20}
+          textAnchor="middle"
+          dominantBaseline="central"
+          className="fill-white pointer-events-none"
+          style={{ fontSize: "12px", fontWeight: "800" }}
+        >
+          {roomType}
+        </text>
+
+        {/* Bed count badge (below room) */}
+        <rect
+          x={pos.x + roomWidth / 2 - 35}
+          y={pos.y + roomHeight + 8}
+          width="70"
+          height="22"
+          rx="11"
+          className={`${side === "left" ? "fill-blue-600 group-hover:fill-blue-700" : "fill-orange-600 group-hover:fill-orange-700"} transition-colors`}
+        />
+        <text
+          x={pos.x + roomWidth / 2}
+          y={pos.y + roomHeight + 20}
+          textAnchor="middle"
+          className="fill-white pointer-events-none"
+          style={{ fontSize: "13px", fontWeight: "800" }}
+        >
+          {totalBeds} BEDS
+        </text>
+      </g>
+    );
   };
 
   return (
     <svg
       viewBox={`0 0 ${svgWidth} ${svgHeight}`}
       className="w-full h-auto"
-      style={{ minHeight: "500px", maxHeight: "1200px" }}
+      style={{ minHeight: "600px", maxHeight: "1200px" }}
     >
+      {/* Background */}
       <rect 
         width={svgWidth} 
         height={svgHeight} 
@@ -116,255 +192,143 @@ export function BuildingFloorPlan({ buildingName, rooms, onRoomClick }: Building
         className="dark:fill-stone-950" 
       />
       
+      {/* Title */}
       <text
         x={svgWidth / 2}
         y="40"
         textAnchor="middle"
         className="fill-stone-900 dark:fill-stone-100"
-        style={{ fontSize: "32px", fontWeight: "bold" }}
+        style={{ fontSize: "36px", fontWeight: "bold" }}
       >
         Building #1 (661)
       </text>
 
+      {/* Left side label */}
       <text
-        x={sideMargin + leftSideWidth / 2}
-        y="65"
+        x={sideMargin + sideWidth / 2}
+        y="70"
         textAnchor="middle"
         className="fill-blue-600 dark:fill-blue-400"
-        style={{ fontSize: "20px", fontWeight: "700" }}
+        style={{ fontSize: "22px", fontWeight: "700" }}
       >
-        ◄ LEFT SIDE (101-106)
+        ◄ LEFT SIDE
       </text>
       
+      {/* Right side label */}
       <text
-        x={sideMargin + leftSideWidth + centerDividerWidth + rightSideWidth / 2}
-        y="65"
+        x={sideMargin + sideWidth + centerDividerWidth + sideWidth / 2}
+        y="70"
         textAnchor="middle"
         className="fill-orange-600 dark:fill-orange-400"
-        style={{ fontSize: "20px", fontWeight: "700" }}
+        style={{ fontSize: "22px", fontWeight: "700" }}
       >
-        RIGHT SIDE (107-112) ►
+        RIGHT SIDE ►
       </text>
 
+      {/* Center divider line */}
       <line
-        x1={sideMargin + leftSideWidth + centerDividerWidth / 2}
+        x1={sideMargin + sideWidth + centerDividerWidth / 2}
         y1={headerHeight - 10}
-        x2={sideMargin + leftSideWidth + centerDividerWidth / 2}
-        y2={svgHeight - 60}
+        x2={sideMargin + sideWidth + centerDividerWidth / 2}
+        y2={svgHeight - 80}
         stroke="#ef4444"
-        strokeWidth="5"
+        strokeWidth="6"
         className="dark:stroke-red-500"
-        opacity="0.7"
+        opacity="0.8"
       />
 
+      {/* Building split label */}
       <text
-        x={sideMargin + leftSideWidth + centerDividerWidth / 2 + 8}
-        y={(headerHeight + svgHeight - 60) / 2}
+        x={sideMargin + sideWidth + centerDividerWidth / 2 + 10}
+        y={(headerHeight + svgHeight - 80) / 2}
         textAnchor="middle"
         className="fill-red-600 dark:fill-red-400"
         style={{ 
-          fontSize: "14px", 
+          fontSize: "16px", 
           fontWeight: "800",
           writingMode: "vertical-rl",
           textOrientation: "mixed"
         }}
       >
-        BUILDING SPLIT
+        HALLWAY
       </text>
 
-      {floors.map((floor, floorIndex) => {
-        const leftFloorRooms = leftRoomsByFloor[floor] || [];
-        const rightFloorRooms = rightRoomsByFloor[floor] || [];
+      {/* Render LEFT SIDE rooms in 3×2 grid */}
+      {/* Top row: 101, 102, 103 */}
+      {leftTopRooms.map((room, idx) => renderRoom(room, "left", "top", idx))}
+      
+      {/* Bottom row: 104, 105, 106 */}
+      {leftBottomRooms.map((room, idx) => renderRoom(room, "left", "bottom", idx))}
 
-        return (
-          <g key={`floor-${floor}`}>
-            {/* Render LEFT side rooms (101-106) */}
-            {leftFloorRooms.map((room, roomIndex) => {
-              const pos = getRoomPosition("left", floorIndex, roomIndex);
-              const roomNumber = getRoomNumber(room.name);
-              const RoomLayout = getRoomLayoutComponent(room.room_type);
-              const singleBeds = room.bed_count || 0;
-              const bunkBeds = room.bunk_bed_count || 0;
-              const totalBeds = singleBeds + (bunkBeds * 2);
+      {/* Render RIGHT SIDE rooms in 3×2 grid */}
+      {/* Top row: 107, 108, 109 */}
+      {rightTopRooms.map((room, idx) => renderRoom(room, "right", "top", idx))}
+      
+      {/* Bottom row: 110, 111, 112 */}
+      {rightBottomRooms.map((room, idx) => renderRoom(room, "right", "bottom", idx))}
 
-              return (
-                <g
-                  key={room.id}
-                  onClick={() => onRoomClick(room)}
-                  className="cursor-pointer group"
-                >
-                  {/* Room layout SVG */}
-                  <g transform={`translate(${pos.x}, ${pos.y}) scale(0.5)`}>
-                    <RoomLayout className="stroke-stone-300 dark:stroke-stone-700 group-hover:stroke-blue-500 dark:group-hover:stroke-blue-400 transition-all" />
-                  </g>
-
-                  {/* Hover overlay */}
-                  <rect
-                    x={pos.x}
-                    y={pos.y}
-                    width={roomWidth}
-                    height={roomHeight}
-                    rx="12"
-                    className="fill-blue-500 opacity-0 group-hover:opacity-5 transition-opacity pointer-events-none"
-                  />
-
-                  {/* Room number label */}
-                  <text
-                    x={pos.x + roomWidth / 2}
-                    y={pos.y - 8}
-                    textAnchor="middle"
-                    className="fill-stone-900 dark:fill-stone-100 font-bold"
-                    style={{ fontSize: "20px", fontWeight: "900" }}
-                  >
-                    {roomNumber}
-                  </text>
-
-                  {/* Bed count badge */}
-                  <rect
-                    x={pos.x + roomWidth / 2 - 30}
-                    y={pos.y + roomHeight + 5}
-                    width="60"
-                    height="20"
-                    rx="10"
-                    className="fill-blue-600 group-hover:fill-blue-700 transition-colors"
-                  />
-                  <text
-                    x={pos.x + roomWidth / 2}
-                    y={pos.y + roomHeight + 18}
-                    textAnchor="middle"
-                    className="fill-white"
-                    style={{ fontSize: "12px", fontWeight: "800" }}
-                  >
-                    {totalBeds} BEDS
-                  </text>
-                </g>
-              );
-            })}
-
-            {/* Render RIGHT side rooms (107-112) */}
-            {rightFloorRooms.map((room, roomIndex) => {
-              const pos = getRoomPosition("right", floorIndex, roomIndex);
-              const roomNumber = getRoomNumber(room.name);
-              const RoomLayout = getRoomLayoutComponent(room.room_type);
-              const singleBeds = room.bed_count || 0;
-              const bunkBeds = room.bunk_bed_count || 0;
-              const totalBeds = singleBeds + (bunkBeds * 2);
-
-              return (
-                <g
-                  key={room.id}
-                  onClick={() => onRoomClick(room)}
-                  className="cursor-pointer group"
-                >
-                  {/* Room layout SVG */}
-                  <g transform={`translate(${pos.x}, ${pos.y}) scale(0.5)`}>
-                    <RoomLayout className="stroke-stone-300 dark:stroke-stone-700 group-hover:stroke-orange-500 dark:group-hover:stroke-orange-400 transition-all" />
-                  </g>
-
-                  {/* Hover overlay */}
-                  <rect
-                    x={pos.x}
-                    y={pos.y}
-                    width={roomWidth}
-                    height={roomHeight}
-                    rx="12"
-                    className="fill-orange-500 opacity-0 group-hover:opacity-5 transition-opacity pointer-events-none"
-                  />
-
-                  {/* Room number label */}
-                  <text
-                    x={pos.x + roomWidth / 2}
-                    y={pos.y - 8}
-                    textAnchor="middle"
-                    className="fill-stone-900 dark:fill-stone-100 font-bold"
-                    style={{ fontSize: "20px", fontWeight: "900" }}
-                  >
-                    {roomNumber}
-                  </text>
-
-                  {/* Bed count badge */}
-                  <rect
-                    x={pos.x + roomWidth / 2 - 30}
-                    y={pos.y + roomHeight + 5}
-                    width="60"
-                    height="20"
-                    rx="10"
-                    className="fill-orange-600 group-hover:fill-orange-700 transition-colors"
-                  />
-                  <text
-                    x={pos.x + roomWidth / 2}
-                    y={pos.y + roomHeight + 18}
-                    textAnchor="middle"
-                    className="fill-white"
-                    style={{ fontSize: "12px", fontWeight: "800" }}
-                  >
-                    {totalBeds} BEDS
-                  </text>
-                </g>
-              );
-            })}
-          </g>
-        );
-      })}
-
-      <g transform={`translate(${svgWidth / 2 - 150}, ${svgHeight - 50})`}>
+      {/* Legend */}
+      <g transform={`translate(${svgWidth / 2 - 180}, ${svgHeight - 60})`}>
         <text
           x="0"
           y="0"
           className="fill-stone-600 dark:fill-stone-400"
-          style={{ fontSize: "14px", fontWeight: "700" }}
+          style={{ fontSize: "15px", fontWeight: "700" }}
         >
           LEGEND:
         </text>
         
+        {/* Bed icon */}
         <rect
           x="80"
-          y="-12"
-          width="25"
-          height="15"
+          y="-13"
+          width="28"
+          height="16"
           rx="2"
           className="fill-none stroke-stone-600 dark:stroke-stone-400"
           strokeWidth="2"
         />
         <text
-          x="110"
+          x="115"
           y="0"
           className="fill-stone-700 dark:fill-stone-300"
-          style={{ fontSize: "11px", fontWeight: "600" }}
+          style={{ fontSize: "12px", fontWeight: "600" }}
         >
           = Bed
         </text>
         
+        {/* Toilet icon */}
         <circle
-          cx="175"
+          cx="185"
           cy="-5"
-          r="8"
+          r="9"
           className="fill-none stroke-stone-600 dark:stroke-stone-400"
           strokeWidth="2"
         />
         <text
-          x="188"
+          x="200"
           y="0"
           className="fill-stone-700 dark:fill-stone-300"
-          style={{ fontSize: "11px", fontWeight: "600" }}
+          style={{ fontSize: "12px", fontWeight: "600" }}
         >
           = Toilet
         </text>
         
+        {/* Closet icon */}
         <rect
-          x="250"
-          y="-12"
-          width="25"
-          height="15"
+          x="270"
+          y="-13"
+          width="28"
+          height="16"
           rx="2"
           className="fill-none stroke-stone-600 dark:stroke-stone-400"
           strokeWidth="2"
         />
         <text
-          x="280"
+          x="305"
           y="0"
           className="fill-stone-700 dark:fill-stone-300"
-          style={{ fontSize: "11px", fontWeight: "600" }}
+          style={{ fontSize: "12px", fontWeight: "600" }}
         >
           = Closet
         </text>
