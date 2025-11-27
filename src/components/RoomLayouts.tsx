@@ -15,38 +15,54 @@ export const RoomTypeA: React.FC<RoomLayoutProps> = ({ roomNumber, side, ...prop
       {/* Room border */}
       <rect x="2" y="2" width="316" height="216" stroke="currentColor" fill="white" strokeWidth="3" rx="8" />
 
-      {/* Top-left bed */}
-      <g transform="translate(30, 30)">
-        <rect x="0" y="0" width="70" height="40" rx="4" ry="4" fill="none" stroke="currentColor" strokeWidth="2"/>
-        <rect x="0" y="-10" width="70" height="10" fill="none" stroke="currentColor" strokeWidth="2" rx="2"/>
+      {/* Top-left bed - vertical, pillow against left wall */}
+      <g transform="translate(15, 45)">
+        {/* Mattress */}
+        <rect x="0" y="0" width="70" height="120" rx="6" ry="6" stroke="currentColor" strokeWidth="2" fill="white"/>
+        {/* Blanket outline */}
+        <rect x="4" y="20" width="62" height="95" rx="6" ry="6" stroke="currentColor" strokeWidth="1.5" fill="none"/>
+        {/* Pillow */}
+        <rect x="10" y="3" width="50" height="18" rx="4" ry="4" stroke="currentColor" strokeWidth="2" fill="none"/>
       </g>
 
-      {/* Top-right bed */}
-      <g transform="translate(220, 30)">
-        <rect x="0" y="0" width="70" height="40" rx="4" ry="4" fill="none" stroke="currentColor" strokeWidth="2"/>
-        <rect x="0" y="-10" width="70" height="10" fill="none" stroke="currentColor" strokeWidth="2" rx="2"/>
+      {/* Top-right bed - vertical, pillow against right wall */}
+      <g transform="translate(235, 45)">
+        {/* Mattress */}
+        <rect x="0" y="0" width="70" height="120" rx="6" ry="6" stroke="currentColor" strokeWidth="2" fill="white"/>
+        {/* Blanket outline */}
+        <rect x="4" y="20" width="62" height="95" rx="6" ry="6" stroke="currentColor" strokeWidth="1.5" fill="none"/>
+        {/* Pillow */}
+        <rect x="10" y="3" width="50" height="18" rx="4" ry="4" stroke="currentColor" strokeWidth="2" fill="none"/>
       </g>
 
-      {/* Bottom-left bed */}
-      <g transform="translate(30, 100)">
-        <rect x="0" y="0" width="70" height="40" rx="4" ry="4" fill="none" stroke="currentColor" strokeWidth="2"/>
-        <rect x="0" y="-10" width="70" height="10" fill="none" stroke="currentColor" strokeWidth="2" rx="2"/>
+      {/* Bottom-left bed - vertical, pillow against left wall */}
+      <g transform="translate(95, 45)">
+        {/* Mattress */}
+        <rect x="0" y="0" width="70" height="120" rx="6" ry="6" stroke="currentColor" strokeWidth="2" fill="white"/>
+        {/* Blanket outline */}
+        <rect x="4" y="20" width="62" height="95" rx="6" ry="6" stroke="currentColor" strokeWidth="1.5" fill="none"/>
+        {/* Pillow */}
+        <rect x="10" y="3" width="50" height="18" rx="4" ry="4" stroke="currentColor" strokeWidth="2" fill="none"/>
       </g>
 
-      {/* Bottom-right bed */}
-      <g transform="translate(220, 100)">
-        <rect x="0" y="0" width="70" height="40" rx="4" ry="4" fill="none" stroke="currentColor" strokeWidth="2"/>
-        <rect x="0" y="-10" width="70" height="10" fill="none" stroke="currentColor" strokeWidth="2" rx="2"/>
+      {/* Bottom-right bed - vertical, pillow against right wall */}
+      <g transform="translate(155, 45)">
+        {/* Mattress */}
+        <rect x="0" y="0" width="70" height="120" rx="6" ry="6" stroke="currentColor" strokeWidth="2" fill="white"/>
+        {/* Blanket outline */}
+        <rect x="4" y="20" width="62" height="95" rx="6" ry="6" stroke="currentColor" strokeWidth="1.5" fill="none"/>
+        {/* Pillow */}
+        <rect x="10" y="3" width="50" height="18" rx="4" ry="4" stroke="currentColor" strokeWidth="2" fill="none"/>
       </g>
 
-      {/* Toilet (bottom-left corner) */}
-      <g transform="translate(35, 175)">
+      {/* Toilet (top-left corner) */}
+      <g transform="translate(25, 10)">
         <circle cx="15" cy="15" r="12" fill="none" stroke="currentColor" strokeWidth="2"/>
         <rect x="8" y="2" width="14" height="6" fill="none" stroke="currentColor" strokeWidth="2" rx="1"/>
       </g>
 
-      {/* Closet (bottom-right corner) */}
-      <g transform="translate(250, 170)">
+      {/* Closet (top-right corner) */}
+      <g transform="translate(255, 10)">
         <rect x="0" y="0" width="40" height="35" fill="none" stroke="currentColor" strokeWidth="2" rx="2"/>
         <line x1="20" y1="0" x2="20" y2="35" stroke="currentColor" strokeWidth="2"/>
       </g>
@@ -59,7 +75,7 @@ export const RoomTypeA: React.FC<RoomLayoutProps> = ({ roomNumber, side, ...prop
 
       {/* Room number label (centered) */}
       {roomNumber && (
-        <g transform="translate(160, 110)">
+        <g transform="translate(160, 20)">
           <rect x="-28" y="-16" width="56" height="32" fill={bgColor} rx="8" ry="8"/>
           <text 
             x="0" 
@@ -86,26 +102,34 @@ export const RoomTypeB: React.FC<RoomLayoutProps> = ({ roomNumber, side, ...prop
       {/* Room border */}
       <rect x="2" y="2" width="316" height="216" stroke="currentColor" fill="white" strokeWidth="3" rx="8" />
 
-      {/* Left bed (bottom) */}
-      <g transform="translate(70, 160)">
-        <rect x="0" y="0" width="70" height="40" rx="4" ry="4" fill="none" stroke="currentColor" strokeWidth="2"/>
-        <rect x="0" y="-10" width="70" height="10" fill="none" stroke="currentColor" strokeWidth="2" rx="2"/>
+      {/* Left bed (bottom wall, rotated 90 degrees) - pillow touches bottom wall */}
+      <g transform="translate(50, 148) rotate(-90)">
+        {/* Mattress */}
+        <rect x="0" y="0" width="70" height="120" rx="6" ry="6" stroke="currentColor" strokeWidth="2" fill="white"/>
+        {/* Blanket outline */}
+        <rect x="4" y="20" width="62" height="95" rx="6" ry="6" stroke="currentColor" strokeWidth="1.5" fill="none"/>
+        {/* Pillow */}
+        <rect x="10" y="3" width="50" height="18" rx="4" ry="4" stroke="currentColor" strokeWidth="2" fill="none"/>
       </g>
 
-      {/* Right bed (bottom) */}
-      <g transform="translate(180, 160)">
-        <rect x="0" y="0" width="70" height="40" rx="4" ry="4" fill="none" stroke="currentColor" strokeWidth="2"/>
-        <rect x="0" y="-10" width="70" height="10" fill="none" stroke="currentColor" strokeWidth="2" rx="2"/>
+      {/* Right bed (bottom wall, rotated 90 degrees) - pillow touches bottom wall */}
+      <g transform="translate(200, 148) rotate(-90)">
+        {/* Mattress */}
+        <rect x="0" y="0" width="70" height="120" rx="6" ry="6" stroke="currentColor" strokeWidth="2" fill="white"/>
+        {/* Blanket outline */}
+        <rect x="4" y="20" width="62" height="95" rx="6" ry="6" stroke="currentColor" strokeWidth="1.5" fill="none"/>
+        {/* Pillow */}
+        <rect x="10" y="3" width="50" height="18" rx="4" ry="4" stroke="currentColor" strokeWidth="2" fill="none"/>
       </g>
 
       {/* Toilet (top-right corner) */}
-      <g transform="translate(260, 25)">
+      <g transform="translate(260, 15)">
         <circle cx="15" cy="15" r="12" fill="none" stroke="currentColor" strokeWidth="2"/>
         <rect x="8" y="2" width="14" height="6" fill="none" stroke="currentColor" strokeWidth="2" rx="1"/>
       </g>
 
       {/* Closet (top-left corner) */}
-      <g transform="translate(30, 25)">
+      <g transform="translate(25, 15)">
         <rect x="0" y="0" width="40" height="35" fill="none" stroke="currentColor" strokeWidth="2" rx="2"/>
         <line x1="20" y1="0" x2="20" y2="35" stroke="currentColor" strokeWidth="2"/>
       </g>
@@ -118,7 +142,7 @@ export const RoomTypeB: React.FC<RoomLayoutProps> = ({ roomNumber, side, ...prop
 
       {/* Room number label (centered) */}
       {roomNumber && (
-        <g transform="translate(160, 110)">
+        <g transform="translate(160, 80)">
           <rect x="-28" y="-16" width="56" height="32" fill={bgColor} rx="8" ry="8"/>
           <text 
             x="0" 
@@ -145,26 +169,34 @@ export const RoomTypeC: React.FC<RoomLayoutProps> = ({ roomNumber, side, ...prop
       {/* Room border */}
       <rect x="2" y="2" width="316" height="216" stroke="currentColor" fill="white" strokeWidth="3" rx="8" />
 
-      {/* Left bed (bottom) */}
-      <g transform="translate(70, 160)">
-        <rect x="0" y="0" width="70" height="40" rx="4" ry="4" fill="none" stroke="currentColor" strokeWidth="2"/>
-        <rect x="0" y="-10" width="70" height="10" fill="none" stroke="currentColor" strokeWidth="2" rx="2"/>
+      {/* Left bed (bottom wall, rotated 90 degrees) - pillow touches bottom wall */}
+      <g transform="translate(50, 148) rotate(-90)">
+        {/* Mattress */}
+        <rect x="0" y="0" width="70" height="120" rx="6" ry="6" stroke="currentColor" strokeWidth="2" fill="white"/>
+        {/* Blanket outline */}
+        <rect x="4" y="20" width="62" height="95" rx="6" ry="6" stroke="currentColor" strokeWidth="1.5" fill="none"/>
+        {/* Pillow */}
+        <rect x="10" y="3" width="50" height="18" rx="4" ry="4" stroke="currentColor" strokeWidth="2" fill="none"/>
       </g>
 
-      {/* Right bed (bottom) */}
-      <g transform="translate(180, 160)">
-        <rect x="0" y="0" width="70" height="40" rx="4" ry="4" fill="none" stroke="currentColor" strokeWidth="2"/>
-        <rect x="0" y="-10" width="70" height="10" fill="none" stroke="currentColor" strokeWidth="2" rx="2"/>
+      {/* Right bed (bottom wall, rotated 90 degrees) - pillow touches bottom wall */}
+      <g transform="translate(200, 148) rotate(-90)">
+        {/* Mattress */}
+        <rect x="0" y="0" width="70" height="120" rx="6" ry="6" stroke="currentColor" strokeWidth="2" fill="white"/>
+        {/* Blanket outline */}
+        <rect x="4" y="20" width="62" height="95" rx="6" ry="6" stroke="currentColor" strokeWidth="1.5" fill="none"/>
+        {/* Pillow */}
+        <rect x="10" y="3" width="50" height="18" rx="4" ry="4" stroke="currentColor" strokeWidth="2" fill="none"/>
       </g>
 
       {/* Toilet (top-right corner) */}
-      <g transform="translate(260, 25)">
+      <g transform="translate(260, 15)">
         <circle cx="15" cy="15" r="12" fill="none" stroke="currentColor" strokeWidth="2"/>
         <rect x="8" y="2" width="14" height="6" fill="none" stroke="currentColor" strokeWidth="2" rx="1"/>
       </g>
 
       {/* Closet (top-left corner) */}
-      <g transform="translate(30, 25)">
+      <g transform="translate(25, 15)">
         <rect x="0" y="0" width="40" height="35" fill="none" stroke="currentColor" strokeWidth="2" rx="2"/>
         <line x1="20" y1="0" x2="20" y2="35" stroke="currentColor" strokeWidth="2"/>
       </g>
@@ -175,7 +207,7 @@ export const RoomTypeC: React.FC<RoomLayoutProps> = ({ roomNumber, side, ...prop
         <path d="M 0 0 A 60 60 0 0 1 60 60" fill="none" stroke="currentColor" strokeWidth="2"/>
       </g>
 
-      {/* Interior connection door (right side) */}
+      {/* Interior connection door (right side) - connects to room 109 */}
       <g transform="translate(318, 90)">
         <line x1="0" y1="0" x2="0" y2="40" stroke="currentColor" strokeWidth="4"/>
         <path d="M 0 0 A 40 40 0 0 1 -40 40" fill="none" stroke="currentColor" strokeWidth="2"/>
@@ -183,7 +215,7 @@ export const RoomTypeC: React.FC<RoomLayoutProps> = ({ roomNumber, side, ...prop
 
       {/* Room number label (centered) */}
       {roomNumber && (
-        <g transform="translate(160, 110)">
+        <g transform="translate(160, 80)">
           <rect x="-28" y="-16" width="56" height="32" fill={bgColor} rx="8" ry="8"/>
           <text 
             x="0" 
