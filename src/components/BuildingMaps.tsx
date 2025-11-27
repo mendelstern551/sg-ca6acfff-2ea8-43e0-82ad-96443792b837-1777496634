@@ -40,39 +40,8 @@ export function BuildingMaps() {
       setLoading(true);
       const data = await buildingService.getBuildingsWithRooms();
       
-      // Combine Building #1 Left Side and Right Side into a single entry
-      const processedBuildings: BuildingWithRooms[] = [];
-      let building1Left: BuildingWithRooms | null = null;
-      let building1Right: BuildingWithRooms | null = null;
-      
-      for (const building of data) {
-        if (building.name === "Building #1 - Left Side") {
-          building1Left = building;
-        } else if (building.name === "Building #1 - Right Side") {
-          building1Right = building;
-        } else {
-          processedBuildings.push(building);
-        }
-      }
-      
-      // If we have both sides of Building #1, combine them
-      if (building1Left && building1Right) {
-        const combinedBuilding: BuildingWithRooms = {
-          ...building1Left,
-          name: "Building #1",
-          rooms: [
-            ...(Array.isArray(building1Left.rooms) ? building1Left.rooms : []),
-            ...(Array.isArray(building1Right.rooms) ? building1Right.rooms : [])
-          ]
-        };
-        processedBuildings.unshift(combinedBuilding);
-      } else if (building1Left) {
-        processedBuildings.unshift({ ...building1Left, name: "Building #1" });
-      } else if (building1Right) {
-        processedBuildings.unshift({ ...building1Right, name: "Building #1" });
-      }
-      
-      setBuildings(processedBuildings);
+      // No longer need to merge Building #1 sides - we have a single unified building
+      setBuildings(data);
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
       setError(msg);
