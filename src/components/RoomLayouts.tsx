@@ -77,58 +77,36 @@ export const RoomTypeA: React.FC<RoomLayoutProps> = ({ roomNumber, side, ...prop
 };
 
 export const RoomTypeB: React.FC<RoomLayoutProps> = ({ roomNumber, side, ...props }) => {
-  // ROOM DIMENSIONS (must match real Softgen container!)
-  const ROOM_WIDTH = 220;
-  const ROOM_HEIGHT = 260;
-
-  // BED DIMENSIONS
-  const BED_WIDTH = 60;
-  const BED_HEIGHT = 110;
-
-  // PERFECT CENTERING FORMULA
-  const totalBedsWidth = BED_WIDTH * 2;
-  const spaceLeft = (ROOM_WIDTH - totalBedsWidth) / 2;
-
   return (
-    <svg
-      width={ROOM_WIDTH}
-      height={ROOM_HEIGHT}
-      viewBox={`0 0 ${ROOM_WIDTH} ${ROOM_HEIGHT}`}
-      {...props}
-    >
-      {/* OUTER ROOM BORDER */}
-      <rect x="0" y="0" width={ROOM_WIDTH} height={ROOM_HEIGHT} fill="white" stroke="currentColor" strokeWidth="2"/>
+    <svg width="180" height="180" viewBox="0 0 180 180" {...props}>
 
-      {/* CLOSET – top left */}
-      <rect x="10" y="10" width="40" height="40" stroke="currentColor" strokeWidth="2" fill="none"/>
-      <line x1="30" y1="10" x2="30" y2="50" stroke="currentColor" strokeWidth="2"/>
+      {/* ROOM OUTLINE */}
+      <rect x="5" y="5" width="170" height="170" fill="white" stroke="currentColor" strokeWidth="2" />
 
-      {/* DOOR ARC – centered top */}
-      <line x1={ROOM_WIDTH / 2 - 30} y1="0" x2={ROOM_WIDTH / 2 + 30} y2="0" stroke="currentColor" strokeWidth="4"/>
-      <path
-        d={`M ${ROOM_WIDTH / 2 + 30} 0 A 30 30 0 0 0 ${ROOM_WIDTH / 2 - 30} 30`}
-        stroke="currentColor"
-        strokeWidth="2"
-        fill="none"
-      />
+      {/* CLOSET */}
+      <rect x="10" y="10" width="30" height="30" stroke="currentColor" fill="none" strokeWidth="2" />
 
-      {/* TOILET – top right */}
-      <circle cx={ROOM_WIDTH - 30} cy={30} r="18" fill="none" stroke="currentColor" strokeWidth="2"/>
-      <rect x={ROOM_WIDTH - 40} y="10" width="20" height="10" fill="none" stroke="currentColor" strokeWidth="2"/>
+      {/* DOOR ARC */}
+      <path d="M 90 10 A 40 40 0 0 1 130 50" stroke="currentColor" strokeWidth="2" fill="none" />
+
+      {/* TOILET */}
+      <circle cx="145" cy="35" r="10" stroke="currentColor" strokeWidth="2" fill="none" />
+
+      {/* --- BEDS SECTION --- */}
 
       {/* LEFT BED */}
-      <g transform={`translate(${spaceLeft}, ${ROOM_HEIGHT - BED_HEIGHT - 10}) rotate(180, ${BED_WIDTH / 2}, ${BED_HEIGHT / 2})`}>
-        <rect width={BED_WIDTH} height={BED_HEIGHT} rx="6" ry="6" stroke="currentColor" strokeWidth="2" fill="white"/>
-        <rect x="3" y="20" width={BED_WIDTH - 6} height={BED_HEIGHT - 25} rx="6" ry="6" stroke="currentColor" strokeWidth="1.5" fill="none"/>
-        <rect x="8" y="3" width={BED_WIDTH - 16} height="18" rx="4" ry="4" stroke="currentColor" strokeWidth="2" fill="none"/>
-      </g>
+      <rect x="35" y="115" width="40" height="55" rx="3" stroke="currentColor" fill="none" strokeWidth="2" />
+      {/* LEFT PILLOW */}
+      <rect x="38" y="118" width="34" height="12" rx="2" stroke="currentColor" fill="none" strokeWidth="1.5" />
 
       {/* RIGHT BED */}
-      <g transform={`translate(${spaceLeft + BED_WIDTH}, ${ROOM_HEIGHT - BED_HEIGHT - 10}) rotate(180, ${BED_WIDTH / 2}, ${BED_HEIGHT / 2})`}>
-        <rect width={BED_WIDTH} height={BED_HEIGHT} rx="6" ry="6" stroke="currentColor" strokeWidth="2" fill="white"/>
-        <rect x="3" y="20" width={BED_WIDTH - 6} height={BED_HEIGHT - 25} rx="6" ry="6" stroke="currentColor" strokeWidth="1.5" fill="none"/>
-        <rect x="8" y="3" width={BED_WIDTH - 16} height="18" rx="4" ry="4" stroke="currentColor" strokeWidth="2" fill="none"/>
-      </g>
+      <rect x="105" y="115" width="40" height="55" rx="3" stroke="currentColor" fill="none" strokeWidth="2" />
+      {/* RIGHT PILLOW */}
+      <rect x="108" y="118" width="34" height="12" rx="2" stroke="currentColor" fill="none" strokeWidth="1.5" />
+
+      {/* NIGHT TABLE BETWEEN */}
+      <rect x="78" y="130" width="25" height="25" rx="3" stroke="currentColor" fill="none" strokeWidth="2" />
+
     </svg>
   );
 };
