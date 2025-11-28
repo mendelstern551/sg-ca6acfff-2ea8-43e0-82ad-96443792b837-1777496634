@@ -84,8 +84,7 @@ export const RoomTypeB: React.FC<RoomLayoutProps> = ({ roomNumber, side, ...prop
   const roomWidth = 240;
   const roomHeight = 260;
   const bedWidth = 70;
-  const totalBedsWidth = bedWidth * 2;
-  const leftPadding = (roomWidth - totalBedsWidth) / 2;
+  const leftPadding = (roomWidth - bedWidth * 2) / 2;
   
   return (
     <svg width={roomWidth} height={roomHeight} viewBox={`0 0 ${roomWidth} ${roomHeight}`} {...props}>
@@ -104,14 +103,14 @@ export const RoomTypeB: React.FC<RoomLayoutProps> = ({ roomNumber, side, ...prop
       <circle cx="205" cy="25" r="18" fill="none" stroke="currentColor" strokeWidth="2"/>
       <rect x="195" y="5" width="20" height="10" fill="none" stroke="currentColor" strokeWidth="2"/>
 
-      {/* BED 1 (LEFT) — dynamically centered */}
+      {/* BED 1 (LEFT) — dynamically centered using exact calculation */}
       <g transform={`translate(${leftPadding}, ${roomHeight}) rotate(180)`}>
         <rect width={bedWidth} height="120" rx="6" ry="6" stroke="currentColor" strokeWidth="2" fill="white"/>
         <rect x="4" y="20" width="62" height="95" rx="6" ry="6" stroke="currentColor" strokeWidth="1.5" fill="none"/>
         <rect x="10" y="3" width="50" height="18" rx="4" ry="4" stroke="currentColor" strokeWidth="2" fill="none"/>
       </g>
 
-      {/* BED 2 (RIGHT) — dynamically centered */}
+      {/* BED 2 (RIGHT) — dynamically centered using exact calculation */}
       <g transform={`translate(${leftPadding + bedWidth}, ${roomHeight}) rotate(180)`}>
         <rect width={bedWidth} height="120" rx="6" ry="6" stroke="currentColor" strokeWidth="2" fill="white"/>
         <rect x="4" y="20" width="62" height="95" rx="6" ry="6" stroke="currentColor" strokeWidth="1.5" fill="none"/>
