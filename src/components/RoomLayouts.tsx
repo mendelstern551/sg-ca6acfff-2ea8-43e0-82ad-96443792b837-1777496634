@@ -114,15 +114,15 @@ export const RoomTypeB: React.FC<RoomLayoutProps> = ({ roomNumber, side, ...prop
       <circle cx="205" cy="25" r="18" fill="none" stroke="currentColor" strokeWidth="2"/>
       <rect x="195" y="5" width="20" height="10" fill="none" stroke="currentColor" strokeWidth="2"/>
 
-      {/* BED 1 (left bottom) */}
-      <g transform="translate(35,110)">
+      {/* BED 1 (left bottom, rotated 180°, touching bottom wall) */}
+      <g transform="translate(35,260) rotate(180)">
         <rect width="70" height="120" rx="6" ry="6" stroke="currentColor" strokeWidth="2" fill="white"/>
         <rect x="4" y="20" width="62" height="95" rx="6" ry="6" stroke="currentColor" strokeWidth="1.5" fill="none"/>
         <rect x="10" y="3" width="50" height="18" rx="4" ry="4" stroke="currentColor" strokeWidth="2" fill="none"/>
       </g>
 
-      {/* BED 2 (right bottom) */}
-      <g transform="translate(135,110)">
+      {/* BED 2 (right bottom, rotated 180°, touching bottom wall) */}
+      <g transform="translate(135,260) rotate(180)">
         <rect width="70" height="120" rx="6" ry="6" stroke="currentColor" strokeWidth="2" fill="white"/>
         <rect x="4" y="20" width="62" height="95" rx="6" ry="6" stroke="currentColor" strokeWidth="1.5" fill="none"/>
         <rect x="10" y="3" width="50" height="18" rx="4" ry="4" stroke="currentColor" strokeWidth="2" fill="none"/>
