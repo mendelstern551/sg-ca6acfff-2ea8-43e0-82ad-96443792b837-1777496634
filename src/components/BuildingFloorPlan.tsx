@@ -1,4 +1,3 @@
-
 import { Room } from "@/services/buildingService";
 import { RoomTypeA, RoomTypeB, RoomTypeC } from "./RoomLayouts";
 
@@ -22,6 +21,13 @@ const ROOM_TYPES: Record<number, "A" | "B" | "C"> = {
   110: "C",
   111: "B",
   112: "B"
+};
+
+// Bed counts by room type
+const BED_COUNT = {
+  A: 4,
+  B: 2,
+  C: 2
 };
 
 export function BuildingFloorPlan({ buildingName, rooms, onRoomClick }: BuildingFloorPlanProps) {
@@ -96,10 +102,8 @@ export function BuildingFloorPlan({ buildingName, rooms, onRoomClick }: Building
     const pos = getRoomPosition(side, row, columnIndex);
     const roomNumber = getRoomNumber(room.name);
     const RoomLayout = getRoomComponent(roomNumber);
-    const singleBeds = room.bed_count || 0;
-    const bunkBeds = room.bunk_bed_count || 0;
-    const totalBeds = singleBeds + (bunkBeds * 2);
     const roomType = ROOM_TYPES[roomNumber] || "B";
+    const bedCount = BED_COUNT[roomType];
 
     return (
       <g
@@ -127,16 +131,27 @@ export function BuildingFloorPlan({ buildingName, rooms, onRoomClick }: Building
           className={`${side === "left" ? "fill-blue-500" : "fill-orange-500"} opacity-0 group-hover:opacity-10 transition-opacity pointer-events-none`}
         />
 
-        {/* Room number label (above room) */}
-        <text
-          x={pos.x + roomWidth / 2}
-          y={pos.y - 10}
-          textAnchor="middle"
-          className="fill-stone-900 dark:fill-stone-100 font-bold pointer-events-none"
-          style={{ fontSize: "22px", fontWeight: "900" }}
-        >
-          {roomNumber}
-        </text>
+        {/* Room number label (centered above room) */}
+        <g transform={`translate(${pos.x + roomWidth / 2}, ${pos.y - 20})`}>
+          <rect
+            x="-30"
+            y="-15"
+            width="60"
+            height="30"
+            rx="10"
+            fill={side === "left" ? "#0069ff" : "#ff6600"}
+          />
+          <text
+            x="0"
+            y="5"
+            textAnchor="middle"
+            fill="white"
+            fontSize="16"
+            fontWeight="bold"
+          >
+            {roomNumber}
+          </text>
+        </g>
 
         {/* Room type badge (top-right corner) */}
         <circle
@@ -156,7 +171,7 @@ export function BuildingFloorPlan({ buildingName, rooms, onRoomClick }: Building
           {roomType}
         </text>
 
-        {/* Bed count badge (below room) */}
+        {/* Bed count badge (centered below room) */}
         <rect
           x={pos.x + roomWidth / 2 - 35}
           y={pos.y + roomHeight + 8}
@@ -172,7 +187,7 @@ export function BuildingFloorPlan({ buildingName, rooms, onRoomClick }: Building
           className="fill-white pointer-events-none"
           style={{ fontSize: "13px", fontWeight: "800" }}
         >
-          {totalBeds} BEDS
+          {bedCount} BEDS
         </text>
       </g>
     );
