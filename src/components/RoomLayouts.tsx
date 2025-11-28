@@ -72,23 +72,6 @@ export const RoomTypeA: React.FC<RoomLayoutProps> = ({ roomNumber, side, ...prop
         <line x1="0" y1="0" x2="60" y2="0" stroke="currentColor" strokeWidth="4"/>
         <path d="M 0 0 A 60 60 0 0 0 60 -60" fill="none" stroke="currentColor" strokeWidth="2"/>
       </g>
-
-      {/* Room number label (centered) */}
-      {roomNumber && (
-        <g transform="translate(160, 20)">
-          <rect x="-28" y="-16" width="56" height="32" fill={bgColor} rx="8" ry="8"/>
-          <text 
-            x="0" 
-            y="6" 
-            textAnchor="middle" 
-            fill="white"
-            fontSize="18"
-            fontWeight="700"
-          >
-            {roomNumber}
-          </text>
-        </g>
-      )}
     </svg>
   );
 };
@@ -114,36 +97,19 @@ export const RoomTypeB: React.FC<RoomLayoutProps> = ({ roomNumber, side, ...prop
       <circle cx="205" cy="25" r="18" fill="none" stroke="currentColor" strokeWidth="2"/>
       <rect x="195" y="5" width="20" height="10" fill="none" stroke="currentColor" strokeWidth="2"/>
 
-      {/* BED 1 (left bottom, rotated 180°, touching bottom wall) */}
+      {/* BED 1 (LEFT) — rotated & placed at bottom wall */}
       <g transform="translate(35,260) rotate(180)">
         <rect width="70" height="120" rx="6" ry="6" stroke="currentColor" strokeWidth="2" fill="white"/>
         <rect x="4" y="20" width="62" height="95" rx="6" ry="6" stroke="currentColor" strokeWidth="1.5" fill="none"/>
         <rect x="10" y="3" width="50" height="18" rx="4" ry="4" stroke="currentColor" strokeWidth="2" fill="none"/>
       </g>
 
-      {/* BED 2 (right bottom, rotated 180°, touching bottom wall) */}
+      {/* BED 2 (RIGHT) — rotated & placed at bottom wall */}
       <g transform="translate(135,260) rotate(180)">
         <rect width="70" height="120" rx="6" ry="6" stroke="currentColor" strokeWidth="2" fill="white"/>
         <rect x="4" y="20" width="62" height="95" rx="6" ry="6" stroke="currentColor" strokeWidth="1.5" fill="none"/>
         <rect x="10" y="3" width="50" height="18" rx="4" ry="4" stroke="currentColor" strokeWidth="2" fill="none"/>
       </g>
-
-      {/* Room number label (centered) */}
-      {roomNumber && (
-        <g transform="translate(120, 75)">
-          <rect x="-28" y="-16" width="56" height="32" fill={bgColor} rx="8" ry="8"/>
-          <text 
-            x="0" 
-            y="6" 
-            textAnchor="middle" 
-            fill="white"
-            fontSize="18"
-            fontWeight="700"
-          >
-            {roomNumber}
-          </text>
-        </g>
-      )}
     </svg>
   );
 };
@@ -200,23 +166,6 @@ export const RoomTypeC: React.FC<RoomLayoutProps> = ({ roomNumber, side, ...prop
         <line x1="0" y1="0" x2="0" y2="40" stroke="currentColor" strokeWidth="4"/>
         <path d="M 0 0 A 40 40 0 0 1 -40 40" fill="none" stroke="currentColor" strokeWidth="2"/>
       </g>
-
-      {/* Room number label (centered) */}
-      {roomNumber && (
-        <g transform="translate(160, 80)">
-          <rect x="-28" y="-16" width="56" height="32" fill={bgColor} rx="8" ry="8"/>
-          <text 
-            x="0" 
-            y="6" 
-            textAnchor="middle" 
-            fill="white"
-            fontSize="18"
-            fontWeight="700"
-          >
-            {roomNumber}
-          </text>
-        </g>
-      )}
     </svg>
   );
 };
