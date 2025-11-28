@@ -80,10 +80,17 @@ export const RoomTypeB: React.FC<RoomLayoutProps> = ({ roomNumber, side, ...prop
   const bedCount = 2;
   const bgColor = side === "left" ? "#007bff" : "#ff6600";
   
+  // Dynamic calculations for perfect centering
+  const roomWidth = 240;
+  const roomHeight = 260;
+  const bedWidth = 70;
+  const totalBedsWidth = bedWidth * 2;
+  const leftPadding = (roomWidth - totalBedsWidth) / 2;
+  
   return (
-    <svg width="240" height="260" viewBox="0 0 240 260" {...props}>
+    <svg width={roomWidth} height={roomHeight} viewBox={`0 0 ${roomWidth} ${roomHeight}`} {...props}>
       {/* ROOM OUTLINE */}
-      <rect x="0" y="0" width="240" height="260" fill="white" stroke="currentColor" strokeWidth="2"/>
+      <rect x="0" y="0" width={roomWidth} height={roomHeight} fill="white" stroke="currentColor" strokeWidth="2"/>
 
       {/* CLOSET (top-left) */}
       <rect x="0" y="0" width="60" height="55" fill="none" stroke="currentColor" strokeWidth="2"/>
@@ -97,16 +104,16 @@ export const RoomTypeB: React.FC<RoomLayoutProps> = ({ roomNumber, side, ...prop
       <circle cx="205" cy="25" r="18" fill="none" stroke="currentColor" strokeWidth="2"/>
       <rect x="195" y="5" width="20" height="10" fill="none" stroke="currentColor" strokeWidth="2"/>
 
-      {/* BED 1 (LEFT) — centered at x=50 */}
-      <g transform="translate(50,260) rotate(180)">
-        <rect width="70" height="120" rx="6" ry="6" stroke="currentColor" strokeWidth="2" fill="white"/>
+      {/* BED 1 (LEFT) — dynamically centered */}
+      <g transform={`translate(${leftPadding}, ${roomHeight}) rotate(180)`}>
+        <rect width={bedWidth} height="120" rx="6" ry="6" stroke="currentColor" strokeWidth="2" fill="white"/>
         <rect x="4" y="20" width="62" height="95" rx="6" ry="6" stroke="currentColor" strokeWidth="1.5" fill="none"/>
         <rect x="10" y="3" width="50" height="18" rx="4" ry="4" stroke="currentColor" strokeWidth="2" fill="none"/>
       </g>
 
-      {/* BED 2 (RIGHT) — centered at x=120 */}
-      <g transform="translate(120,260) rotate(180)">
-        <rect width="70" height="120" rx="6" ry="6" stroke="currentColor" strokeWidth="2" fill="white"/>
+      {/* BED 2 (RIGHT) — dynamically centered */}
+      <g transform={`translate(${leftPadding + bedWidth}, ${roomHeight}) rotate(180)`}>
+        <rect width={bedWidth} height="120" rx="6" ry="6" stroke="currentColor" strokeWidth="2" fill="white"/>
         <rect x="4" y="20" width="62" height="95" rx="6" ry="6" stroke="currentColor" strokeWidth="1.5" fill="none"/>
         <rect x="10" y="3" width="50" height="18" rx="4" ry="4" stroke="currentColor" strokeWidth="2" fill="none"/>
       </g>
