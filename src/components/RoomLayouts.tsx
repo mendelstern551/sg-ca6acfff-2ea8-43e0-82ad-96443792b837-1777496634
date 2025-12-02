@@ -33,40 +33,73 @@ export const NightTable = () => (
 export const RoomTypeA: React.FC<RoomLayoutProps> = ({ roomNumber, side, ...props }) => {
   return (
     <svg
-      width="180"
-      height="180"
-      viewBox="0 0 180 180"
+      width="420"
+      height="360"
+      viewBox="0 0 420 360"
       fill="none"
       stroke="black"
       strokeWidth="2"
       {...props}
     >
-      {/* Room outline */}
-      <rect x="5" y="5" width="170" height="170" />
+      {/* ROOM OUTLINE */}
+      <rect x="10" y="10" width="400" height="340" fill="white" />
 
-      {/* LEFT QUEEN BED */}
-      <g transform="translate(15, 60) scale(0.9)">
-        <rect x="5" y="5" width="70" height="10" />
-        <rect x="5" y="15" width="70" height="70" />
-        <rect x="5" y="85" width="70" height="10" />
-        <rect x="12" y="20" width="25" height="15" rx="3" />
-        <rect x="43" y="20" width="25" height="15" rx="3" />
+      {/** ---------------------- LEFT SIDE BEDS ---------------------- */}
+
+      {/* TOP LEFT BED (Q3-L) */}
+      <g transform="translate(40, 40)">
+        {/* Bed frame */}
+        <rect width="110" height="70" strokeWidth="2" />
+        {/* Pillow on left wall */}
+        <rect x="0" y="0" width="110" height="15" fill="#e6e6e6" />
       </g>
 
-      {/* RIGHT QUEEN BED */}
-      <g transform="translate(95, 60) scale(0.9)">
-        <rect x="5" y="5" width="70" height="10" />
-        <rect x="5" y="15" width="70" height="70" />
-        <rect x="5" y="85" width="70" height="10" />
-        <rect x="12" y="20" width="25" height="15" rx="3" />
-        <rect x="43" y="20" width="25" height="15" rx="3" />
+      {/* BOTTOM LEFT BED (Q3-L) */}
+      <g transform="translate(40, 170)">
+        <rect width="110" height="70" strokeWidth="2" />
+        <rect x="0" y="0" width="110" height="15" fill="#e6e6e6" />
       </g>
 
-      {/* NIGHT TABLE BETWEEN BEDS */}
-      <g transform="translate(78, 100) scale(1)">
-        <rect x="0" y="0" width="25" height="30" rx="2" />
-        <line x1="0" y1="12" x2="25" y2="12" />
-        <circle cx="12.5" cy="8" r="2" />
+      {/* NIGHT TABLE between left beds */}
+      <g transform="translate(75, 130)">
+        <rect width="40" height="30" strokeWidth="2" />
+      </g>
+
+      {/** ---------------------- RIGHT SIDE BEDS ---------------------- */}
+
+      {/* TOP RIGHT BED (Q3-R) */}
+      <g transform="translate(260, 40)">
+        {/* Bed frame */}
+        <rect width="110" height="70" strokeWidth="2" />
+        {/* Pillow on right wall */}
+        <rect x="0" y="0" width="110" height="15" fill="#e6e6e6" />
+      </g>
+
+      {/* BOTTOM RIGHT BED (Q3-R) */}
+      <g transform="translate(260, 170)">
+        <rect width="110" height="70" strokeWidth="2" />
+        <rect x="0" y="0" width="110" height="15" fill="#e6e6e6" />
+      </g>
+
+      {/* NIGHT TABLE between right beds */}
+      <g transform="translate(295, 130)">
+        <rect width="40" height="30" strokeWidth="2" />
+      </g>
+
+      {/** ---------------------- CENTER TABLE + CHAIRS ---------------------- */}
+
+      {/* TABLE */}
+      <g transform="translate(170, 70)">
+        <rect width="70" height="40" strokeWidth="2" />
+      </g>
+
+      {/* CHAIRS */}
+      <g transform="translate(150, 65)">
+        <rect width="30" height="20" />
+      </g>
+
+      <g transform="translate(245, 65)">
+        <rect width="30" height="20" />
       </g>
     </svg>
   );
