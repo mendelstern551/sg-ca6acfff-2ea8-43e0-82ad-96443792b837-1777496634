@@ -74,35 +74,42 @@ export const RoomTypeA: React.FC<RoomLayoutProps> = ({ roomNumber, side, ...prop
 
 export const RoomTypeB: React.FC<RoomLayoutProps> = ({ roomNumber, side, ...props }) => {
   return (
-    <svg width="180" height="180" viewBox="0 0 180 180" {...props}>
+    <svg
+      width="110"
+      height="140"
+      viewBox="0 0 110 140"
+      fill="none"
+      stroke="black"
+      strokeWidth="2"
+      {...props}
+    >
+      {/* Room Outline */}
+      <rect x="1" y="1" width="108" height="138" fill="white" />
 
-      {/* ROOM OUTLINE */}
-      <rect x="5" y="5" width="170" height="170" fill="white" stroke="currentColor" strokeWidth="2" />
+      {/* Toilet (top-right) */}
+      <circle cx="92" cy="30" r="8" />
+      <rect x="84" y="22" width="12" height="16" />
 
-      {/* CLOSET */}
-      <rect x="10" y="10" width="30" height="30" stroke="currentColor" fill="none" strokeWidth="2" />
+      {/* Closet (top-left) */}
+      <rect x="10" y="12" width="24" height="26" />
+      <line x1="22" y1="12" x2="22" y2="38" />
 
-      {/* DOOR ARC */}
-      <path d="M 90 10 A 40 40 0 0 1 130 50" stroke="currentColor" strokeWidth="2" fill="none" />
+      {/* Door (center top, left swing) */}
+      <path d="M55 1 v22" />
+      <path d="M55 23 a30 30 0 0 1 -30 -30" />
 
-      {/* TOILET */}
-      <circle cx="145" cy="35" r="10" stroke="currentColor" strokeWidth="2" fill="none" />
+      {/* Beds */}
+      {/* Left Bed */}
+      <rect x="18" y="78" width="30" height="46" rx="2" />
+      <rect x="23" y="82" width="20" height="14" rx="1" />
 
-      {/* --- BEDS SECTION --- */}
+      {/* Right Bed */}
+      <rect x="62" y="78" width="30" height="46" rx="2" />
+      <rect x="67" y="82" width="20" height="14" rx="1" />
 
-      {/* LEFT BED */}
-      <rect x="35" y="115" width="40" height="55" rx="3" stroke="currentColor" fill="none" strokeWidth="2" />
-      {/* LEFT PILLOW */}
-      <rect x="38" y="118" width="34" height="12" rx="2" stroke="currentColor" fill="none" strokeWidth="1.5" />
-
-      {/* RIGHT BED */}
-      <rect x="105" y="115" width="40" height="55" rx="3" stroke="currentColor" fill="none" strokeWidth="2" />
-      {/* RIGHT PILLOW */}
-      <rect x="108" y="118" width="34" height="12" rx="2" stroke="currentColor" fill="none" strokeWidth="1.5" />
-
-      {/* NIGHT TABLE BETWEEN */}
-      <rect x="78" y="130" width="25" height="25" rx="3" stroke="currentColor" fill="none" strokeWidth="2" />
-
+      {/* Night Table */}
+      <rect x="48" y="94" width="14" height="18" rx="2" />
+      <line x1="48" y1="103" x2="62" y2="103" />
     </svg>
   );
 };
