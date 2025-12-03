@@ -76,9 +76,9 @@ export function BuildingFloorPlan({ buildingName, rooms, onRoomClick }: Building
     return num >= 110 && num <= 112;
   }).sort((a, b) => getRoomNumber(a.name) - getRoomNumber(b.name));
 
-  // Layout constants optimized for larger room images
-  const roomWidth = 260;
-  const roomHeight = 260;
+  // Layout constants optimized for larger 800x800 room image
+  const roomWidth = 280;
+  const roomHeight = 280;
   const roomSpacing = 25;
   const verticalSpacing = 35;
   const headerHeight = 90;
@@ -116,8 +116,8 @@ export function BuildingFloorPlan({ buildingName, rooms, onRoomClick }: Building
         onClick={() => onRoomClick(room)}
         className="cursor-pointer group"
       >
-        {/* Room layout SVG - scaled to fit larger image */}
-        <g transform={`translate(${pos.x}, ${pos.y}) scale(${roomType === "A" ? 0.433 : 1})`}>
+        {/* Room layout SVG - scaled to fit larger 800x800 image */}
+        <g transform={`translate(${pos.x}, ${pos.y}) scale(${roomType === "A" ? 0.35 : 1})`}>
           <RoomLayout 
             className={`${side === "left" 
               ? "stroke-blue-400 dark:stroke-blue-600 group-hover:stroke-blue-600 dark:group-hover:stroke-blue-400" 
