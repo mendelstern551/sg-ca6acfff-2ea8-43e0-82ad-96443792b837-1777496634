@@ -5,169 +5,152 @@ interface RoomLayoutProps extends React.SVGProps<SVGSVGElement> {
   side?: "left" | "right";
 }
 
-export const QueenBed = () => (
-  <svg width="80" height="100" viewBox="0 0 80 100" fill="none" stroke="black" strokeWidth="2">
-    {/* Headboard */}
-    <rect x="5" y="5" width="70" height="10" />
-
-    {/* Mattress */}
-    <rect x="5" y="15" width="70" height="70" />
-
-    {/* Footboard */}
-    <rect x="5" y="85" width="70" height="10" />
-
-    {/* Pillows */}
-    <rect x="12" y="20" width="25" height="15" rx="3" />
-    <rect x="43" y="20" width="25" height="15" rx="3" />
-  </svg>
-);
-
-export const NightTable = () => (
-  <svg width="25" height="30" viewBox="0 0 25 30" fill="none" stroke="black" strokeWidth="2">
-    <rect x="3" y="3" width="19" height="24" rx="2" />
-    <line x1="3" y1="12" x2="22" y2="12" />
-    <circle cx="12.5" cy="8" r="2" />
-  </svg>
-);
-
 export const RoomTypeA: React.FC<RoomLayoutProps> = ({ roomNumber, side, ...props }) => {
   return (
     <svg
       width="320"
-      height="280"
-      viewBox="0 0 320 280"
+      height="320"
+      viewBox="0 0 100 100"
       fill="none"
       stroke="currentColor"
-      strokeWidth="2"
+      strokeWidth="0.5"
       {...props}
     >
-      {/* ROOM OUTLINE - gray walls */}
-      <rect x="5" y="5" width="310" height="270" fill="white" stroke="#9ca3af" strokeWidth="8" />
-
-      {/* TOP WINDOW (centered) */}
-      <rect x="135" y="1" width="50" height="8" fill="white" stroke="#6b7280" strokeWidth="2" />
-      <line x1="160" y1="1" x2="160" y2="9" stroke="#6b7280" strokeWidth="2" />
-
-      {/** ---------------------- LEFT SIDE BEDS (2 beds) ---------------------- */}
-
-      {/* TOP LEFT BED with diamond pattern */}
-      <g transform="translate(25, 30)">
-        {/* Bed frame */}
-        <rect width="85" height="65" fill="white" strokeWidth="2" />
-        {/* Pillow on top (against wall) */}
-        <rect x="0" y="0" width="85" height="12" fill="#e5e7eb" strokeWidth="1.5" />
-        {/* Diamond pattern on mattress */}
-        <line x1="20" y1="20" x2="42.5" y2="42.5" strokeWidth="1" opacity="0.4" />
-        <line x1="42.5" y1="20" x2="20" y2="42.5" strokeWidth="1" opacity="0.4" />
-        <line x1="42.5" y1="20" x2="65" y2="42.5" strokeWidth="1" opacity="0.4" />
-        <line x1="65" y1="20" x2="42.5" y2="42.5" strokeWidth="1" opacity="0.4" />
-        <line x1="20" y1="42.5" x2="42.5" y2="65" strokeWidth="1" opacity="0.4" />
-        <line x1="42.5" y1="42.5" x2="20" y2="65" strokeWidth="1" opacity="0.4" />
-        <line x1="42.5" y1="42.5" x2="65" y2="65" strokeWidth="1" opacity="0.4" />
-        <line x1="65" y1="42.5" x2="42.5" y2="65" strokeWidth="1" opacity="0.4" />
-        {/* Night stand next to bed */}
-        <rect x="90" y="20" width="20" height="25" fill="white" strokeWidth="2" rx="2" />
-      </g>
-
-      {/* BOTTOM LEFT BED with diamond pattern */}
-      <g transform="translate(25, 140)">
-        <rect width="85" height="65" fill="white" strokeWidth="2" />
-        <rect x="0" y="0" width="85" height="12" fill="#e5e7eb" strokeWidth="1.5" />
-        {/* Diamond pattern */}
-        <line x1="20" y1="20" x2="42.5" y2="42.5" strokeWidth="1" opacity="0.4" />
-        <line x1="42.5" y1="20" x2="20" y2="42.5" strokeWidth="1" opacity="0.4" />
-        <line x1="42.5" y1="20" x2="65" y2="42.5" strokeWidth="1" opacity="0.4" />
-        <line x1="65" y1="20" x2="42.5" y2="42.5" strokeWidth="1" opacity="0.4" />
-        <line x1="20" y1="42.5" x2="42.5" y2="65" strokeWidth="1" opacity="0.4" />
-        <line x1="42.5" y1="42.5" x2="20" y2="65" strokeWidth="1" opacity="0.4" />
-        <line x1="42.5" y1="42.5" x2="65" y2="65" strokeWidth="1" opacity="0.4" />
-        <line x1="65" y1="42.5" x2="42.5" y2="65" strokeWidth="1" opacity="0.4" />
-        {/* Night stand */}
-        <rect x="90" y="20" width="20" height="25" fill="white" strokeWidth="2" rx="2" />
-      </g>
-
-      {/* LEFT SIDE CIRCULAR ELEMENT (table or decoration) between beds */}
-      <circle cx="40" cy="115" r="12" fill="white" strokeWidth="2" />
-      <circle cx="40" cy="115" r="4" fill="none" strokeWidth="1.5" />
-
-      {/** ---------------------- RIGHT SIDE BEDS (2 beds) ---------------------- */}
-
-      {/* TOP RIGHT BED with diamond pattern */}
-      <g transform="translate(210, 30)">
-        <rect width="85" height="65" fill="white" strokeWidth="2" />
-        <rect x="0" y="0" width="85" height="12" fill="#e5e7eb" strokeWidth="1.5" />
-        {/* Diamond pattern */}
-        <line x1="20" y1="20" x2="42.5" y2="42.5" strokeWidth="1" opacity="0.4" />
-        <line x1="42.5" y1="20" x2="20" y2="42.5" strokeWidth="1" opacity="0.4" />
-        <line x1="42.5" y1="20" x2="65" y2="42.5" strokeWidth="1" opacity="0.4" />
-        <line x1="65" y1="20" x2="42.5" y2="42.5" strokeWidth="1" opacity="0.4" />
-        <line x1="20" y1="42.5" x2="42.5" y2="65" strokeWidth="1" opacity="0.4" />
-        <line x1="42.5" y1="42.5" x2="20" y2="65" strokeWidth="1" opacity="0.4" />
-        <line x1="42.5" y1="42.5" x2="65" y2="65" strokeWidth="1" opacity="0.4" />
-        <line x1="65" y1="42.5" x2="42.5" y2="65" strokeWidth="1" opacity="0.4" />
-        {/* Night stand */}
-        <rect x="-25" y="20" width="20" height="25" fill="white" strokeWidth="2" rx="2" />
-      </g>
-
-      {/* BOTTOM RIGHT BED with diamond pattern */}
-      <g transform="translate(210, 140)">
-        <rect width="85" height="65" fill="white" strokeWidth="2" />
-        <rect x="0" y="0" width="85" height="12" fill="#e5e7eb" strokeWidth="1.5" />
-        {/* Diamond pattern */}
-        <line x1="20" y1="20" x2="42.5" y2="42.5" strokeWidth="1" opacity="0.4" />
-        <line x1="42.5" y1="20" x2="20" y2="42.5" strokeWidth="1" opacity="0.4" />
-        <line x1="42.5" y1="20" x2="65" y2="42.5" strokeWidth="1" opacity="0.4" />
-        <line x1="65" y1="20" x2="42.5" y2="42.5" strokeWidth="1" opacity="0.4" />
-        <line x1="20" y1="42.5" x2="42.5" y2="65" strokeWidth="1" opacity="0.4" />
-        <line x1="42.5" y1="42.5" x2="20" y2="65" strokeWidth="1" opacity="0.4" />
-        <line x1="42.5" y1="42.5" x2="65" y2="65" strokeWidth="1" opacity="0.4" />
-        <line x1="65" y1="42.5" x2="42.5" y2="65" strokeWidth="1" opacity="0.4" />
-        {/* Night stand */}
-        <rect x="-25" y="20" width="20" height="25" fill="white" strokeWidth="2" rx="2" />
-      </g>
-
-      {/* RIGHT SIDE CIRCULAR ELEMENT between beds */}
-      <circle cx="280" cy="115" r="12" fill="white" strokeWidth="2" />
-      <circle cx="280" cy="115" r="4" fill="none" strokeWidth="1.5" />
-
-      {/** ---------------------- BATHROOM AREA (bottom left) ---------------------- */}
+      {/* Outer perimeter walls (gray) */}
+      <rect x="0" y="0" width="100" height="100" fill="#808080" stroke="none" />
+      <rect x="2" y="2" width="96" height="96" fill="white" stroke="none" />
 
       {/* Bathroom walls */}
-      <rect x="5" y="215" width="90" height="60" fill="#f3f4f6" stroke="#9ca3af" strokeWidth="3" />
+      <rect x="0" y="0" width="30" height="30" fill="#808080" stroke="none" />
+      <rect x="2" y="2" width="26" height="20" fill="white" stroke="none" />
+
+      {/* -------------------- BEDS (Top row) -------------------- */}
+      
+      {/* TOP LEFT BED */}
+      <g>
+        <rect x="5" y="70" width="18" height="25" fill="#f0f0f0" stroke="black" strokeWidth="0.5" />
+        {/* Pillow (left side) */}
+        <rect x="5.5" y="71" width="4" height="22" fill="white" stroke="black" strokeWidth="0.4" />
+        {/* Quilt pattern (cross) */}
+        <line x1="10" y1="72" x2="22" y2="94" stroke="#a0a0a0" strokeWidth="0.3" />
+        <line x1="10" y1="94" x2="22" y2="72" stroke="#a0a0a0" strokeWidth="0.3" />
+      </g>
+
+      {/* TOP RIGHT BED */}
+      <g>
+        <rect x="77" y="70" width="18" height="25" fill="#f0f0f0" stroke="black" strokeWidth="0.5" />
+        {/* Pillow (right side) */}
+        <rect x="90.5" y="71" width="4" height="22" fill="white" stroke="black" strokeWidth="0.4" />
+        {/* Quilt pattern */}
+        <line x1="78" y1="72" x2="90" y2="94" stroke="#a0a0a0" strokeWidth="0.3" />
+        <line x1="78" y1="94" x2="90" y2="72" stroke="#a0a0a0" strokeWidth="0.3" />
+      </g>
+
+      {/* -------------------- BEDS (Bottom row) -------------------- */}
+      
+      {/* BOTTOM LEFT BED */}
+      <g>
+        <rect x="5" y="40" width="18" height="25" fill="#f0f0f0" stroke="black" strokeWidth="0.5" />
+        {/* Pillow */}
+        <rect x="5.5" y="41" width="4" height="22" fill="white" stroke="black" strokeWidth="0.4" />
+        {/* Quilt pattern */}
+        <line x1="10" y1="42" x2="22" y2="64" stroke="#a0a0a0" strokeWidth="0.3" />
+        <line x1="10" y1="64" x2="22" y2="42" stroke="#a0a0a0" strokeWidth="0.3" />
+      </g>
+
+      {/* BOTTOM RIGHT BED */}
+      <g>
+        <rect x="77" y="40" width="18" height="25" fill="#f0f0f0" stroke="black" strokeWidth="0.5" />
+        {/* Pillow */}
+        <rect x="90.5" y="41" width="4" height="22" fill="white" stroke="black" strokeWidth="0.4" />
+        {/* Quilt pattern */}
+        <line x1="78" y1="42" x2="90" y2="64" stroke="#a0a0a0" strokeWidth="0.3" />
+        <line x1="78" y1="64" x2="90" y2="42" stroke="#a0a0a0" strokeWidth="0.3" />
+      </g>
+
+      {/* -------------------- NIGHT STANDS -------------------- */}
+      
+      {/* Left side night stand */}
+      <g>
+        <rect x="9" y="56" width="8" height="8" fill="#f0f0f0" stroke="black" strokeWidth="0.5" />
+        <rect x="9" y="61.6" width="8" height="2.4" fill="white" stroke="black" strokeWidth="0.4" />
+        <line x1="10.6" y1="62.8" x2="15.4" y2="62.8" stroke="black" strokeWidth="0.6" />
+      </g>
+
+      {/* Right side night stand */}
+      <g>
+        <rect x="83" y="56" width="8" height="8" fill="#f0f0f0" stroke="black" strokeWidth="0.5" />
+        <rect x="83" y="61.6" width="8" height="2.4" fill="white" stroke="black" strokeWidth="0.4" />
+        <line x1="84.6" y1="62.8" x2="89.4" y2="62.8" stroke="black" strokeWidth="0.6" />
+      </g>
+
+      {/* -------------------- CLOSET (bottom right) -------------------- */}
+      
+      {/* Closet structure */}
+      <rect x="60" y="0" width="40" height="15" fill="#808080" stroke="none" />
+      <rect x="62" y="2" width="36" height="11" fill="white" stroke="none" />
+      
+      {/* Hanging rod */}
+      <line x1="62" y1="10.5" x2="98" y2="10.5" stroke="black" strokeWidth="0.6" />
+      
+      {/* Hangers */}
+      {[70, 80, 90].map((hx, i) => (
+        <g key={i}>
+          <polyline
+            points={`${hx},10.5 ${hx},8.5 ${hx-3},8.5 ${hx},8.5 ${hx+3},8.5 ${hx-3},8.5`}
+            fill="none"
+            stroke="black"
+            strokeWidth="0.3"
+          />
+        </g>
+      ))}
+
+      {/* -------------------- BATHROOM FIXTURES -------------------- */}
+      
+      {/* Shower */}
+      <g>
+        <rect x="2" y="2" width="15" height="15" stroke="black" strokeWidth="0.5" fill="none" />
+        <line x1="2" y1="17" x2="17" y2="4.5" stroke="black" strokeWidth="0.5" />
+        <line x1="4.5" y1="17" x2="17" y2="2" stroke="black" strokeWidth="0.5" />
+        <circle cx="5" cy="5" r="1" fill="none" stroke="black" strokeWidth="0.4" />
+      </g>
 
       {/* Toilet */}
-      <ellipse cx="30" cy="235" rx="10" ry="12" fill="white" strokeWidth="1.5" />
-      <rect x="20" y="240" width="20" height="5" fill="white" strokeWidth="1.5" rx="2" />
+      <g>
+        <rect x="4" y="22" width="4" height="8" stroke="black" strokeWidth="0.5" fill="white" />
+        <ellipse cx="14" cy="26" rx="6" ry="4" stroke="black" strokeWidth="0.5" fill="white" />
+      </g>
 
-      {/* Sink (corner) */}
-      <path d="M 15 255 Q 15 265 25 265 L 35 265 Q 45 265 45 255 Z" fill="white" strokeWidth="1.5" />
-      <circle cx="30" cy="262" r="3" fill="none" strokeWidth="1" />
+      {/* Sink */}
+      <g>
+        <rect x="20" y="4" width="8" height="8" stroke="black" strokeWidth="0.5" fill="white" />
+        <circle cx="24" cy="8" r="3" fill="none" stroke="black" strokeWidth="0.5" />
+        <rect x="23.5" y="4" width="1" height="2" fill="black" />
+      </g>
 
-      {/* Shower/Bath area */}
-      <rect x="50" y="225" width="38" height="45" fill="white" strokeWidth="1.5" rx="2" />
-      <line x1="55" y1="230" x2="55" y2="265" strokeWidth="1" opacity="0.3" />
-      <line x1="60" y1="230" x2="60" y2="265" strokeWidth="1" opacity="0.3" />
-      <line x1="65" y1="230" x2="65" y2="265" strokeWidth="1" opacity="0.3" />
-      <line x1="70" y1="230" x2="70" y2="265" strokeWidth="1" opacity="0.3" />
-      <line x1="75" y1="230" x2="75" y2="265" strokeWidth="1" opacity="0.3" />
-      <line x1="80" y1="230" x2="80" y2="265" strokeWidth="1" opacity="0.3" />
-      <line x1="83" y1="230" x2="83" y2="265" strokeWidth="1" opacity="0.3" />
-
-      {/** ---------------------- CLOSET AREA (bottom right) ---------------------- */}
-
-      {/* Closet structure */}
-      <rect x="225" y="215" width="90" height="60" fill="#fef3c7" stroke="#9ca3af" strokeWidth="3" />
+      {/* -------------------- OPENINGS -------------------- */}
       
-      {/* Closet doors/panels */}
-      <line x1="245" y1="220" x2="245" y2="270" strokeWidth="2" opacity="0.4" />
-      <line x1="260" y1="220" x2="260" y2="270" strokeWidth="2" opacity="0.4" />
-      <line x1="275" y1="220" x2="275" y2="270" strokeWidth="2" opacity="0.4" />
-      <line x1="290" y1="220" x2="290" y2="270" strokeWidth="2" opacity="0.4" />
-      <line x1="305" y1="220" x2="305" y2="270" strokeWidth="2" opacity="0.4" />
-      
-      {/* Closet shelves (horizontal lines) */}
-      <line x1="230" y1="235" x2="310" y2="235" strokeWidth="1.5" opacity="0.3" />
-      <line x1="230" y1="250" x2="310" y2="250" strokeWidth="1.5" opacity="0.3" />
+      {/* Window (top center) */}
+      <g>
+        <rect x="30" y="98" width="40" height="2" fill="white" stroke="none" />
+        <line x1="30" y1="100" x2="70" y2="100" stroke="black" strokeWidth="0.5" />
+        <line x1="30" y1="98" x2="70" y2="98" stroke="black" strokeWidth="0.5" />
+        <line x1="30" y1="99" x2="70" y2="99" stroke="black" strokeWidth="0.3" />
+      </g>
+
+      {/* Main door (bottom, swing inward) */}
+      <g>
+        <rect x="7" y="0" width="18" height="2" fill="white" stroke="none" />
+        <line x1="7" y1="2" x2="7" y2="20" stroke="black" strokeWidth="0.6" />
+        <path d="M 7 2 Q 25 2 25 20" fill="none" stroke="black" strokeWidth="0.4" />
+      </g>
+
+      {/* Bathroom door (angled) */}
+      <g>
+        <rect x="28" y="2" width="2" height="20" fill="white" stroke="none" />
+        <line x1="30" y1="22" x2="40.6" y2="32.6" stroke="black" strokeWidth="0.6" />
+        <path d="M 30 22 Q 30 32.6 40.6 32.6" fill="none" stroke="black" strokeWidth="0.4" />
+      </g>
     </svg>
   );
 };

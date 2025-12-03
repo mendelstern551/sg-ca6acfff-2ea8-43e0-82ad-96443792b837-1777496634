@@ -71,14 +71,14 @@ export function BuildingFloorPlan({ buildingName, rooms, onRoomClick }: Building
     return num >= 110 && num <= 112;
   }).sort((a, b) => getRoomNumber(a.name) - getRoomNumber(b.name));
 
-  // Layout constants for 3×2 grid arrangement with updated RoomTypeA dimensions
+  // Layout constants for 3×2 grid with updated RoomTypeA dimensions
   const roomWidth = 160;
-  const roomHeight = 140;
-  const roomSpacing = 25;
-  const verticalSpacing = 40;
+  const roomHeight = 160;
+  const roomSpacing = 20;
+  const verticalSpacing = 30;
   const headerHeight = 100;
-  const sideMargin = 40;
-  const centerDividerWidth = 100;
+  const sideMargin = 30;
+  const centerDividerWidth = 80;
   
   // Each side has 3 rooms per row
   const sideWidth = 3 * roomWidth + 2 * roomSpacing;
