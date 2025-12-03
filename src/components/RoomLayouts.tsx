@@ -8,36 +8,39 @@ interface RoomLayoutProps extends React.SVGProps<SVGSVGElement> {
 export const RoomTypeA: React.FC<RoomLayoutProps> = ({ roomNumber, side, ...props }) => {
   return (
     <svg
-      width="320"
-      height="320"
-      viewBox="0 0 320 320"
+      width="400"
+      height="400"
+      viewBox="0 0 400 400"
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
       xmlnsXlink="http://www.w3.org/1999/xlink"
       {...props}
     >
       {/* Background for contrast */}
-      <rect x="0" y="0" width="320" height="320" fill="white" />
+      <rect x="0" y="0" width="400" height="400" fill="white" />
       
-      {/* Room layout image - fills entire box */}
+      {/* Room layout image - fills entire box with enhanced contrast */}
       <image
         href="/Gemini_Generated_Image_jlzgjcjlzgjcjlzg.png"
         x="0"
         y="0"
-        width="320"
-        height="320"
+        width="400"
+        height="400"
         preserveAspectRatio="xMidYMid slice"
+        style={{
+          filter: "contrast(1.4) brightness(1.1) saturate(1.2)"
+        }}
       />
       
       {/* Border overlay */}
       <rect 
-        x="1" 
-        y="1" 
-        width="318" 
-        height="318" 
+        x="2" 
+        y="2" 
+        width="396" 
+        height="396" 
         fill="none" 
         stroke="currentColor" 
-        strokeWidth="2"
+        strokeWidth="3"
         rx="8"
       />
     </svg>
