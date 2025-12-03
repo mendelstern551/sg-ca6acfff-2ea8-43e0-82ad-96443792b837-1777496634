@@ -16,10 +16,30 @@ export const RoomTypeA: React.FC<RoomLayoutProps> = ({ roomNumber, side, ...prop
       xmlnsXlink="http://www.w3.org/1999/xlink"
       {...props}
     >
-      {/* Background for contrast */}
+      {/* SVG Filter Definitions for Maximum Sharpness */}
+      <defs>
+        <filter id="sharpen-filter" x="-50%" y="-50%" width="200%" height="200%">
+          {/* Gaussian Blur for base */}
+          <feGaussianBlur in="SourceGraphic" stdDeviation="0" result="blur"/>
+          {/* High-pass filter for edge detection */}
+          <feColorMatrix in="blur" type="matrix" values="1 0 0 0 0, 0 1 0 0 0, 0 0 1 0 0, 0 0 0 1 0" result="color"/>
+          {/* Edge enhancement */}
+          <feConvolveMatrix order="3" kernelMatrix="0 -1 0   -1 5 -1   0 -1 0" in="SourceGraphic" result="sharpen"/>
+          {/* Combine for maximum sharpness */}
+          <feBlend mode="normal" in="sharpen" in2="SourceGraphic"/>
+          {/* Contrast boost */}
+          <feComponentTransfer>
+            <feFuncR type="linear" slope="2.5" intercept="-0.3"/>
+            <feFuncG type="linear" slope="2.5" intercept="-0.3"/>
+            <feFuncB type="linear" slope="2.5" intercept="-0.3"/>
+          </feComponentTransfer>
+        </filter>
+      </defs>
+
+      {/* White background for maximum contrast */}
       <rect x="0" y="0" width="600" height="600" fill="white" />
       
-      {/* Room layout image - fills entire box with maximum contrast */}
+      {/* Room layout image with aggressive sharpening and contrast */}
       <image
         href="/Gemini_Generated_Image_jlzgjcjlzgjcjlzg.png"
         x="0"
@@ -27,21 +47,25 @@ export const RoomTypeA: React.FC<RoomLayoutProps> = ({ roomNumber, side, ...prop
         width="600"
         height="600"
         preserveAspectRatio="xMidYMid slice"
+        filter="url(#sharpen-filter)"
         style={{
-          filter: "contrast(1.8) brightness(1.2) saturate(1.4) sharpen(1.5)"
+          filter: "contrast(2.5) brightness(1.4) saturate(1.6) drop-shadow(0 0 1px rgba(0,0,0,0.8))"
         }}
       />
       
-      {/* Border overlay */}
+      {/* Strong border overlay for definition */}
       <rect 
-        x="3" 
-        y="3" 
-        width="594" 
-        height="594" 
+        x="4" 
+        y="4" 
+        width="592" 
+        height="592" 
         fill="none" 
         stroke="currentColor" 
-        strokeWidth="4"
+        strokeWidth="6"
         rx="10"
+        style={{
+          filter: "drop-shadow(0 2px 4px rgba(0,0,0,0.3))"
+        }}
       />
     </svg>
   );
