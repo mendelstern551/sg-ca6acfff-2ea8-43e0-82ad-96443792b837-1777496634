@@ -19,14 +19,14 @@ export const RoomTypeA: React.FC<RoomLayoutProps> = ({ roomNumber, side, ...prop
       {/* Background for contrast */}
       <rect x="0" y="0" width="320" height="320" fill="white" />
       
-      {/* Room layout image */}
+      {/* Room layout image - fills entire box */}
       <image
         href="/Gemini_Generated_Image_jlzgjcjlzgjcjlzg.png"
         x="0"
         y="0"
         width="320"
         height="320"
-        preserveAspectRatio="xMidYMid meet"
+        preserveAspectRatio="xMidYMid slice"
       />
       
       {/* Border overlay */}
