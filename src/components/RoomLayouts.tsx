@@ -16,28 +16,29 @@ export const RoomTypeA: React.FC<RoomLayoutProps> = ({ roomNumber, side, ...prop
       xmlnsXlink="http://www.w3.org/1999/xlink"
       {...props}
     >
-      {/* Background image for Type A room */}
+      {/* Background for contrast */}
+      <rect x="0" y="0" width="320" height="320" fill="white" />
+      
+      {/* Room layout image */}
       <image
-        xlinkHref="/Gemini_Generated_Image_jlzgjcjlzgjcjlzg.png"
+        href="/Gemini_Generated_Image_jlzgjcjlzgjcjlzg.png"
         x="0"
         y="0"
         width="320"
         height="320"
-        preserveAspectRatio="xMidYMid slice"
-        style={{ imageRendering: "auto" }}
+        preserveAspectRatio="xMidYMid meet"
       />
       
-      {/* Fallback border if image doesn't load */}
+      {/* Border overlay */}
       <rect 
-        x="2" 
-        y="2" 
-        width="316" 
-        height="316" 
+        x="1" 
+        y="1" 
+        width="318" 
+        height="318" 
         fill="none" 
         stroke="currentColor" 
         strokeWidth="2"
-        strokeDasharray="5,5"
-        opacity="0.3"
+        rx="8"
       />
     </svg>
   );
