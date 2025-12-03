@@ -13,16 +13,31 @@ export const RoomTypeA: React.FC<RoomLayoutProps> = ({ roomNumber, side, ...prop
       viewBox="0 0 320 320"
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
+      xmlnsXlink="http://www.w3.org/1999/xlink"
       {...props}
     >
       {/* Background image for Type A room */}
       <image
-        href="/Gemini_Generated_Image_jlzgjcjlzgjcjlzg.png"
+        xlinkHref="/Gemini_Generated_Image_jlzgjcjlzgjcjlzg.png"
         x="0"
         y="0"
         width="320"
         height="320"
-        preserveAspectRatio="xMidYMid meet"
+        preserveAspectRatio="xMidYMid slice"
+        style={{ imageRendering: "auto" }}
+      />
+      
+      {/* Fallback border if image doesn't load */}
+      <rect 
+        x="2" 
+        y="2" 
+        width="316" 
+        height="316" 
+        fill="none" 
+        stroke="currentColor" 
+        strokeWidth="2"
+        strokeDasharray="5,5"
+        opacity="0.3"
       />
     </svg>
   );
