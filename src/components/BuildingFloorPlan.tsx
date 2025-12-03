@@ -39,9 +39,14 @@ export function BuildingFloorPlan({ buildingName, rooms, onRoomClick }: Building
     return match ? parseInt(match[1]) : 0;
   };
   
+  // Get room type from room number
+  const getRoomType = (roomNumber: number): "A" | "B" | "C" => {
+    return ROOM_TYPES[roomNumber] || "B";
+  };
+  
   // Get room type component based on room number
   const getRoomComponent = (roomNumber: number) => {
-    const type = ROOM_TYPES[roomNumber] || "B";
+    const type = getRoomType(roomNumber);
     if (type === "A") return RoomTypeA;
     if (type === "C") return RoomTypeC;
     return RoomTypeB;
@@ -100,7 +105,7 @@ export function BuildingFloorPlan({ buildingName, rooms, onRoomClick }: Building
 
   const renderRoom = (room: Room, side: "left" | "right", row: "top" | "bottom", columnIndex: number) => {
     const pos = getRoomPosition(side, row, columnIndex);
-    const identifier = getRoomIdentifier(room.name);
+    const identifier = getRoomNumber(room.name);
     const RoomLayout = getRoomComponent(identifier);
     const roomType = getRoomType(identifier);
     const bedCount = BED_COUNT[roomType];
