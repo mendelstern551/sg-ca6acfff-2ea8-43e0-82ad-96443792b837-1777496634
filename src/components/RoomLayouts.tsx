@@ -10,126 +10,20 @@ export const RoomTypeA: React.FC<RoomLayoutProps> = ({ roomNumber, side, ...prop
     <svg
       width="320"
       height="320"
-      viewBox="0 0 100 100"
+      viewBox="0 0 320 320"
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
       {...props}
     >
-      {/* ROOM OUTER WALLS (gray #6e6e6e) */}
-      <rect x="0" y="0" width="100" height="100" fill="#6e6e6e" stroke="none" />
-      <rect x="4" y="4" width="92" height="92" fill="white" stroke="none" />
-
-      {/* WINDOW (top center) */}
-      <rect x="30" y="96" width="40" height="4" stroke="black" strokeWidth="2" fill="white" />
-
-      {/* BATHROOM (bottom-left) */}
-      <rect x="4" y="4" width="30" height="30" fill="#6e6e6e" stroke="none" />
-      <rect x="6" y="6" width="26" height="22" fill="white" stroke="none" />
-
-      {/* Toilet */}
-      <ellipse cx="12" cy="24" rx="6" ry="4" stroke="black" strokeWidth="2" fill="white" />
-      <rect x="7" y="24" width="6" height="8" stroke="black" strokeWidth="2" fill="white" />
-
-      {/* Shower */}
-      <rect x="6" y="6" width="16" height="16" stroke="black" strokeWidth="2" fill="white" />
-      <line x1="6" y1="22" x2="22" y2="12" stroke="black" strokeWidth="2" />
-      <line x1="6" y1="12" x2="22" y2="22" stroke="black" strokeWidth="2" />
-      <circle cx="10" cy="10" r="1.2" stroke="black" strokeWidth="2" fill="none" />
-
-      {/* Sink */}
-      <rect x="22" y="8" width="10" height="10" stroke="black" strokeWidth="2" fill="white" />
-      <circle cx="27" cy="13" r="4" stroke="black" strokeWidth="2" fill="none" />
-
-      {/* Bathroom Door (inward swing) */}
-      <line x1="34" y1="22" x2="34" y2="34" stroke="black" strokeWidth="2" />
-      <path d="M 34 22 A 12 12 0 0 1 46 34" stroke="black" strokeWidth="2" fill="none" />
-
-      {/* MAIN DOOR (bottom center) */}
-      <path d="M 50 4 A 13 13 0 0 0 37 17" stroke="black" strokeWidth="2" fill="none" />
-      <line x1="50" y1="4" x2="50" y2="17" stroke="black" strokeWidth="2" />
-
-      {/* BEDS (4 identical beds with diamond quilt pattern) */}
-      
-      {/* Bed helper function implemented inline for each bed */}
-      
-      {/* Top-left bed (10, 72) */}
-      <g>
-        <rect x="10" y="72" width="24" height="16" stroke="black" strokeWidth="2" fill="white" />
-        {/* Pillow (bottom side) */}
-        <rect x="12" y="84" width="20" height="4" stroke="black" strokeWidth="2" fill="white" />
-        {/* Diamond quilt pattern */}
-        <line x1="10" y1="72" x2="34" y2="88" stroke="black" strokeWidth="2" />
-        <line x1="10" y1="88" x2="34" y2="72" stroke="black" strokeWidth="2" />
-        <line x1="22" y1="72" x2="34" y2="80" stroke="black" strokeWidth="2" />
-        <line x1="22" y1="72" x2="10" y2="80" stroke="black" strokeWidth="2" />
-        <line x1="10" y1="80" x2="22" y2="88" stroke="black" strokeWidth="2" />
-        <line x1="34" y1="80" x2="22" y2="88" stroke="black" strokeWidth="2" />
-      </g>
-
-      {/* Top-right bed (66, 72) */}
-      <g>
-        <rect x="66" y="72" width="24" height="16" stroke="black" strokeWidth="2" fill="white" />
-        {/* Pillow (bottom side) */}
-        <rect x="68" y="84" width="20" height="4" stroke="black" strokeWidth="2" fill="white" />
-        {/* Diamond quilt pattern */}
-        <line x1="66" y1="72" x2="90" y2="88" stroke="black" strokeWidth="2" />
-        <line x1="66" y1="88" x2="90" y2="72" stroke="black" strokeWidth="2" />
-        <line x1="78" y1="72" x2="90" y2="80" stroke="black" strokeWidth="2" />
-        <line x1="78" y1="72" x2="66" y2="80" stroke="black" strokeWidth="2" />
-        <line x1="66" y1="80" x2="78" y2="88" stroke="black" strokeWidth="2" />
-        <line x1="90" y1="80" x2="78" y2="88" stroke="black" strokeWidth="2" />
-      </g>
-
-      {/* Bottom-left bed (10, 52) */}
-      <g>
-        <rect x="10" y="52" width="24" height="16" stroke="black" strokeWidth="2" fill="white" />
-        {/* Pillow (bottom side) */}
-        <rect x="12" y="64" width="20" height="4" stroke="black" strokeWidth="2" fill="white" />
-        {/* Diamond quilt pattern */}
-        <line x1="10" y1="52" x2="34" y2="68" stroke="black" strokeWidth="2" />
-        <line x1="10" y1="68" x2="34" y2="52" stroke="black" strokeWidth="2" />
-        <line x1="22" y1="52" x2="34" y2="60" stroke="black" strokeWidth="2" />
-        <line x1="22" y1="52" x2="10" y2="60" stroke="black" strokeWidth="2" />
-        <line x1="10" y1="60" x2="22" y2="68" stroke="black" strokeWidth="2" />
-        <line x1="34" y1="60" x2="22" y2="68" stroke="black" strokeWidth="2" />
-      </g>
-
-      {/* Bottom-right bed (66, 52) */}
-      <g>
-        <rect x="66" y="52" width="24" height="16" stroke="black" strokeWidth="2" fill="white" />
-        {/* Pillow (bottom side) */}
-        <rect x="68" y="64" width="20" height="4" stroke="black" strokeWidth="2" fill="white" />
-        {/* Diamond quilt pattern */}
-        <line x1="66" y1="52" x2="90" y2="68" stroke="black" strokeWidth="2" />
-        <line x1="66" y1="68" x2="90" y2="52" stroke="black" strokeWidth="2" />
-        <line x1="78" y1="52" x2="90" y2="60" stroke="black" strokeWidth="2" />
-        <line x1="78" y1="52" x2="66" y2="60" stroke="black" strokeWidth="2" />
-        <line x1="66" y1="60" x2="78" y2="68" stroke="black" strokeWidth="2" />
-        <line x1="90" y1="60" x2="78" y2="68" stroke="black" strokeWidth="2" />
-      </g>
-
-      {/* NIGHTSTANDS (2 beside top beds) */}
-      
-      {/* Left nightstand (36, 78) */}
-      <g>
-        <rect x="36" y="78" width="10" height="10" stroke="black" strokeWidth="2" fill="white" />
-        <circle cx="41" cy="83" r="2" stroke="black" strokeWidth="2" fill="none" />
-        <circle cx="41" cy="83" r="0.7" stroke="black" strokeWidth="2" fill="black" />
-      </g>
-
-      {/* Right nightstand (54, 78) */}
-      <g>
-        <rect x="54" y="78" width="10" height="10" stroke="black" strokeWidth="2" fill="white" />
-        <circle cx="59" cy="83" r="2" stroke="black" strokeWidth="2" fill="none" />
-        <circle cx="59" cy="83" r="0.7" stroke="black" strokeWidth="2" fill="black" />
-      </g>
-
-      {/* CLOSET (bottom-right) */}
-      <rect x="70" y="4" width="26" height="20" fill="#6e6e6e" stroke="none" />
-      <rect x="72" y="6" width="22" height="16" fill="white" stroke="black" strokeWidth="2" />
-      {/* Bifold door lines */}
-      <line x1="72" y1="20" x2="83" y2="4" stroke="black" strokeWidth="2" />
-      <line x1="94" y1="20" x2="83" y2="4" stroke="black" strokeWidth="2" />
+      {/* Background image for Type A room */}
+      <image
+        href="/Gemini_Generated_Image_jlzgjcjlzgjcjlzg.png"
+        x="0"
+        y="0"
+        width="320"
+        height="320"
+        preserveAspectRatio="xMidYMid meet"
+      />
     </svg>
   );
 };
