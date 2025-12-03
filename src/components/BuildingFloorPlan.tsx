@@ -76,21 +76,21 @@ export function BuildingFloorPlan({ buildingName, rooms, onRoomClick }: Building
     return num >= 110 && num <= 112;
   }).sort((a, b) => getRoomNumber(a.name) - getRoomNumber(b.name));
 
-  // Layout constants optimized for viewing all 12 rooms on webpage
-  const roomWidth = 200;
-  const roomHeight = 200;
-  const roomSpacing = 20;
-  const verticalSpacing = 30;
+  // Layout constants optimized for larger room images
+  const roomWidth = 260;
+  const roomHeight = 260;
+  const roomSpacing = 25;
+  const verticalSpacing = 35;
   const headerHeight = 90;
-  const sideMargin = 25;
-  const centerDividerWidth = 60;
+  const sideMargin = 30;
+  const centerDividerWidth = 70;
   
   // Each side has 3 rooms per row
   const sideWidth = 3 * roomWidth + 2 * roomSpacing;
   
   // Total SVG dimensions
   const svgWidth = sideMargin + sideWidth + centerDividerWidth + sideWidth + sideMargin;
-  const svgHeight = headerHeight + 2 * (roomHeight + verticalSpacing) + 70;
+  const svgHeight = headerHeight + 2 * (roomHeight + verticalSpacing) + 80;
 
   // Calculate position for a room in the grid
   const getRoomPosition = (side: "left" | "right", row: "top" | "bottom", columnIndex: number) => {
@@ -116,8 +116,8 @@ export function BuildingFloorPlan({ buildingName, rooms, onRoomClick }: Building
         onClick={() => onRoomClick(room)}
         className="cursor-pointer group"
       >
-        {/* Room layout SVG - proper scale for larger RoomTypeA */}
-        <g transform={`translate(${pos.x}, ${pos.y}) scale(${roomType === "A" ? 0.5 : 1})`}>
+        {/* Room layout SVG - scaled to fit larger image */}
+        <g transform={`translate(${pos.x}, ${pos.y}) scale(${roomType === "A" ? 0.433 : 1})`}>
           <RoomLayout 
             className={`${side === "left" 
               ? "stroke-blue-400 dark:stroke-blue-600 group-hover:stroke-blue-600 dark:group-hover:stroke-blue-400" 
@@ -132,18 +132,18 @@ export function BuildingFloorPlan({ buildingName, rooms, onRoomClick }: Building
           y={pos.y}
           width={roomWidth}
           height={roomHeight}
-          rx="8"
+          rx="10"
           className={`${side === "left" ? "fill-blue-500" : "fill-orange-500"} opacity-0 group-hover:opacity-10 transition-opacity pointer-events-none`}
         />
 
         {/* Room number label (centered above room) */}
-        <g transform={`translate(${pos.x + roomWidth / 2}, ${pos.y - 18})`}>
+        <g transform={`translate(${pos.x + roomWidth / 2}, ${pos.y - 20})`}>
           <rect
-            x="-32"
-            y="-14"
-            width="64"
-            height="28"
-            rx="10"
+            x="-38"
+            y="-16"
+            width="76"
+            height="32"
+            rx="12"
             fill={side === "left" ? "#0069ff" : "#ff6600"}
           />
           <text
@@ -151,7 +151,7 @@ export function BuildingFloorPlan({ buildingName, rooms, onRoomClick }: Building
             y="4"
             textAnchor="middle"
             fill="white"
-            fontSize="15"
+            fontSize="17"
             fontWeight="bold"
           >
             {identifier}
@@ -160,37 +160,37 @@ export function BuildingFloorPlan({ buildingName, rooms, onRoomClick }: Building
 
         {/* Room type badge (top-right corner) */}
         <circle
-          cx={pos.x + roomWidth - 18}
-          cy={pos.y + 18}
-          r="13"
+          cx={pos.x + roomWidth - 22}
+          cy={pos.y + 22}
+          r="15"
           className={`${side === "left" ? "fill-blue-600" : "fill-orange-600"} group-hover:opacity-90 transition-opacity`}
         />
         <text
-          x={pos.x + roomWidth - 18}
-          y={pos.y + 18}
+          x={pos.x + roomWidth - 22}
+          y={pos.y + 22}
           textAnchor="middle"
           dominantBaseline="central"
           className="fill-white pointer-events-none"
-          style={{ fontSize: "11px", fontWeight: "800" }}
+          style={{ fontSize: "12px", fontWeight: "800" }}
         >
           {roomType}
         </text>
 
         {/* Bed count badge (centered below room) */}
         <rect
-          x={pos.x + roomWidth / 2 - 32}
-          y={pos.y + roomHeight + 7}
-          width="64"
-          height="20"
-          rx="10"
+          x={pos.x + roomWidth / 2 - 38}
+          y={pos.y + roomHeight + 8}
+          width="76"
+          height="24"
+          rx="12"
           className={`${side === "left" ? "fill-blue-600 group-hover:fill-blue-700" : "fill-orange-600 group-hover:fill-orange-700"} transition-colors`}
         />
         <text
           x={pos.x + roomWidth / 2}
-          y={pos.y + roomHeight + 18}
+          y={pos.y + roomHeight + 21}
           textAnchor="middle"
           className="fill-white pointer-events-none"
-          style={{ fontSize: "12px", fontWeight: "800" }}
+          style={{ fontSize: "13px", fontWeight: "800" }}
         >
           {bedCount} BEDS
         </text>
