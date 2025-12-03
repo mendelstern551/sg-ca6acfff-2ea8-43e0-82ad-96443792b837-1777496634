@@ -71,21 +71,21 @@ export function BuildingFloorPlan({ buildingName, rooms, onRoomClick }: Building
     return num >= 110 && num <= 112;
   }).sort((a, b) => getRoomNumber(a.name) - getRoomNumber(b.name));
 
-  // Layout constants for 3×2 grid arrangement
+  // Layout constants for 3×2 grid arrangement with updated RoomTypeA dimensions
   const roomWidth = 160;
-  const roomHeight = 110;
-  const roomSpacing = 20;
-  const verticalSpacing = 30;
+  const roomHeight = 140;
+  const roomSpacing = 25;
+  const verticalSpacing = 40;
   const headerHeight = 100;
   const sideMargin = 40;
-  const centerDividerWidth = 80;
+  const centerDividerWidth = 100;
   
   // Each side has 3 rooms per row
   const sideWidth = 3 * roomWidth + 2 * roomSpacing;
   
   // Total SVG dimensions
   const svgWidth = sideMargin + sideWidth + centerDividerWidth + sideWidth + sideMargin;
-  const svgHeight = headerHeight + 2 * (roomHeight + verticalSpacing) + 100;
+  const svgHeight = headerHeight + 2 * (roomHeight + verticalSpacing) + 80;
 
   // Calculate position for a room in the grid
   const getRoomPosition = (side: "left" | "right", row: "top" | "bottom", columnIndex: number) => {
@@ -111,8 +111,8 @@ export function BuildingFloorPlan({ buildingName, rooms, onRoomClick }: Building
         onClick={() => onRoomClick(room)}
         className="cursor-pointer group"
       >
-        {/* Room layout SVG */}
-        <g transform={`translate(${pos.x}, ${pos.y}) scale(0.5)`}>
+        {/* Room layout SVG - adjusted scale for RoomTypeA */}
+        <g transform={`translate(${pos.x}, ${pos.y}) scale(${roomType === "A" ? 0.5 : 1})`}>
           <RoomLayout 
             className={`${side === "left" 
               ? "stroke-blue-400 dark:stroke-blue-600 group-hover:stroke-blue-600 dark:group-hover:stroke-blue-400" 
@@ -197,7 +197,7 @@ export function BuildingFloorPlan({ buildingName, rooms, onRoomClick }: Building
     <svg
       viewBox={`0 0 ${svgWidth} ${svgHeight}`}
       className="w-full h-auto"
-      style={{ minHeight: "600px", maxHeight: "1200px" }}
+      style={{ minHeight: "700px", maxHeight: "1400px" }}
     >
       {/* Background */}
       <rect 
