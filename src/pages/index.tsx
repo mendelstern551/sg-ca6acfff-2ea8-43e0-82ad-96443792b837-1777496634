@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Calendar, Users, DollarSign, FileText, Plus, Clock } from "lucide-react";
+import { Calendar, Users, DollarSign, FileText, Plus } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -31,22 +31,12 @@ import { ReminderDialog } from "@/components/ReminderDialog";
 import { reminderService } from "@/services/reminderService";
 import { ReminderModal } from "@/components/ReminderModal";
 import { CornerNotifications } from "@/components/CornerNotifications";
-import Link from "next/link";
-import { buildingService } from "@/services/buildingService";
-import { OpenIssuesNotifier } from "@/components/OpenIssuesNotifier";
-import { RealtimeActivityFeed } from "@/components/RealtimeActivityFeed";
-import { BuildingMaps } from "@/components/BuildingMaps";
-import { AdminBuildingSettings } from "@/components/AdminBuildingSettings";
 
 type InvoiceRow = Database["public"]["Tables"]["invoices"]["Row"];
 type ExpenseInsert = Database["public"]["Tables"]["expenses"]["Insert"];
 type BookingInsert = Database["public"]["Tables"]["bookings"]["Insert"];
 type BookingUpdate = Database["public"]["Tables"]["bookings"]["Update"];
 type Reminder = Database["public"]["Tables"]["reminders"]["Row"];
-
-type Profile = {
-  role: string;
-};
 
 export default function HomePage() {
   const [activeTab, setActiveTab] = useState("bookings");
@@ -598,30 +588,10 @@ export default function HomePage() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-stone-950">
-      <OpenIssuesNotifier />
-      <RealtimeActivityFeed />
+    <div className="min-h-screen bg-gradient-to-br from-amber-50 via-rose-50 to-blue-50 dark:from-stone-950 dark:via-slate-900 dark:to-indigo-950">
       <header className="border-b border-stone-200 dark:border-stone-800 bg-white/95 dark:bg-stone-900/95 backdrop-blur-sm sticky top-0 z-50 shadow-sm">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-6">
-              <div>
-                <h1 className="text-2xl font-bold text-stone-900 dark:text-stone-100">Trout Lake Resort</h1>
-                <p className="text-sm text-stone-600 dark:text-stone-400 mt-1">Booking Management System</p>
-              </div>
-              <nav className="hidden md:flex items-center gap-4 ml-8">
-                <Link 
-                  href="/time-tracking"
-                  className="text-sm font-medium text-stone-600 dark:text-stone-400 hover:text-orange-600 dark:hover:text-orange-400 transition-colors flex items-center gap-2"
-                >
-                  <Clock className="h-4 w-4" />
-                  Time Tracking
-                </Link>
-              </nav>
-            </div>
-            <ThemeSwitch />
-          </div>
-        </div>
+        <div className="container mx-auto px-4 py-4"><div className="flex items-center justify-between">
+          <div><h1 className="text-2xl font-bold text-stone-900 dark:text-stone-100">Trout Lake Resort</h1><p className="text-sm text-stone-600 dark:text-stone-400 mt-1">Booking Management System</p></div><ThemeSwitch /></div></div>
       </header>
 
       <main className="container mx-auto px-4 py-8">
@@ -651,13 +621,16 @@ export default function HomePage() {
           </Card>
         </div>
 
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-5">
+        <Tabs value={activeTab} onValueChange={(value) => { setActiveTab(value); if (value !== "expenses") setFilteredBookingId(undefined); }} className="space-y-6">
+          <TabsList className="grid w-full grid-cols-7 lg:w-[1050px] bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 p-1">
             <TabsTrigger value="bookings">Bookings</TabsTrigger>
             <TabsTrigger value="calendar">Calendar</TabsTrigger>
-            <TabsTrigger value="building-maps">Building Maps</TabsTrigger>
+            <TabsTrigger value="invoices">Invoices</TabsTrigger>
             <TabsTrigger value="budget">Budget</TabsTrigger>
-            <TabsTrigger value="settings">Settings</TabsTrigger>
+            <TabsTrigger value="expenses">Expenses</TabsTrigger>
+            <TabsTrigger value="receipts">Receipts</TabsTrigger>
+            <TabsTrigger value="manager">Manager</TabsTrigger>
+            <TabsTrigger value="emails">Email History</TabsTrigger>
           </TabsList>
 
           <TabsContent value="bookings" className="space-y-4">
@@ -669,8 +642,11 @@ export default function HomePage() {
 
           <TabsContent value="calendar" className="space-y-4"><BookingCalendar key={`calendar-${refreshKey}-${bookings.length}`} bookings={bookings} onBookingClick={handleEditBooking} onAddBooking={() => { setEditingBooking(undefined); setBookingDialogOpen(true); }} /></TabsContent>
 
-          <TabsContent value="building-maps" className="space-y-4">
-            <BuildingMaps />
+          <TabsContent value="invoices" className="space-y-4">
+            <Card className="bg-white dark:bg-stone-900 border-stone-200 dark:border-stone-800">
+              <CardHeader><div className="flex items-center justify-between"><div><CardTitle className="text-stone-900 dark:text-stone-100 flex items-center gap-2"><FileText className="h-5 w-5 text-blue-600" />Invoice Management</CardTitle><CardDescription className="text-stone-600 dark:text-stone-400">View and manage all invoices for your bookings</CardDescription></div></div></CardHeader>
+              <CardContent>{invoices.length === 0 ? <div className="text-center py-12"><FileText className="h-16 w-16 mx-auto mb-4 text-blue-300 dark:text-blue-700" /><h3 className="text-lg font-medium text-stone-900 dark:text-stone-100 mb-2">No Invoices Yet</h3><p className="text-stone-600 dark:text-stone-400 mb-6 max-w-md mx-auto">Invoices are automatically generated when you confirm a booking.</p></div> : <div className="space-y-3">{invoices.map((invoice) => { const booking = bookings.find(b => b.id === invoice.booking_id); return (<div key={invoice.id} className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 hover:border-blue-300 dark:hover:border-blue-600 transition-colors"><div className="flex-1"><div className="flex items-center gap-3 mb-2"><span className="font-mono text-sm font-semibold text-blue-600 dark:text-blue-400">{invoice.invoice_number}</span><Badge variant={invoice.balance_due > 0 ? "destructive" : "default"}>{invoice.balance_due > 0 ? "Outstanding" : "Paid"}</Badge></div><div className="text-sm text-stone-700 dark:text-stone-300"><p className="font-medium">{invoice.client_name}</p><p className="text-xs text-stone-500 dark:text-stone-400 mt-1">{format(new Date(invoice.event_date_start), "MMM d")} - {format(new Date(invoice.event_date_end), "MMM d, yyyy")} • {invoice.number_of_guests} guests</p></div></div><div className="flex items-center gap-4"><div className="text-right"><p className="text-lg font-bold text-stone-900 dark:text-stone-100">${Number(invoice.total_amount).toFixed(2)}</p>{invoice.balance_due > 0 && (<p className="text-xs text-orange-600 dark:text-orange-400">${Number(invoice.balance_due).toFixed(2)} due</p>)}</div><Button onClick={() => { if (booking) { setSelectedInvoiceBooking(booking); setInvoiceDialogOpen(true); } }} variant="outline" size="sm"><FileText className="h-4 w-4 mr-2" />View</Button></div></div>); })}</div>}</CardContent>
+            </Card>
           </TabsContent>
 
           <TabsContent value="budget"><BudgetDashboard bookings={bookings} expenses={expenses} /></TabsContent>
@@ -692,10 +668,6 @@ export default function HomePage() {
           </TabsContent>
 
           <TabsContent value="emails"><EmailHistory bookings={bookings.map(b => ({ id: b.id, name: b.name, contact_name: b.contact_name }))} /></TabsContent>
-
-          <TabsContent value="settings" className="space-y-6">
-            <AdminBuildingSettings />
-          </TabsContent>
         </Tabs>
       </main>
 

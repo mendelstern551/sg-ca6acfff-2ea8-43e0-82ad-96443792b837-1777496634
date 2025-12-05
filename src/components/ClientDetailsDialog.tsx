@@ -11,13 +11,11 @@ import { formatCurrency } from "@/lib/bookingCalculations";
 import { format } from "date-fns";
 import { DollarSign, TrendingUp, TrendingDown, Receipt, Calendar, Users, FileText, Plus, StickyNote, Pencil } from "lucide-react";
 import { InvoiceDialog } from "./InvoiceDialog";
-import { ContractUpload } from "./ContractUpload";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { paymentService } from "@/services/paymentService";
 import { bookingService } from "@/services/bookingService";
 import { invoiceService } from "@/services/invoiceService";
 import { useToast } from "@/hooks/use-toast";
-import { contractService } from "@/services/contractService";
 
 interface ClientDetailsDialogProps {
   open: boolean;
@@ -39,8 +37,6 @@ export function ClientDetailsDialog({
   const [noteDialogOpen, setNoteDialogOpen] = useState(false);
   const [customerEditDialogOpen, setCustomerEditDialogOpen] = useState(false);
   const [localBooking, setLocalBooking] = useState(booking);
-  const [contracts, setContracts] = useState<any[]>([]);
-  const [loadingContracts, setLoadingContracts] = useState(false);
   
   const [paymentAmount, setPaymentAmount] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("cash");
@@ -59,25 +55,6 @@ export function ClientDetailsDialog({
   const totalExpenses = clientExpenses.reduce((sum, e) => sum + e.amount, 0);
   const netProfit = localBooking.total_cost - totalExpenses;
   const profitMargin = localBooking.total_cost > 0 ? ((netProfit / localBooking.total_cost) * 100).toFixed(1) : "0";
-
-  // Fetch contracts when dialog opens
-  useEffect(() => {
-    if (open) {
-      loadContracts();
-    }
-  }, [open, localBooking.id]);
-
-  const loadContracts = async () => {
-    try {
-      setLoadingContracts(true);
-      const contractsData = await contractService.getContractsByBookingId(localBooking.id);
-      setContracts(contractsData);
-    } catch (error) {
-      console.error("Error loading contracts:", error);
-    } finally {
-      setLoadingContracts(false);
-    }
-  };
 
   const handleAddPayment = async () => {
     if (!paymentAmount || parseFloat(paymentAmount) <= 0) {
@@ -501,13 +478,6 @@ export function ClientDetailsDialog({
                 </div>
               </CardContent>
             </Card>
-
-            {/* Contract Upload Section */}
-            <ContractUpload 
-              bookingId={localBooking.id}
-              contracts={contracts}
-              onContractsUpdate={loadContracts}
-            />
 
             <Card className={`border-2 ${netProfit >= 0 ? "border-green-600 bg-green-50 dark:bg-green-950/20" : "border-red-600 bg-red-50 dark:bg-red-950/20"}`}>
               <CardContent className="pt-6">

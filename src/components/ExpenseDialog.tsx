@@ -84,7 +84,6 @@ export function ExpenseDialog({ open, onOpenChange, onSave, expense, bookings }:
       vendor,
       payment_method: paymentMethod,
       expense_date: date.toISOString(),
-      receipt_url: receiptUrls[0] || null,
       receipt_urls: receiptUrls,
       proof_urls: proofUrls,
       notes,

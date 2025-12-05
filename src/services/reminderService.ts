@@ -155,27 +155,16 @@ export const reminderService = {
     try {
       const now = new Date();
 
-      // Fetch all snoozed reminders and filter in JavaScript
-      // This avoids the complex JSONB query that was causing network errors
       const { data, error } = await supabase
         .from("reminders")
         .select("*")
         .eq("status", "snoozed")
+        .not("metadata->>minimized", "is", null)
         .order("snoozed_until", { ascending: true });
 
       if (error) throw error;
 
-      // Filter for minimized reminders that are still within snooze window
       return (data || []).filter(reminder => {
-        // Check if reminder has minimized flag in metadata
-        const isMinimized = reminder.metadata && 
-                           typeof reminder.metadata === "object" && 
-                           "minimized" in reminder.metadata && 
-                           reminder.metadata.minimized === true;
-        
-        if (!isMinimized) return false;
-        
-        // Check if still within snooze window
         if (reminder.snoozed_until) {
           return isBefore(now, new Date(reminder.snoozed_until));
         }

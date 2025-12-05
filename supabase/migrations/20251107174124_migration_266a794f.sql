@@ -1,1 +1,0 @@
-ALTER TABLE public.manager_compensation ADD COLUMN notes TEXT;
