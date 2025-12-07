@@ -98,6 +98,7 @@ export const invoiceService = {
       deposit_amount: bookingData.depositAmount,
       balance_due: bookingData.balanceDue,
       total_amount: bookingData.totalAmount,
+      amount: bookingData.totalAmount, // Added back as it is required by DB
       status: "unpaid",
       notes: bookingData.notes
     };
