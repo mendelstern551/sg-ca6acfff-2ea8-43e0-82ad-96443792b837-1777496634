@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
 import { differenceInMinutes } from "date-fns";
@@ -35,7 +34,8 @@ export const taskLogService = {
         started_at: new Date().toISOString()
       };
 
-      const { data, error } = await supabase
+      // Cast supabase to any to prevent TS2589 "Type instantiation is excessively deep"
+      const { data, error } = await (supabase as any)
         .from("task_logs")
         .insert(insertData)
         .select()
@@ -51,7 +51,8 @@ export const taskLogService = {
 
   async completeTask(taskLogId: string, notes?: string): Promise<TaskLog> {
     try {
-      const { data: taskLog, error: fetchError } = await supabase
+      // Cast supabase to any
+      const { data: taskLog, error: fetchError } = await (supabase as any)
         .from("task_logs")
         .select("*")
         .eq("id", taskLogId)
@@ -65,7 +66,8 @@ export const taskLogService = {
         new Date(taskLog.started_at)
       );
 
-      const { data, error } = await supabase
+      // Cast supabase to any
+      const { data, error } = await (supabase as any)
         .from("task_logs")
         .update({
           completed_at: completedAt.toISOString(),
@@ -86,7 +88,8 @@ export const taskLogService = {
 
   async getActiveTask(employeeId: string): Promise<TaskLog | null> {
     try {
-      const { data, error } = await supabase
+      // Cast supabase to any
+      const { data, error } = await (supabase as any)
         .from("task_logs")
         .select("*")
         .eq("employee_id", employeeId)
@@ -107,10 +110,8 @@ export const taskLogService = {
       const today = new Date();
       today.setHours(0, 0, 0, 0);
 
-      // Use a completely separate any-typed variable to break the type chain
-      const safeSupabase: any = supabase;
-
-      const { data, error } = await safeSupabase
+      // Cast supabase to any - This is the critical fix for the recursive type error
+      const { data, error } = await (supabase as any)
         .from("task_logs")
         .select(`
           *,
@@ -139,7 +140,8 @@ export const taskLogService = {
 
   async getAllBuildings(): Promise<Building[]> {
     try {
-      const { data, error } = await supabase
+      // Cast supabase to any
+      const { data, error } = await (supabase as any)
         .from("buildings")
         .select("*")
         .order("name", { ascending: true });
@@ -154,7 +156,8 @@ export const taskLogService = {
 
   async getTaskTypesByBuilding(buildingId: string): Promise<TaskType[]> {
     try {
-      const { data, error } = await supabase
+      // Cast supabase to any
+      const { data, error } = await (supabase as any)
         .from("task_types")
         .select("*")
         .eq("building_id", buildingId)
@@ -170,7 +173,8 @@ export const taskLogService = {
 
   async createBuilding(name: string, address?: string, description?: string): Promise<Building> {
     try {
-      const { data, error } = await supabase
+      // Cast supabase to any
+      const { data, error } = await (supabase as any)
         .from("buildings")
         .insert({ name, address, description })
         .select()
@@ -190,7 +194,8 @@ export const taskLogService = {
     description?: string
   ): Promise<TaskType> {
     try {
-      const { data, error } = await supabase
+      // Cast supabase to any
+      const { data, error } = await (supabase as any)
         .from("task_types")
         .insert({
           building_id: buildingId,
