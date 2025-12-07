@@ -107,9 +107,10 @@ export const taskLogService = {
       const today = new Date();
       today.setHours(0, 0, 0, 0);
 
-      // Fix TS2589: Type instantiation is excessively deep
-      // We cast the client to any to completely bypass TypeScript's deep type inference for this query
-      const { data, error } = await (supabase as any)
+      // Use a completely separate any-typed variable to break the type chain
+      const safeSupabase: any = supabase;
+
+      const { data, error } = await safeSupabase
         .from("task_logs")
         .select(`
           *,
