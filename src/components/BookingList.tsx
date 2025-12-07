@@ -3,7 +3,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { MoreHorizontal, Calendar, Trash2, Edit, FileText, ChevronDown, ChevronUp, Eye } from "lucide-react";
+import { MoreHorizontal, Calendar, Trash2, Edit, FileText, ChevronDown, ChevronUp, Eye, Mail } from "lucide-react";
 import { format } from "date-fns";
 import { Expense, Booking, PaymentStatus } from "@/types/booking";
 import { formatCurrency } from "@/lib/bookingCalculations";
@@ -44,6 +44,33 @@ export function BookingList({ bookings, expenses, onEdit, onDelete, onUpdateBook
   const handleOpenClientDetails = (booking: Booking) => {
     setSelectedBookingForDetails(booking);
     setClientDetailsOpen(true);
+  };
+
+  const handleSendFeedback = async (booking: Booking) => {
+    try {
+      const response = await fetch("/api/send-feedback-request", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          bookingId: booking.id,
+          contactName: booking.contact_name,
+          contactEmail: booking.contact_email,
+          eventName: booking.name,
+          checkOutDate: booking.end_date
+        }),
+      });
+
+      const result = await response.json();
+      
+      if (response.ok) {
+        alert(`✅ Feedback request email sent successfully to ${booking.contact_email}`);
+      } else {
+        alert(`❌ Failed to send email: ${result.error}`);
+      }
+    } catch (error) {
+      console.error("Error sending feedback request:", error);
+      alert("❌ Failed to send feedback request email");
+    }
   };
 
   return (
@@ -119,6 +146,10 @@ export function BookingList({ bookings, expenses, onEdit, onDelete, onUpdateBook
                           <DropdownMenuItem onClick={() => onNavigateToExpenses(booking.id)}>
                             <FileText className="mr-2 h-4 w-4" />
                             View Expenses
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleSendFeedback(booking)}>
+                            <Mail className="mr-2 h-4 w-4" />
+                            Send Feedback Request
                           </DropdownMenuItem>
                           <DropdownMenuItem onClick={() => onDelete(booking.id)} className="text-red-600 dark:text-red-500 focus:text-red-600 focus:bg-red-50 dark:focus:bg-red-900/50">
                             <Trash2 className="mr-2 h-4 w-4" />
