@@ -98,7 +98,6 @@ export const invoiceService = {
       deposit_amount: bookingData.depositAmount,
       balance_due: bookingData.balanceDue,
       total_amount: bookingData.totalAmount,
-      amount: bookingData.totalAmount,
       status: "unpaid",
       notes: bookingData.notes
     };
