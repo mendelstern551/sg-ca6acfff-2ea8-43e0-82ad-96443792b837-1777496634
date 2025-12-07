@@ -388,7 +388,7 @@ export default function HomePage() {
     setCurrentReminder(reminder);
   };
 
-  const handleSaveBooking = async (bookingData: Omit<Booking, "id" | "created_at" | "updated_at" | "payments">) => {
+  const handleSaveBooking = async (bookingData: Omit<Booking, "id" | "created_at" | "updated_at" | "payments">, shouldSendEmail?: boolean) => {
     try {
       const amountPaid = editingBooking?.payments?.reduce((sum, p) => sum + Number(p.amount), 0) || 0;
       const balanceDue = bookingData.total_cost - amountPaid;
@@ -420,6 +420,52 @@ export default function HomePage() {
         toast({ title: "Booking Created", description: "New booking has been created successfully." });
       }
 
+      // ✅ Send confirmation email AFTER booking is created (with real booking ID)
+      if (shouldSendEmail && bookingData.confirmed && bookingData.contact_email) {
+        try {
+          const response = await fetch("/api/send-confirmation", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              to: bookingData.contact_email,
+              clientName: bookingData.contact_name,
+              bookingName: bookingData.name || `${bookingData.contact_name}'s event`,
+              bookingType: bookingData.booking_type,
+              startDate: bookingData.start_date,
+              endDate: bookingData.end_date,
+              numberOfGuests: bookingData.number_of_guests,
+              totalCost: bookingData.total_cost,
+              depositAmount: bookingData.deposit_amount,
+              balanceDue: balanceDue,
+              notes: bookingData.notes,
+              bookingId: savedBookingId, // ✅ Real booking ID
+            }),
+          });
+
+          const result = await response.json();
+          
+          if (response.ok) {
+            toast({
+              title: "✅ Confirmation Email Sent!",
+              description: `Booking confirmation sent to ${bookingData.contact_email}`,
+            });
+          } else {
+            toast({
+              title: "❌ Email Failed",
+              description: result.error || "Failed to send confirmation email",
+              variant: "destructive"
+            });
+          }
+        } catch (emailError) {
+          console.error("Error sending confirmation email:", emailError);
+          toast({
+            title: "❌ Email Error",
+            description: "Failed to send confirmation email. Booking was saved successfully.",
+            variant: "destructive"
+          });
+        }
+      }
+
       // Auto-generate or refresh reminders for BOTH pending and confirmed bookings
       try {
         const significantChange = isNewBooking
@@ -433,7 +479,7 @@ export default function HomePage() {
           await reminderService.deleteBookingReminders(savedBookingId);
           // Create fresh reminders based on current status and dates
           await reminderService.generateBookingReminders(savedBookingId, {
-            eventName: bookingData.name,
+            eventName: bookingData.name || `${bookingData.contact_name}'s event`,
             contactName: bookingData.contact_name,
             startDate: new Date(bookingData.start_date),
             isPending: !bookingData.confirmed
