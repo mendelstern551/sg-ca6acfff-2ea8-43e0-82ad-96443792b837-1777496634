@@ -420,7 +420,7 @@ export default function HomePage() {
         toast({ title: "Booking Created", description: "New booking has been created successfully." });
       }
 
-      // ✅ Send confirmation email AFTER booking is created (with real booking ID)
+      // ✅ NOW send confirmation email AFTER booking is created (with real booking ID)
       if (shouldSendEmail && bookingData.confirmed && bookingData.contact_email) {
         try {
           const response = await fetch("/api/send-confirmation", {
