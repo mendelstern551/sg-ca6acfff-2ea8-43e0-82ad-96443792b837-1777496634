@@ -17,151 +17,221 @@ export type Database = {
     Tables: {
       bookings: {
         Row: {
-          additional_cleaning_fee: number
-          amount_paid: number
-          balance_due: number
-          base_rate: number
-          booking_type: string
-          cleaning_fee: number
-          confirmed: boolean
+          additional_cleaning_fee: number | null
+          amount_paid: number | null
+          balance_due: number | null
+          base_rate: number | null
+          booking_type: string | null
+          building_id: string | null
+          cleaning_fee: number | null
+          confirmed: boolean | null
           contact_email: string | null
           contact_name: string
           contact_phone: string | null
           created_at: string | null
           custom_price: number | null
-          deposit_amount: number
+          deposit_amount: number | null
           discount_percent: number | null
           end_date: string
           id: string
           name: string
           notes: string | null
-          number_of_guests: number
-          number_of_rooms: number
-          payment_status: string
-          per_person_rate: number
+          number_of_guests: number | null
+          number_of_rooms: number | null
+          payment_status: string | null
+          per_person_rate: number | null
+          recurring: Json | null
           start_date: string
-          total_cost: number
+          total_cost: number | null
           updated_at: string | null
         }
         Insert: {
-          additional_cleaning_fee?: number
-          amount_paid?: number
-          balance_due?: number
-          base_rate?: number
-          booking_type: string
-          cleaning_fee?: number
-          confirmed?: boolean
+          additional_cleaning_fee?: number | null
+          amount_paid?: number | null
+          balance_due?: number | null
+          base_rate?: number | null
+          booking_type?: string | null
+          building_id?: string | null
+          cleaning_fee?: number | null
+          confirmed?: boolean | null
           contact_email?: string | null
           contact_name: string
           contact_phone?: string | null
           created_at?: string | null
           custom_price?: number | null
-          deposit_amount?: number
+          deposit_amount?: number | null
           discount_percent?: number | null
           end_date: string
           id?: string
           name: string
           notes?: string | null
-          number_of_guests?: number
-          number_of_rooms?: number
-          payment_status?: string
-          per_person_rate?: number
+          number_of_guests?: number | null
+          number_of_rooms?: number | null
+          payment_status?: string | null
+          per_person_rate?: number | null
+          recurring?: Json | null
           start_date: string
-          total_cost?: number
+          total_cost?: number | null
           updated_at?: string | null
         }
         Update: {
-          additional_cleaning_fee?: number
-          amount_paid?: number
-          balance_due?: number
-          base_rate?: number
-          booking_type?: string
-          cleaning_fee?: number
-          confirmed?: boolean
+          additional_cleaning_fee?: number | null
+          amount_paid?: number | null
+          balance_due?: number | null
+          base_rate?: number | null
+          booking_type?: string | null
+          building_id?: string | null
+          cleaning_fee?: number | null
+          confirmed?: boolean | null
           contact_email?: string | null
           contact_name?: string
           contact_phone?: string | null
           created_at?: string | null
           custom_price?: number | null
-          deposit_amount?: number
+          deposit_amount?: number | null
           discount_percent?: number | null
           end_date?: string
           id?: string
           name?: string
           notes?: string | null
-          number_of_guests?: number
-          number_of_rooms?: number
-          payment_status?: string
-          per_person_rate?: number
+          number_of_guests?: number | null
+          number_of_rooms?: number | null
+          payment_status?: string | null
+          per_person_rate?: number | null
+          recurring?: Json | null
           start_date?: string
-          total_cost?: number
+          total_cost?: number | null
           updated_at?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "bookings_building_id_fkey"
+            columns: ["building_id"]
+            isOneToOne: false
+            referencedRelation: "buildings"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       buildings: {
         Row: {
           address: string | null
           created_at: string | null
           description: string | null
+          floor_plan_url: string | null
           id: string
+          map_image_url: string | null
           name: string
+          target_heating_level: number | null
+          updated_at: string | null
         }
         Insert: {
           address?: string | null
           created_at?: string | null
           description?: string | null
+          floor_plan_url?: string | null
           id?: string
+          map_image_url?: string | null
           name: string
+          target_heating_level?: number | null
+          updated_at?: string | null
         }
         Update: {
           address?: string | null
           created_at?: string | null
           description?: string | null
+          floor_plan_url?: string | null
           id?: string
+          map_image_url?: string | null
           name?: string
+          target_heating_level?: number | null
+          updated_at?: string | null
         }
         Relationships: []
+      }
+      contracts: {
+        Row: {
+          booking_id: string | null
+          created_at: string | null
+          file_name: string
+          file_path: string
+          file_size: number | null
+          file_type: string | null
+          id: string
+          notes: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          booking_id?: string | null
+          created_at?: string | null
+          file_name: string
+          file_path: string
+          file_size?: number | null
+          file_type?: string | null
+          id?: string
+          notes?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          booking_id?: string | null
+          created_at?: string | null
+          file_name?: string
+          file_path?: string
+          file_size?: number | null
+          file_type?: string | null
+          id?: string
+          notes?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contracts_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       email_logs: {
         Row: {
           booking_id: string | null
-          created_at: string | null
-          email_type: string
+          email_type: string | null
           error_message: string | null
           id: string
+          invoice_id: string | null
           metadata: Json | null
           recipient_email: string
           recipient_name: string | null
           sent_at: string | null
           status: string | null
-          subject: string
+          subject: string | null
         }
         Insert: {
           booking_id?: string | null
-          created_at?: string | null
-          email_type: string
+          email_type?: string | null
           error_message?: string | null
           id?: string
+          invoice_id?: string | null
           metadata?: Json | null
           recipient_email: string
           recipient_name?: string | null
           sent_at?: string | null
           status?: string | null
-          subject: string
+          subject?: string | null
         }
         Update: {
           booking_id?: string | null
-          created_at?: string | null
-          email_type?: string
+          email_type?: string | null
           error_message?: string | null
           id?: string
+          invoice_id?: string | null
           metadata?: Json | null
           recipient_email?: string
           recipient_name?: string | null
           sent_at?: string | null
           status?: string | null
-          subject?: string
+          subject?: string | null
         }
         Relationships: [
           {
@@ -169,6 +239,13 @@ export type Database = {
             columns: ["booking_id"]
             isOneToOne: false
             referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "email_logs_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "invoices"
             referencedColumns: ["id"]
           },
         ]
@@ -183,9 +260,13 @@ export type Database = {
           hourly_rate: number | null
           id: string
           id_photo_url: string | null
+          is_active: boolean | null
+          job_title: string | null
           notes: string | null
+          pay_rate: number | null
           phone: string | null
           photo_url: string | null
+          role: string | null
           status: string | null
           updated_at: string | null
         }
@@ -198,9 +279,13 @@ export type Database = {
           hourly_rate?: number | null
           id?: string
           id_photo_url?: string | null
+          is_active?: boolean | null
+          job_title?: string | null
           notes?: string | null
+          pay_rate?: number | null
           phone?: string | null
           photo_url?: string | null
+          role?: string | null
           status?: string | null
           updated_at?: string | null
         }
@@ -213,9 +298,13 @@ export type Database = {
           hourly_rate?: number | null
           id?: string
           id_photo_url?: string | null
+          is_active?: boolean | null
+          job_title?: string | null
           notes?: string | null
+          pay_rate?: number | null
           phone?: string | null
           photo_url?: string | null
+          role?: string | null
           status?: string | null
           updated_at?: string | null
         }
@@ -225,14 +314,15 @@ export type Database = {
         Row: {
           amount: number
           booking_id: string | null
-          category: string
+          category: string | null
           created_at: string | null
           description: string
           expense_date: string
           id: string
           notes: string | null
-          payment_method: string
+          payment_method: string | null
           proof_urls: string[] | null
+          receipt_url: string | null
           receipt_urls: string[] | null
           updated_at: string | null
           vendor: string | null
@@ -240,14 +330,15 @@ export type Database = {
         Insert: {
           amount: number
           booking_id?: string | null
-          category: string
+          category?: string | null
           created_at?: string | null
           description: string
           expense_date: string
           id?: string
           notes?: string | null
-          payment_method: string
+          payment_method?: string | null
           proof_urls?: string[] | null
+          receipt_url?: string | null
           receipt_urls?: string[] | null
           updated_at?: string | null
           vendor?: string | null
@@ -255,14 +346,15 @@ export type Database = {
         Update: {
           amount?: number
           booking_id?: string | null
-          category?: string
+          category?: string | null
           created_at?: string | null
           description?: string
           expense_date?: string
           id?: string
           notes?: string | null
-          payment_method?: string
+          payment_method?: string | null
           proof_urls?: string[] | null
+          receipt_url?: string | null
           receipt_urls?: string[] | null
           updated_at?: string | null
           vendor?: string | null
@@ -277,80 +369,151 @@ export type Database = {
           },
         ]
       }
+      feedback_submissions: {
+        Row: {
+          areas_of_improvement: string[] | null
+          bonus_credit_amount: number | null
+          bonus_credit_issued: boolean | null
+          booking_id: string
+          client_email: string
+          client_name: string
+          created_at: string | null
+          feedback_text: string | null
+          id: string
+          metadata: Json | null
+          rating: number | null
+          submission_date: string | null
+          updated_at: string | null
+          would_recommend: boolean | null
+        }
+        Insert: {
+          areas_of_improvement?: string[] | null
+          bonus_credit_amount?: number | null
+          bonus_credit_issued?: boolean | null
+          booking_id: string
+          client_email: string
+          client_name: string
+          created_at?: string | null
+          feedback_text?: string | null
+          id?: string
+          metadata?: Json | null
+          rating?: number | null
+          submission_date?: string | null
+          updated_at?: string | null
+          would_recommend?: boolean | null
+        }
+        Update: {
+          areas_of_improvement?: string[] | null
+          bonus_credit_amount?: number | null
+          bonus_credit_issued?: boolean | null
+          booking_id?: string
+          client_email?: string
+          client_name?: string
+          created_at?: string | null
+          feedback_text?: string | null
+          id?: string
+          metadata?: Json | null
+          rating?: number | null
+          submission_date?: string | null
+          updated_at?: string | null
+          would_recommend?: boolean | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "feedback_submissions_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       invoices: {
         Row: {
-          balance_due: number
-          base_price: number
-          booking_id: string
+          amount: number
+          balance_due: number | null
+          base_price: number | null
+          booking_id: string | null
           client_email: string | null
           client_name: string
           client_phone: string | null
           created_at: string | null
-          deposit_amount: number
+          deposit_amount: number | null
+          due_date: string | null
           email_sent_at: string | null
-          email_sent_to: string | null
           email_status: string | null
-          event_date_end: string
-          event_date_start: string
+          event_date_end: string | null
+          event_date_start: string | null
           id: string
           invoice_number: string
+          issued_date: string | null
           last_reminder_sent_at: string | null
+          line_items: Json | null
           notes: string | null
-          number_of_guests: number
-          number_of_rooms: number
+          number_of_guests: number | null
+          number_of_rooms: number | null
+          paid_date: string | null
           reminder_count: number | null
-          status: string
-          total_amount: number
+          status: string | null
+          total_amount: number | null
           updated_at: string | null
         }
         Insert: {
-          balance_due: number
-          base_price: number
-          booking_id: string
+          amount: number
+          balance_due?: number | null
+          base_price?: number | null
+          booking_id?: string | null
           client_email?: string | null
           client_name: string
           client_phone?: string | null
           created_at?: string | null
-          deposit_amount: number
+          deposit_amount?: number | null
+          due_date?: string | null
           email_sent_at?: string | null
-          email_sent_to?: string | null
           email_status?: string | null
-          event_date_end: string
-          event_date_start: string
+          event_date_end?: string | null
+          event_date_start?: string | null
           id?: string
           invoice_number: string
+          issued_date?: string | null
           last_reminder_sent_at?: string | null
+          line_items?: Json | null
           notes?: string | null
-          number_of_guests: number
-          number_of_rooms: number
+          number_of_guests?: number | null
+          number_of_rooms?: number | null
+          paid_date?: string | null
           reminder_count?: number | null
-          status?: string
-          total_amount: number
+          status?: string | null
+          total_amount?: number | null
           updated_at?: string | null
         }
         Update: {
-          balance_due?: number
-          base_price?: number
-          booking_id?: string
+          amount?: number
+          balance_due?: number | null
+          base_price?: number | null
+          booking_id?: string | null
           client_email?: string | null
           client_name?: string
           client_phone?: string | null
           created_at?: string | null
-          deposit_amount?: number
+          deposit_amount?: number | null
+          due_date?: string | null
           email_sent_at?: string | null
-          email_sent_to?: string | null
           email_status?: string | null
-          event_date_end?: string
-          event_date_start?: string
+          event_date_end?: string | null
+          event_date_start?: string | null
           id?: string
           invoice_number?: string
+          issued_date?: string | null
           last_reminder_sent_at?: string | null
+          line_items?: Json | null
           notes?: string | null
-          number_of_guests?: number
-          number_of_rooms?: number
+          number_of_guests?: number | null
+          number_of_rooms?: number | null
+          paid_date?: string | null
           reminder_count?: number | null
-          status?: string
-          total_amount?: number
+          status?: string | null
+          total_amount?: number | null
           updated_at?: string | null
         }
         Relationships: [
@@ -363,41 +526,118 @@ export type Database = {
           },
         ]
       }
+      issues: {
+        Row: {
+          assigned_to: string | null
+          building_id: string | null
+          created_at: string | null
+          description: string | null
+          id: string
+          notes: string | null
+          priority: string | null
+          reported_by: string | null
+          resolved_at: string | null
+          room_id: string | null
+          status: string | null
+          task_log_id: string | null
+          title: string
+          updated_at: string | null
+        }
+        Insert: {
+          assigned_to?: string | null
+          building_id?: string | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          notes?: string | null
+          priority?: string | null
+          reported_by?: string | null
+          resolved_at?: string | null
+          room_id?: string | null
+          status?: string | null
+          task_log_id?: string | null
+          title: string
+          updated_at?: string | null
+        }
+        Update: {
+          assigned_to?: string | null
+          building_id?: string | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          notes?: string | null
+          priority?: string | null
+          reported_by?: string | null
+          resolved_at?: string | null
+          room_id?: string | null
+          status?: string | null
+          task_log_id?: string | null
+          title?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "issues_assigned_to_fkey"
+            columns: ["assigned_to"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "issues_building_id_fkey"
+            columns: ["building_id"]
+            isOneToOne: false
+            referencedRelation: "buildings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "issues_room_id_fkey"
+            columns: ["room_id"]
+            isOneToOne: false
+            referencedRelation: "rooms"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "issues_task_log_id_fkey"
+            columns: ["task_log_id"]
+            isOneToOne: false
+            referencedRelation: "task_logs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       manager_compensation: {
         Row: {
           amount: number
           booking_id: string | null
-          calculation_basis: string | null
-          compensation_type: string
           created_at: string | null
-          due_date: string
+          due_date: string | null
           id: string
+          manager_id: string | null
           notes: string | null
-          paid: boolean
+          paid: boolean | null
           updated_at: string | null
         }
         Insert: {
           amount: number
           booking_id?: string | null
-          calculation_basis?: string | null
-          compensation_type: string
           created_at?: string | null
-          due_date: string
+          due_date?: string | null
           id?: string
+          manager_id?: string | null
           notes?: string | null
-          paid?: boolean
+          paid?: boolean | null
           updated_at?: string | null
         }
         Update: {
           amount?: number
           booking_id?: string | null
-          calculation_basis?: string | null
-          compensation_type?: string
           created_at?: string | null
-          due_date?: string
+          due_date?: string | null
           id?: string
+          manager_id?: string | null
           notes?: string | null
-          paid?: boolean
+          paid?: boolean | null
           updated_at?: string | null
         }
         Relationships: [
@@ -408,45 +648,46 @@ export type Database = {
             referencedRelation: "bookings"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "manager_compensation_manager_id_fkey"
+            columns: ["manager_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
         ]
       }
       manager_payments: {
         Row: {
           amount: number
-          compensation_id: string
           created_at: string | null
           id: string
+          manager_id: string
           notes: string | null
           payment_date: string
-          payment_method: string
-          updated_at: string | null
         }
         Insert: {
           amount: number
-          compensation_id: string
           created_at?: string | null
           id?: string
+          manager_id: string
           notes?: string | null
           payment_date: string
-          payment_method: string
-          updated_at?: string | null
         }
         Update: {
           amount?: number
-          compensation_id?: string
           created_at?: string | null
           id?: string
+          manager_id?: string
           notes?: string | null
           payment_date?: string
-          payment_method?: string
-          updated_at?: string | null
         }
         Relationships: [
           {
-            foreignKeyName: "manager_payments_compensation_id_fkey"
-            columns: ["compensation_id"]
+            foreignKeyName: "manager_payments_manager_id_fkey"
+            columns: ["manager_id"]
             isOneToOne: false
-            referencedRelation: "manager_compensation"
+            referencedRelation: "employees"
             referencedColumns: ["id"]
           },
         ]
@@ -456,10 +697,9 @@ export type Database = {
           booking_id: string
           created_at: string | null
           id: string
-          invoice_id: string | null
+          invoice_id: string
           notes: string | null
           reminder_type: string
-          sent_at: string | null
           sent_to: string
           status: string
         }
@@ -467,21 +707,19 @@ export type Database = {
           booking_id: string
           created_at?: string | null
           id?: string
-          invoice_id?: string | null
+          invoice_id: string
           notes?: string | null
           reminder_type: string
-          sent_at?: string | null
           sent_to: string
-          status?: string
+          status: string
         }
         Update: {
           booking_id?: string
           created_at?: string | null
           id?: string
-          invoice_id?: string | null
+          invoice_id?: string
           notes?: string | null
           reminder_type?: string
-          sent_at?: string | null
           sent_to?: string
           status?: string
         }
@@ -505,32 +743,38 @@ export type Database = {
       payments: {
         Row: {
           amount: number
-          booking_id: string
+          booking_id: string | null
           created_at: string | null
           id: string
+          invoice_id: string | null
           notes: string | null
           payment_date: string
-          payment_method: string
+          payment_method: string | null
+          transaction_id: string | null
           updated_at: string | null
         }
         Insert: {
           amount: number
-          booking_id: string
+          booking_id?: string | null
           created_at?: string | null
           id?: string
+          invoice_id?: string | null
           notes?: string | null
-          payment_date: string
-          payment_method: string
+          payment_date?: string
+          payment_method?: string | null
+          transaction_id?: string | null
           updated_at?: string | null
         }
         Update: {
           amount?: number
-          booking_id?: string
+          booking_id?: string | null
           created_at?: string | null
           id?: string
+          invoice_id?: string | null
           notes?: string | null
           payment_date?: string
-          payment_method?: string
+          payment_method?: string | null
+          transaction_id?: string | null
           updated_at?: string | null
         }
         Relationships: [
@@ -539,6 +783,13 @@ export type Database = {
             columns: ["booking_id"]
             isOneToOne: false
             referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payments_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "invoices"
             referencedColumns: ["id"]
           },
         ]
@@ -572,104 +823,289 @@ export type Database = {
       }
       reminders: {
         Row: {
+          assigned_to: string | null
           auto_generated: boolean | null
-          booking_id: string | null
-          category: string
+          category: string | null
           created_at: string | null
           description: string | null
           due_date: string
           id: string
           metadata: Json | null
-          priority: string
-          recurring: boolean | null
-          recurring_interval: string | null
+          priority: string | null
+          related_id: string | null
+          related_type: string | null
           snoozed_until: string | null
-          status: string
+          status: string | null
           title: string
           updated_at: string | null
         }
         Insert: {
+          assigned_to?: string | null
           auto_generated?: boolean | null
-          booking_id?: string | null
-          category: string
+          category?: string | null
           created_at?: string | null
           description?: string | null
           due_date: string
           id?: string
           metadata?: Json | null
-          priority?: string
-          recurring?: boolean | null
-          recurring_interval?: string | null
+          priority?: string | null
+          related_id?: string | null
+          related_type?: string | null
           snoozed_until?: string | null
-          status?: string
+          status?: string | null
           title: string
           updated_at?: string | null
         }
         Update: {
+          assigned_to?: string | null
           auto_generated?: boolean | null
-          booking_id?: string | null
-          category?: string
+          category?: string | null
           created_at?: string | null
           description?: string | null
           due_date?: string
           id?: string
           metadata?: Json | null
-          priority?: string
-          recurring?: boolean | null
-          recurring_interval?: string | null
+          priority?: string | null
+          related_id?: string | null
+          related_type?: string | null
           snoozed_until?: string | null
-          status?: string
+          status?: string | null
           title?: string
           updated_at?: string | null
         }
         Relationships: [
           {
-            foreignKeyName: "reminders_booking_id_fkey"
-            columns: ["booking_id"]
+            foreignKeyName: "reminders_assigned_to_fkey"
+            columns: ["assigned_to"]
             isOneToOne: false
-            referencedRelation: "bookings"
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      room_cleaning_sessions: {
+        Row: {
+          clock_in_time: string | null
+          clock_out_time: string | null
+          created_at: string | null
+          employee_id: string | null
+          id: string
+          notes: string | null
+          room_id: string | null
+          status: string
+          updated_at: string | null
+        }
+        Insert: {
+          clock_in_time?: string | null
+          clock_out_time?: string | null
+          created_at?: string | null
+          employee_id?: string | null
+          id?: string
+          notes?: string | null
+          room_id?: string | null
+          status: string
+          updated_at?: string | null
+        }
+        Update: {
+          clock_in_time?: string | null
+          clock_out_time?: string | null
+          created_at?: string | null
+          employee_id?: string | null
+          id?: string
+          notes?: string | null
+          room_id?: string | null
+          status?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "room_cleaning_sessions_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "room_cleaning_sessions_room_id_fkey"
+            columns: ["room_id"]
+            isOneToOne: false
+            referencedRelation: "rooms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      room_tasks: {
+        Row: {
+          created_at: string | null
+          id: string
+          room_id: string | null
+          task_name: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          room_id?: string | null
+          task_name: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          room_id?: string | null
+          task_name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "room_tasks_room_id_fkey"
+            columns: ["room_id"]
+            isOneToOne: false
+            referencedRelation: "rooms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      rooms: {
+        Row: {
+          bed_count: number | null
+          building_id: string | null
+          bunk_bed_count: number | null
+          capacity: number | null
+          created_at: string | null
+          floor: number | null
+          id: string
+          name: string
+          room_number: string | null
+          status: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          bed_count?: number | null
+          building_id?: string | null
+          bunk_bed_count?: number | null
+          capacity?: number | null
+          created_at?: string | null
+          floor?: number | null
+          id?: string
+          name: string
+          room_number?: string | null
+          status?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          bed_count?: number | null
+          building_id?: string | null
+          bunk_bed_count?: number | null
+          capacity?: number | null
+          created_at?: string | null
+          floor?: number | null
+          id?: string
+          name?: string
+          room_number?: string | null
+          status?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rooms_building_id_fkey"
+            columns: ["building_id"]
+            isOneToOne: false
+            referencedRelation: "buildings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      task_completions: {
+        Row: {
+          completed_at: string | null
+          created_at: string | null
+          id: string
+          issue_reported: boolean | null
+          notes: string | null
+          session_id: string | null
+          task_id: string | null
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string | null
+          id?: string
+          issue_reported?: boolean | null
+          notes?: string | null
+          session_id?: string | null
+          task_id?: string | null
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string | null
+          id?: string
+          issue_reported?: boolean | null
+          notes?: string | null
+          session_id?: string | null
+          task_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "task_completions_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "room_cleaning_sessions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "task_completions_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "room_tasks"
             referencedColumns: ["id"]
           },
         ]
       }
       task_logs: {
         Row: {
-          building_id: string
+          booking_id: string | null
+          building_id: string | null
           completed_at: string | null
           created_at: string | null
-          duration_minutes: number | null
-          employee_id: string
+          employee_id: string | null
           id: string
           notes: string | null
-          started_at: string
-          task_type_id: string
-          time_entry_id: string | null
+          room_id: string | null
+          started_at: string | null
+          task_type_id: string | null
+          updated_at: string | null
         }
         Insert: {
-          building_id: string
+          booking_id?: string | null
+          building_id?: string | null
           completed_at?: string | null
           created_at?: string | null
-          duration_minutes?: number | null
-          employee_id: string
+          employee_id?: string | null
           id?: string
           notes?: string | null
-          started_at: string
-          task_type_id: string
-          time_entry_id?: string | null
+          room_id?: string | null
+          started_at?: string | null
+          task_type_id?: string | null
+          updated_at?: string | null
         }
         Update: {
-          building_id?: string
+          booking_id?: string | null
+          building_id?: string | null
           completed_at?: string | null
           created_at?: string | null
-          duration_minutes?: number | null
-          employee_id?: string
+          employee_id?: string | null
           id?: string
           notes?: string | null
-          started_at?: string
-          task_type_id?: string
-          time_entry_id?: string | null
+          room_id?: string | null
+          started_at?: string | null
+          task_type_id?: string | null
+          updated_at?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "task_logs_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "task_logs_building_id_fkey"
             columns: ["building_id"]
@@ -685,63 +1121,52 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "task_logs_room_id_fkey"
+            columns: ["room_id"]
+            isOneToOne: false
+            referencedRelation: "rooms"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "task_logs_task_type_id_fkey"
             columns: ["task_type_id"]
             isOneToOne: false
             referencedRelation: "task_types"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "task_logs_time_entry_id_fkey"
-            columns: ["time_entry_id"]
-            isOneToOne: false
-            referencedRelation: "time_entries"
-            referencedColumns: ["id"]
-          },
         ]
       }
       task_types: {
         Row: {
-          building_id: string | null
           created_at: string | null
-          description: string | null
           id: string
           name: string
+          updated_at: string | null
         }
         Insert: {
-          building_id?: string | null
           created_at?: string | null
-          description?: string | null
           id?: string
           name: string
+          updated_at?: string | null
         }
         Update: {
-          building_id?: string | null
           created_at?: string | null
-          description?: string | null
           id?: string
           name?: string
+          updated_at?: string | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "task_types_building_id_fkey"
-            columns: ["building_id"]
-            isOneToOne: false
-            referencedRelation: "buildings"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       time_entries: {
         Row: {
           clock_in: string
           clock_out: string | null
           created_at: string | null
-          employee_id: string
+          employee_id: string | null
           entry_type: string | null
           id: string
           location_lat: number | null
-          location_lng: number | null
+          location_lon: number | null
           notes: string | null
           updated_at: string | null
         }
@@ -749,11 +1174,11 @@ export type Database = {
           clock_in: string
           clock_out?: string | null
           created_at?: string | null
-          employee_id: string
+          employee_id?: string | null
           entry_type?: string | null
           id?: string
           location_lat?: number | null
-          location_lng?: number | null
+          location_lon?: number | null
           notes?: string | null
           updated_at?: string | null
         }
@@ -761,11 +1186,11 @@ export type Database = {
           clock_in?: string
           clock_out?: string | null
           created_at?: string | null
-          employee_id?: string
+          employee_id?: string | null
           entry_type?: string | null
           id?: string
           location_lat?: number | null
-          location_lng?: number | null
+          location_lon?: number | null
           notes?: string | null
           updated_at?: string | null
         }
@@ -784,7 +1209,16 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      get_monthly_manager_salary: {
+        Args: { p_manager_id: string; p_month: string }
+        Returns: {
+          employee_id: string
+          employee_name: string
+          pay_rate: number
+          salary: number
+          total_hours: number
+        }[]
+      }
     }
     Enums: {
       [_ in never]: never

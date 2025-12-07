@@ -31,6 +31,7 @@ import { ReminderDialog } from "@/components/ReminderDialog";
 import { reminderService } from "@/services/reminderService";
 import { ReminderModal } from "@/components/ReminderModal";
 import { CornerNotifications } from "@/components/CornerNotifications";
+import { FeedbackDashboard } from "@/components/FeedbackDashboard";
 
 type InvoiceRow = Database["public"]["Tables"]["invoices"]["Row"];
 type ExpenseInsert = Database["public"]["Tables"]["expenses"]["Insert"];
@@ -622,7 +623,7 @@ export default function HomePage() {
         </div>
 
         <Tabs value={activeTab} onValueChange={(value) => { setActiveTab(value); if (value !== "expenses") setFilteredBookingId(undefined); }} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-7 lg:w-[1050px] bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 p-1">
+          <TabsList className="grid w-full grid-cols-8 lg:w-[1200px] bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 p-1">
             <TabsTrigger value="bookings">Bookings</TabsTrigger>
             <TabsTrigger value="calendar">Calendar</TabsTrigger>
             <TabsTrigger value="invoices">Invoices</TabsTrigger>
@@ -631,6 +632,7 @@ export default function HomePage() {
             <TabsTrigger value="receipts">Receipts</TabsTrigger>
             <TabsTrigger value="manager">Manager</TabsTrigger>
             <TabsTrigger value="emails">Email History</TabsTrigger>
+            <TabsTrigger value="feedback">Feedback</TabsTrigger>
           </TabsList>
 
           <TabsContent value="bookings" className="space-y-4">
@@ -668,6 +670,50 @@ export default function HomePage() {
           </TabsContent>
 
           <TabsContent value="emails"><EmailHistory bookings={bookings.map(b => ({ id: b.id, name: b.name, contact_name: b.contact_name }))} /></TabsContent>
+
+          <TabsContent value="feedback">
+            <FeedbackDashboard 
+              bookings={bookings} 
+              onSendFeedbackRequest={async (booking) => {
+                try {
+                  const response = await fetch("/api/send-feedback-request", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                      bookingId: booking.id,
+                      contactName: booking.contact_name,
+                      contactEmail: booking.contact_email,
+                      eventName: booking.name,
+                      checkOutDate: booking.end_date
+                    }),
+                  });
+
+                  const result = await response.json();
+                  
+                  if (response.ok) {
+                    toast({
+                      title: "✅ Feedback Request Sent",
+                      description: `Email sent successfully to ${booking.contact_email}`,
+                    });
+                    await loadAllData();
+                  } else {
+                    toast({
+                      title: "❌ Failed to Send",
+                      description: result.error || "Failed to send feedback request",
+                      variant: "destructive"
+                    });
+                  }
+                } catch (error) {
+                  console.error("Error sending feedback request:", error);
+                  toast({
+                    title: "Error",
+                    description: "Failed to send feedback request email",
+                    variant: "destructive"
+                  });
+                }
+              }}
+            />
+          </TabsContent>
         </Tabs>
       </main>
 
