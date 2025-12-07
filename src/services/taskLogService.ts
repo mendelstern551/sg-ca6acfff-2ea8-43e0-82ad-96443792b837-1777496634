@@ -119,7 +119,11 @@ export const taskLogService = {
         .order("started_at", { ascending: true });
 
       if (error) throw error;
-      return (data || []).map(task => ({
+      
+      // Cast the data to avoid "Type instantiation is excessively deep" error
+      const typedData = data as unknown as TaskLogWithDetails[];
+      
+      return typedData.map(task => ({
         ...task,
         duration_minutes: task.completed_at
           ? differenceInMinutes(new Date(task.completed_at), new Date(task.started_at))

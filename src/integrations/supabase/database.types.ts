@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-empty-object-type */
+ 
 export type Json =
   | string
   | number
@@ -825,6 +825,7 @@ export type Database = {
         Row: {
           assigned_to: string | null
           auto_generated: boolean | null
+          booking_id: string | null
           category: string | null
           created_at: string | null
           description: string | null
@@ -832,6 +833,8 @@ export type Database = {
           id: string
           metadata: Json | null
           priority: string | null
+          recurring: boolean | null
+          recurring_interval: string | null
           related_id: string | null
           related_type: string | null
           snoozed_until: string | null
@@ -842,6 +845,7 @@ export type Database = {
         Insert: {
           assigned_to?: string | null
           auto_generated?: boolean | null
+          booking_id?: string | null
           category?: string | null
           created_at?: string | null
           description?: string | null
@@ -849,6 +853,8 @@ export type Database = {
           id?: string
           metadata?: Json | null
           priority?: string | null
+          recurring?: boolean | null
+          recurring_interval?: string | null
           related_id?: string | null
           related_type?: string | null
           snoozed_until?: string | null
@@ -859,6 +865,7 @@ export type Database = {
         Update: {
           assigned_to?: string | null
           auto_generated?: boolean | null
+          booking_id?: string | null
           category?: string | null
           created_at?: string | null
           description?: string | null
@@ -866,6 +873,8 @@ export type Database = {
           id?: string
           metadata?: Json | null
           priority?: string | null
+          recurring?: boolean | null
+          recurring_interval?: string | null
           related_id?: string | null
           related_type?: string | null
           snoozed_until?: string | null
@@ -879,6 +888,13 @@ export type Database = {
             columns: ["assigned_to"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reminders_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
             referencedColumns: ["id"]
           },
         ]
@@ -1070,6 +1086,7 @@ export type Database = {
           room_id: string | null
           started_at: string | null
           task_type_id: string | null
+          time_entry_id: string | null
           updated_at: string | null
         }
         Insert: {
@@ -1083,6 +1100,7 @@ export type Database = {
           room_id?: string | null
           started_at?: string | null
           task_type_id?: string | null
+          time_entry_id?: string | null
           updated_at?: string | null
         }
         Update: {
@@ -1096,6 +1114,7 @@ export type Database = {
           room_id?: string | null
           started_at?: string | null
           task_type_id?: string | null
+          time_entry_id?: string | null
           updated_at?: string | null
         }
         Relationships: [
@@ -1132,6 +1151,13 @@ export type Database = {
             columns: ["task_type_id"]
             isOneToOne: false
             referencedRelation: "task_types"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "task_logs_time_entry_id_fkey"
+            columns: ["time_entry_id"]
+            isOneToOne: false
+            referencedRelation: "time_entries"
             referencedColumns: ["id"]
           },
         ]
