@@ -107,21 +107,22 @@ export const taskLogService = {
       const today = new Date();
       today.setHours(0, 0, 0, 0);
 
-      const { data, error } = await supabase
+      // Cast to any to prevent "Type instantiation is excessively deep" TypeScript error
+      // due to complex nested Supabase joins
+      const { data, error } = await (supabase
         .from("task_logs")
         .select(`
           *,
           building:buildings(*),
           task_type:task_types(*)
-        `)
+        `) as any)
         .eq("employee_id", employeeId)
         .gte("started_at", today.toISOString())
         .order("started_at", { ascending: true });
 
       if (error) throw error;
       
-      // Cast the data to avoid "Type instantiation is excessively deep" error
-      const typedData = data as unknown as TaskLogWithDetails[];
+      const typedData = data as TaskLogWithDetails[];
       
       return typedData.map(task => ({
         ...task,
