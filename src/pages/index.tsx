@@ -397,8 +397,11 @@ export default function HomePage() {
       if (balanceDue <= 0) paymentStatus = "paid";
       else if (amountPaid > 0) paymentStatus = "partial";
       
+      // Remove building_id and recurring to avoid schema cache issues
+      const { building_id, recurring, ...cleanBookingData } = bookingData as any;
+      
       const dataToSave: Omit<Booking, "id" | "created_at" | "updated_at" | "payments"> & { amount_paid: number, balance_due: number, payment_status: any } = {
-          ...bookingData,
+          ...cleanBookingData,
           amount_paid: amountPaid,
           balance_due: balanceDue,
           payment_status: paymentStatus
