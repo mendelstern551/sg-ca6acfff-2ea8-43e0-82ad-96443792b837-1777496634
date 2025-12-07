@@ -206,6 +206,8 @@ export function BookingDialog({ open, onOpenChange, onSave, booking: editingBook
       custom_price: customPrice,
       discount_percent: discountPercent,
       notes: notes,
+      building_id: null,
+      recurring: false
     };
     
     onSave(bookingData);

@@ -24,7 +24,7 @@ export const timeTrackingService = {
         clock_in: new Date().toISOString(),
         entry_type: "work",
         location_lat: location?.lat || null,
-        location_lng: location?.lng || null
+        location_lon: location?.lng || null
       };
 
       const { data, error } = await supabase

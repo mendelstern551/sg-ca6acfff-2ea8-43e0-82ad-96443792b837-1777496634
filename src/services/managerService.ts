@@ -25,7 +25,7 @@ export const managerService = {
       .order("due_date", { ascending: false });
 
     if (error) throw error;
-    return (data as ManagerCompensation[]) || [];
+    return (data as unknown as ManagerCompensation[]) || [];
   },
 
   async getCompensationByBooking(bookingId: string): Promise<ManagerCompensation[]> {
@@ -39,7 +39,7 @@ export const managerService = {
       .order("due_date", { ascending: false });
 
     if (error) throw error;
-    return (data as ManagerCompensation[]) || [];
+    return (data as unknown as ManagerCompensation[]) || [];
   },
 
   async createCompensation(compensation: Omit<ManagerCompensationInsert, "id" | "created_at" | "updated_at">): Promise<ManagerCompensation> {
@@ -96,6 +96,6 @@ export const managerService = {
       .order("due_date", { ascending: true });
 
     if (error) throw error;
-    return (data as ManagerCompensation[]) || [];
+    return (data as unknown as ManagerCompensation[]) || [];
   }
 };

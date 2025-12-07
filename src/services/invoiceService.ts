@@ -98,6 +98,7 @@ export const invoiceService = {
       deposit_amount: bookingData.depositAmount,
       balance_due: bookingData.balanceDue,
       total_amount: bookingData.totalAmount,
+      amount: bookingData.totalAmount, // Map totalAmount to amount for compatibility
       status: "unpaid",
       notes: bookingData.notes
     };
