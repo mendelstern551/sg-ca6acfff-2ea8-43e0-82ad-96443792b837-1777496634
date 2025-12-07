@@ -6,7 +6,7 @@ type EmailLogInsert = Database["public"]["Tables"]["email_logs"]["Insert"];
 
 export interface EmailTrackingData {
   bookingId?: string;
-  emailType: "invoice" | "confirmation" | "payment_reminder" | "other";
+  emailType: "invoice" | "confirmation" | "payment_reminder" | "feedback_request" | "other";
   recipientEmail: string;
   recipientName?: string;
   subject: string;

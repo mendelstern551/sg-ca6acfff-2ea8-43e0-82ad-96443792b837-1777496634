@@ -4,7 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Mail, Search, Filter, Trash2, CheckCircle2, XCircle, Clock, FileText, Calendar, DollarSign } from "lucide-react";
+import { Mail, Search, Filter, Trash2, CheckCircle2, XCircle, Clock, FileText, Calendar, DollarSign, MessageSquare } from "lucide-react";
 import { format } from "date-fns";
 import { emailTrackingService } from "@/services/emailTrackingService";
 import type { Database } from "@/integrations/supabase/types";
@@ -20,6 +20,7 @@ const emailTypeLabels: Record<string, { label: string; icon: any; color: string 
   invoice: { label: "Invoice", icon: FileText, color: "bg-blue-500" },
   confirmation: { label: "Booking Confirmation", icon: Calendar, color: "bg-green-500" },
   payment_reminder: { label: "Payment Reminder", icon: DollarSign, color: "bg-orange-500" },
+  feedback_request: { label: "Feedback Request", icon: MessageSquare, color: "bg-purple-500" },
   other: { label: "Other", icon: Mail, color: "bg-slate-500" }
 };
 
@@ -139,7 +140,7 @@ export function EmailHistory({ bookings = [] }: EmailHistoryProps) {
 
   return (
     <div className="space-y-6">
-      <div className="grid gap-6 md:grid-cols-4">
+      <div className="grid gap-6 md:grid-cols-5">
         <Card className="hover:shadow-lg transition-shadow">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Emails</CardTitle>
@@ -183,6 +184,17 @@ export function EmailHistory({ bookings = [] }: EmailHistoryProps) {
             <p className="text-xs text-slate-600 dark:text-slate-400">Payment reminders</p>
           </CardContent>
         </Card>
+
+        <Card className="hover:shadow-lg transition-shadow border-2 border-purple-200 dark:border-purple-800">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Feedback Requests</CardTitle>
+            <MessageSquare className="h-4 w-4 text-purple-600" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-purple-600">{stats.byType['feedback_request'] || 0}</div>
+            <p className="text-xs text-slate-600 dark:text-slate-400">Sent to clients</p>
+          </CardContent>
+        </Card>
       </div>
 
       <Card>
@@ -194,7 +206,7 @@ export function EmailHistory({ bookings = [] }: EmailHistoryProps) {
                 Email Communication History
               </CardTitle>
               <CardDescription>
-                Track all emails sent to clients for bookings, invoices, and reminders
+                Track all emails sent to clients for bookings, invoices, reminders, and feedback requests
               </CardDescription>
             </div>
           </div>
@@ -220,6 +232,7 @@ export function EmailHistory({ bookings = [] }: EmailHistoryProps) {
                 <SelectItem value="invoice">Invoices</SelectItem>
                 <SelectItem value="confirmation">Confirmations</SelectItem>
                 <SelectItem value="payment_reminder">Payment Reminders</SelectItem>
+                <SelectItem value="feedback_request">Feedback Requests</SelectItem>
                 <SelectItem value="other">Other</SelectItem>
               </SelectContent>
             </Select>
