@@ -413,6 +413,30 @@ export type Database = {
           },
         ]
       }
+      id: {
+        Row: {
+          bonus_credit_amount: number | null
+          created_at: string
+          credit_issued: number | null
+          id: string
+          rating: number
+        }
+        Insert: {
+          bonus_credit_amount?: number | null
+          created_at: string
+          credit_issued?: number | null
+          id?: string
+          rating: number
+        }
+        Update: {
+          bonus_credit_amount?: number | null
+          created_at?: string
+          credit_issued?: number | null
+          id?: string
+          rating?: number
+        }
+        Relationships: []
+      }
       invoices: {
         Row: {
           amount: number
