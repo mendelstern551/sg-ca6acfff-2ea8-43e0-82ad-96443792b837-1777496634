@@ -371,52 +371,37 @@ export type Database = {
       }
       feedback_submissions: {
         Row: {
-          areas_of_improvement: string[] | null
           bonus_credit_amount: number | null
           bonus_credit_issued: boolean | null
           booking_id: string
-          client_email: string
-          client_name: string
+          comments: string | null
           created_at: string | null
-          feedback_text: string | null
           id: string
-          metadata: Json | null
-          rating: number | null
+          rating: number
           submission_date: string | null
           updated_at: string | null
-          would_recommend: boolean | null
         }
         Insert: {
-          areas_of_improvement?: string[] | null
           bonus_credit_amount?: number | null
           bonus_credit_issued?: boolean | null
           booking_id: string
-          client_email: string
-          client_name: string
+          comments?: string | null
           created_at?: string | null
-          feedback_text?: string | null
           id?: string
-          metadata?: Json | null
-          rating?: number | null
+          rating: number
           submission_date?: string | null
           updated_at?: string | null
-          would_recommend?: boolean | null
         }
         Update: {
-          areas_of_improvement?: string[] | null
           bonus_credit_amount?: number | null
           bonus_credit_issued?: boolean | null
           booking_id?: string
-          client_email?: string
-          client_name?: string
+          comments?: string | null
           created_at?: string | null
-          feedback_text?: string | null
           id?: string
-          metadata?: Json | null
-          rating?: number | null
+          rating?: number
           submission_date?: string | null
           updated_at?: string | null
-          would_recommend?: boolean | null
         }
         Relationships: [
           {
