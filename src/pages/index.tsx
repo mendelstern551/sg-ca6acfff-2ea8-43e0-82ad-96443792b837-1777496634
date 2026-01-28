@@ -23,6 +23,7 @@ import { paymentService, Payment } from "@/services/paymentService";
 import type { Database } from "@/integrations/supabase/types";
 import { Badge } from "@/components/ui/badge";
 import { InvoiceDialog } from "@/components/InvoiceDialog";
+import { PaymentDialog } from "@/components/PaymentDialog";
 import { format } from "date-fns";
 import { managerService } from "@/services/managerService";
 import type { ManagerCompensation } from "@/services/managerService";
