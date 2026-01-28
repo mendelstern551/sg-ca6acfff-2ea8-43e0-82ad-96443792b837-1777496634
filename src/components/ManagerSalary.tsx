@@ -14,6 +14,7 @@ import { EnhancedCalendar } from "@/components/ui/enhanced-calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { CalendarIcon } from "lucide-react";
 import { expenseService } from "@/services/expenseService";
+import { useToast } from "@/hooks/use-toast";
 import type { Database } from "@/integrations/supabase/types";
 
 type ExpenseInsert = Database["public"]["Tables"]["expenses"]["Insert"];
@@ -26,6 +27,7 @@ interface ManagerSalaryProps {
 }
 
 export function ManagerSalary({ bookings, onAddExpense, allExpenses, onExpensesUpdate }: ManagerSalaryProps) {
+  const { toast } = useToast();
   const [salaryData, setSalaryData] = useState<ManagerSalaryData>({
     maintenanceFeePerMonth: 1000,
     commissionPercentage: 15,
@@ -51,7 +53,8 @@ export function ManagerSalary({ bookings, onAddExpense, allExpenses, onExpensesU
     const saved = localStorage.getItem("trout-lake-manager-salary");
     if (saved) {
       try {
-        setSalaryData(JSON.parse(saved));
+        const parsed = JSON.parse(saved);
+        setSalaryData(parsed);
       } catch (error) {
         console.error("Error loading manager salary data:", error);
       }
@@ -59,18 +62,25 @@ export function ManagerSalary({ bookings, onAddExpense, allExpenses, onExpensesU
   }, []);
 
   useEffect(() => {
-    if (!isProcessing) {
+    if (!isProcessing && salaryData) {
       createAllManagerExpenses();
     }
-  }, [salaryData.seasonStart, salaryData.seasonEnd, salaryData.maintenanceFeePerMonth, bookings, allExpenses]);
+  }, [salaryData.seasonStart, salaryData.seasonEnd, salaryData.maintenanceFeePerMonth, bookings.length]);
 
   const createAllManagerExpenses = async () => {
+    if (isProcessing) return;
+    
     setIsProcessing(true);
     try {
       await createMonthlyMaintenanceExpenses();
       await createBookingCommissionExpenses();
     } catch (error) {
       console.error("Error creating manager expenses:", error);
+      toast({
+        title: "Error",
+        description: "Failed to create manager expenses",
+        variant: "destructive"
+      });
     } finally {
       setIsProcessing(false);
     }
@@ -82,24 +92,20 @@ export function ManagerSalary({ bookings, onAddExpense, allExpenses, onExpensesU
     const today = new Date();
     const currentMonthStart = startOfMonth(today);
 
-    // Only process if we're within the season
     if (isBefore(currentMonthStart, seasonStart) || isAfter(currentMonthStart, seasonEnd)) {
       return;
     }
 
-    // Get all existing maintenance expenses
     const maintenanceExpenses = allExpenses.filter(exp => 
       exp.category === "Manager Salary" && 
       exp.description?.includes("Monthly Maintenance Fee")
     );
 
-    // Check if current month already has a maintenance fee
     const currentMonthExists = maintenanceExpenses.some(exp => {
       const expenseMonth = startOfMonth(new Date(exp.expense_date));
       return expenseMonth.getTime() === currentMonthStart.getTime();
     });
 
-    // Only create expense for current month if it doesn't exist
     if (!currentMonthExists) {
       const expense: ExpenseInsert = {
         booking_id: null,
@@ -114,16 +120,15 @@ export function ManagerSalary({ bookings, onAddExpense, allExpenses, onExpensesU
         proof_urls: []
       };
       
-      console.log(`Creating maintenance fee for ${format(currentMonthStart, "MMMM yyyy")}`);
       await onAddExpense(expense);
-      console.log("Monthly maintenance fee expense created for current month.");
+      onExpensesUpdate();
     }
   };
 
   const createBookingCommissionExpenses = async () => {
     const commissionExpenses = allExpenses.filter(exp => 
-        exp.category === "Manager Salary" && 
-        exp.description?.includes("Manager Commission")
+      exp.category === "Manager Salary" && 
+      exp.description?.includes("Manager Commission")
     );
 
     const commissionsByBooking = new Map<string, Expense[]>();
@@ -141,7 +146,6 @@ export function ManagerSalary({ bookings, onAddExpense, allExpenses, onExpensesU
       if (expenses.length > 1) {
         const expensesToDelete = expenses.slice(1);
         expensesToDelete.forEach(expense => {
-          console.log(`Queueing deletion of duplicate commission for booking ${bookingId}`);
           deletePromises.push(expenseService.deleteExpense(expense.id));
         });
       }
@@ -149,14 +153,13 @@ export function ManagerSalary({ bookings, onAddExpense, allExpenses, onExpensesU
 
     if (deletePromises.length > 0) {
       await Promise.all(deletePromises);
-      console.log(`${deletePromises.length} duplicate commissions deleted.`);
       onExpensesUpdate();
       return;
     }
 
     const createPromises: Promise<any>[] = [];
     for (const booking of bookings) {
-      if (!booking || !booking.id || !booking.total_cost) {
+      if (!booking?.id || !booking.total_cost) {
         continue;
       }
 
@@ -184,14 +187,13 @@ export function ManagerSalary({ bookings, onAddExpense, allExpenses, onExpensesU
           receipt_urls: [],
           proof_urls: []
         };
-        console.log(`Queueing creation of commission for booking ${booking.id}`);
         createPromises.push(onAddExpense(expense));
       }
     }
       
     if (createPromises.length > 0) {
-        await Promise.all(createPromises);
-        console.log(`${createPromises.length} new commissions created.`);
+      await Promise.all(createPromises);
+      onExpensesUpdate();
     }
   };
 
@@ -234,46 +236,88 @@ export function ManagerSalary({ bookings, onAddExpense, allExpenses, onExpensesU
   const totalPaid = salaryData.payments.reduce((sum, p) => sum + p.amount, 0);
   const balanceDue = totalOwed - totalPaid;
 
-  const handleAddPayment = () => {
-    if (!paymentForm.date || paymentForm.amount <= 0) return;
+  const handleAddPayment = async () => {
+    if (!paymentForm.date || paymentForm.amount <= 0) {
+      toast({
+        title: "Invalid Payment",
+        description: "Please enter a valid date and amount",
+        variant: "destructive"
+      });
+      return;
+    }
 
-    const newPayment: ManagerPayment = {
-      id: Date.now().toString(),
-      date: paymentForm.date.toISOString(),
-      amount: paymentForm.amount,
-      paymentMethod: paymentForm.paymentMethod,
-      referenceNumber: paymentForm.referenceNumber,
-      type: paymentForm.type,
-      relatedBookingId: paymentForm.relatedBookingId || undefined,
-      notes: paymentForm.notes,
-      createdAt: new Date().toISOString()
-    };
+    try {
+      const newPayment: ManagerPayment = {
+        id: Date.now().toString(),
+        date: paymentForm.date.toISOString(),
+        amount: paymentForm.amount,
+        paymentMethod: paymentForm.paymentMethod,
+        referenceNumber: paymentForm.referenceNumber,
+        type: paymentForm.type,
+        relatedBookingId: paymentForm.relatedBookingId || undefined,
+        notes: paymentForm.notes,
+        createdAt: new Date().toISOString()
+      };
 
-    const updatedData = { ...salaryData, payments: [...(salaryData.payments || []), newPayment] };
-    setSalaryData(updatedData);
-    localStorage.setItem("trout-lake-manager-salary", JSON.stringify(updatedData));
+      const updatedData = { 
+        ...salaryData, 
+        payments: [...(salaryData.payments || []), newPayment] 
+      };
+      setSalaryData(updatedData);
+      localStorage.setItem("trout-lake-manager-salary", JSON.stringify(updatedData));
 
-    const expense: ExpenseInsert = {
-      booking_id: paymentForm.relatedBookingId || null,
-      expense_date: paymentForm.date.toISOString(),
-      amount: paymentForm.amount,
-      category: "Manager Salary",
-      description: `Manager payment - ${paymentForm.type}`,
-      payment_method: paymentForm.paymentMethod,
-      vendor: "Manager",
-      notes: paymentForm.notes,
-      receipt_urls: [],
-      proof_urls: []
-    };
-    onAddExpense(expense);
+      const expense: ExpenseInsert = {
+        booking_id: paymentForm.relatedBookingId || null,
+        expense_date: paymentForm.date.toISOString(),
+        amount: paymentForm.amount,
+        category: "Manager Salary",
+        description: `Manager Payment - ${paymentForm.type}`,
+        payment_method: paymentForm.paymentMethod,
+        vendor: "Manager",
+        notes: paymentForm.notes || `Payment for ${paymentForm.type}`,
+        receipt_urls: [],
+        proof_urls: []
+      };
+      
+      await onAddExpense(expense);
+      onExpensesUpdate();
 
-    setPaymentForm({ date: new Date(), amount: 0, paymentMethod: "check", referenceNumber: "", type: "maintenance", relatedBookingId: "", notes: "" });
-    setPaymentDialogOpen(false);
+      toast({
+        title: "Payment Recorded",
+        description: `Manager payment of $${paymentForm.amount.toLocaleString()} recorded successfully`
+      });
+
+      setPaymentForm({ 
+        date: new Date(), 
+        amount: 0, 
+        paymentMethod: "check", 
+        referenceNumber: "", 
+        type: "maintenance", 
+        relatedBookingId: "", 
+        notes: "" 
+      });
+      setPaymentDialogOpen(false);
+    } catch (error) {
+      console.error("Error adding payment:", error);
+      toast({
+        title: "Error",
+        description: "Failed to record payment. Please try again.",
+        variant: "destructive"
+      });
+    }
   };
 
   const handleOpenDialog = (open: boolean) => {
     if (open) {
-      setPaymentForm({ date: new Date(), amount: 0, paymentMethod: "check", referenceNumber: "", type: "maintenance", relatedBookingId: "", notes: "" });
+      setPaymentForm({ 
+        date: new Date(), 
+        amount: 0, 
+        paymentMethod: "check", 
+        referenceNumber: "", 
+        type: "maintenance", 
+        relatedBookingId: "", 
+        notes: "" 
+      });
     }
     setPaymentDialogOpen(open);
   };
@@ -371,7 +415,11 @@ export function ManagerSalary({ bookings, onAddExpense, allExpenses, onExpensesU
                 <CardDescription>Track all payments made to manager</CardDescription>
               </div>
               <Dialog open={paymentDialogOpen} onOpenChange={handleOpenDialog}>
-                <DialogTrigger asChild><Button className="bg-blue-600 hover:bg-blue-700"><Plus className="h-4 w-4 mr-2" />Add Payment</Button></DialogTrigger>
+                <DialogTrigger asChild>
+                  <Button className="bg-blue-600 hover:bg-blue-700">
+                    <Plus className="h-4 w-4 mr-2" />Add Payment
+                  </Button>
+                </DialogTrigger>
                 <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
                   <DialogHeader>
                     <DialogTitle>Record Manager Payment</DialogTitle>
@@ -404,7 +452,14 @@ export function ManagerSalary({ bookings, onAddExpense, allExpenses, onExpensesU
 
                     <div className="space-y-2">
                       <Label htmlFor="amount">Amount ($)</Label>
-                      <Input id="amount" type="number" step="0.01" value={paymentForm.amount} onChange={(e) => setPaymentForm({ ...paymentForm, amount: parseFloat(e.target.value) || 0 })} placeholder="0.00" />
+                      <Input 
+                        id="amount" 
+                        type="number" 
+                        step="0.01" 
+                        value={paymentForm.amount || ""} 
+                        onChange={(e) => setPaymentForm({ ...paymentForm, amount: parseFloat(e.target.value) || 0 })} 
+                        placeholder="0.00" 
+                      />
                     </div>
 
                     <div className="space-y-2">
@@ -422,12 +477,14 @@ export function ManagerSalary({ bookings, onAddExpense, allExpenses, onExpensesU
                     {paymentForm.type === "commission" && (
                       <div className="space-y-2">
                         <Label htmlFor="booking">Related Booking (Optional)</Label>
-                        <Select value={paymentForm.relatedBookingId} onValueChange={(value) => setPaymentForm({ ...paymentForm, relatedBookingId: value })}>
-                          <SelectTrigger><SelectValue placeholder="Select booking" /></SelectTrigger>
+                        <Select value={paymentForm.relatedBookingId || undefined} onValueChange={(value) => setPaymentForm({ ...paymentForm, relatedBookingId: value === "none" ? "" : value })}>
+                          <SelectTrigger><SelectValue placeholder="Select booking (optional)" /></SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="">None</SelectItem>
+                            <SelectItem value="none">None</SelectItem>
                             {bookings.map((booking) => (
-                              <SelectItem key={booking.id} value={booking.id}>{booking.name} - {format(new Date(booking.start_date), "MMM d, yyyy")}</SelectItem>
+                              <SelectItem key={booking.id} value={booking.id}>
+                                {booking.name} - {format(new Date(booking.start_date), "MMM d, yyyy")}
+                              </SelectItem>
                             ))}
                           </SelectContent>
                         </Select>
@@ -452,15 +509,28 @@ export function ManagerSalary({ bookings, onAddExpense, allExpenses, onExpensesU
 
                     <div className="space-y-2">
                       <Label htmlFor="referenceNumber">Reference Number (Optional)</Label>
-                      <Input id="referenceNumber" value={paymentForm.referenceNumber} onChange={(e) => setPaymentForm({ ...paymentForm, referenceNumber: e.target.value })} placeholder="Check #, Transaction ID, etc." />
+                      <Input 
+                        id="referenceNumber" 
+                        value={paymentForm.referenceNumber} 
+                        onChange={(e) => setPaymentForm({ ...paymentForm, referenceNumber: e.target.value })} 
+                        placeholder="Check #, Transaction ID, etc." 
+                      />
                     </div>
 
                     <div className="space-y-2">
                       <Label htmlFor="notes">Notes (Optional)</Label>
-                      <Textarea id="notes" value={paymentForm.notes} onChange={(e) => setPaymentForm({ ...paymentForm, notes: e.target.value })} placeholder="Any additional information..." rows={3} />
+                      <Textarea 
+                        id="notes" 
+                        value={paymentForm.notes} 
+                        onChange={(e) => setPaymentForm({ ...paymentForm, notes: e.target.value })} 
+                        placeholder="Any additional information..." 
+                        rows={3} 
+                      />
                     </div>
 
-                    <Button onClick={handleAddPayment} className="w-full bg-blue-600 hover:bg-blue-700">Record Payment</Button>
+                    <Button onClick={handleAddPayment} className="w-full bg-blue-600 hover:bg-blue-700">
+                      Record Payment
+                    </Button>
                   </div>
                 </DialogContent>
               </Dialog>
@@ -480,7 +550,9 @@ export function ManagerSalary({ bookings, onAddExpense, allExpenses, onExpensesU
                           <p className="font-medium text-sm">${payment.amount.toLocaleString()}</p>
                           <Badge variant={payment.type === "maintenance" ? "default" : "secondary"}>{payment.type}</Badge>
                         </div>
-                        <p className="text-xs text-slate-600 dark:text-slate-400">{format(new Date(payment.date), "MMM d, yyyy")} • {payment.paymentMethod}</p>
+                        <p className="text-xs text-slate-600 dark:text-slate-400">
+                          {format(new Date(payment.date), "MMM d, yyyy")} • {payment.paymentMethod}
+                        </p>
                         {payment.notes && <p className="text-xs text-slate-500 mt-1">{payment.notes}</p>}
                       </div>
                     </div>
