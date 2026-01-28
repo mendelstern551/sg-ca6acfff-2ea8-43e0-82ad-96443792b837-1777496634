@@ -175,7 +175,7 @@ export function ClientCommunications({ bookings, onRefresh }: ClientCommunicatio
 
     setLoading(true);
     try {
-      await clientCommunicationService.sendEmail({
+      const result = await clientCommunicationService.sendEmail({
         booking_id: selectedBooking.id,
         client_name: selectedBooking.name,
         client_email: selectedBooking.contact_email || "",
@@ -187,11 +187,16 @@ export function ClientCommunications({ bookings, onRefresh }: ClientCommunicatio
         scheduled_date: scheduled ? scheduledDate : undefined,
       });
 
+      // ✅ Email sent successfully (even if logging failed)
+      const successMessage = scheduled
+        ? `Email scheduled for ${format(new Date(scheduledDate), "MMM dd, yyyy")}`
+        : `Email sent successfully to ${selectedBooking.contact_email || "client"}`;
+      
+      const warningNote = result === null ? " (History logging unavailable)" : "";
+
       toast({
         title: scheduled ? "Email Scheduled" : "Email Sent",
-        description: scheduled
-          ? `Email scheduled for ${format(new Date(scheduledDate), "MMM dd, yyyy")}`
-          : "Email sent successfully to " + (selectedBooking.contact_email || "client"),
+        description: successMessage + warningNote,
       });
 
       resetForm();

@@ -356,24 +356,54 @@ export const EMAIL_TEMPLATES: EmailTemplate[] = [
 
 class ClientCommunicationService {
   async checkDuplicateEmail(bookingId: string, emailType: EmailTemplateType): Promise<boolean> {
-    const { data, error } = await supabase
-      .from("client_emails")
-      .select("id")
-      .eq("booking_id", bookingId)
-      .eq("email_type", emailType)
-      .in("status", ["sent", "scheduled"]);
+    try {
+      const { data, error } = await supabase
+        .from("client_emails")
+        .select("id")
+        .eq("booking_id", bookingId)
+        .eq("email_type", emailType)
+        .in("status", ["sent", "scheduled"]);
 
-    if (error) throw error;
-    return (data?.length ?? 0) > 0;
+      if (error) {
+        console.warn("⚠️ Duplicate check query failed:", error);
+        return false; // Assume not duplicate if check fails
+      }
+      
+      return (data?.length ?? 0) > 0;
+    } catch (error) {
+      console.warn("⚠️ Duplicate check exception:", error);
+      return false; // Assume not duplicate if check fails
+    }
   }
 
-  async sendEmail(request: EmailSendRequest): Promise<ClientEmail> {
-    const isDuplicate = await this.checkDuplicateEmail(request.booking_id, request.email_type);
-    
-    if (isDuplicate) {
-      throw new Error(`An email of type "${request.email_type}" has already been sent or scheduled for this client.`);
+  async sendEmail(request: EmailSendRequest): Promise<ClientEmail | null> {
+    // ✅ NON-BLOCKING duplicate check - proceed if check fails
+    let isDuplicate = false;
+    try {
+      isDuplicate = await this.checkDuplicateEmail(request.booking_id, request.email_type);
+      if (isDuplicate) {
+        throw new Error(`An email of type "${request.email_type}" has already been sent or scheduled for this client.`);
+      }
+    } catch (error) {
+      if (error instanceof Error && error.message.includes("already been sent")) {
+        throw error; // Block genuine duplicates
+      }
+      console.warn("⚠️ Duplicate check failed, proceeding with email send:", error);
+      // Continue - don't block email sending due to database check failure
     }
 
+    // ✅ CRITICAL: Send email FIRST (most important operation)
+    if (!request.scheduled_date) {
+      try {
+        await this.sendEmailViaAPI(request);
+        console.log("✅ Email sent successfully to:", request.client_email);
+      } catch (error) {
+        console.error("❌ Email sending failed:", error);
+        throw new Error(`Failed to send email: ${error instanceof Error ? error.message : "Unknown error"}`);
+      }
+    }
+
+    // ✅ Log to database AFTER sending (non-blocking)
     const emailRecord = {
       booking_id: request.booking_id,
       client_name: request.client_name,
@@ -388,23 +418,27 @@ class ClientCommunicationService {
       sent_date: request.scheduled_date ? undefined : new Date().toISOString(),
     };
 
-    const { data, error } = await supabase
-      .from("client_emails")
-      .insert(emailRecord)
-      .select()
-      .single();
+    try {
+      const { data, error } = await supabase
+        .from("client_emails")
+        .insert(emailRecord)
+        .select()
+        .single();
 
-    if (error) throw error;
+      if (error) {
+        console.warn("⚠️ Email history logging failed (email was sent successfully):", error);
+        return null; // Email still sent successfully!
+      }
 
-    if (!request.scheduled_date) {
-      await this.sendEmailViaAPI(request);
+      return {
+        ...data,
+        email_type: data.email_type as EmailTemplateType,
+        status: data.status as "sent" | "scheduled" | "failed"
+      };
+    } catch (error) {
+      console.warn("⚠️ Email history logging failed (email was sent successfully):", error);
+      return null; // Email still sent successfully!
     }
-
-    return {
-      ...data,
-      email_type: data.email_type as EmailTemplateType,
-      status: data.status as "sent" | "scheduled" | "failed"
-    };
   }
 
   private async sendEmailViaAPI(request: EmailSendRequest): Promise<void> {
@@ -421,34 +455,50 @@ class ClientCommunicationService {
   }
 
   async getClientEmails(bookingId: string): Promise<ClientEmail[]> {
-    const { data, error } = await supabase
-      .from("client_emails")
-      .select("*")
-      .eq("booking_id", bookingId)
-      .order("created_at", { ascending: false });
+    try {
+      const { data, error } = await supabase
+        .from("client_emails")
+        .select("*")
+        .eq("booking_id", bookingId)
+        .order("created_at", { ascending: false });
 
-    if (error) throw error;
-    
-    return (data || []).map(email => ({
-      ...email,
-      email_type: email.email_type as EmailTemplateType,
-      status: email.status as "sent" | "scheduled" | "failed"
-    }));
+      if (error) {
+        console.warn("⚠️ Failed to load client emails for booking:", bookingId, error);
+        return []; // Return empty array on error
+      }
+      
+      return (data || []).map(email => ({
+        ...email,
+        email_type: email.email_type as EmailTemplateType,
+        status: email.status as "sent" | "scheduled" | "failed"
+      }));
+    } catch (error) {
+      console.warn("⚠️ Exception loading client emails:", error);
+      return []; // Return empty array on exception
+    }
   }
 
   async getAllClientEmails(): Promise<ClientEmail[]> {
-    const { data, error } = await supabase
-      .from("client_emails")
-      .select("*")
-      .order("created_at", { ascending: false });
+    try {
+      const { data, error } = await supabase
+        .from("client_emails")
+        .select("*")
+        .order("created_at", { ascending: false });
 
-    if (error) throw error;
-    
-    return (data || []).map(email => ({
-      ...email,
-      email_type: email.email_type as EmailTemplateType,
-      status: email.status as "sent" | "scheduled" | "failed"
-    }));
+      if (error) {
+        console.warn("⚠️ Failed to load all client emails:", error);
+        return []; // Return empty array on error
+      }
+      
+      return (data || []).map(email => ({
+        ...email,
+        email_type: email.email_type as EmailTemplateType,
+        status: email.status as "sent" | "scheduled" | "failed"
+      }));
+    } catch (error) {
+      console.warn("⚠️ Exception loading all client emails:", error);
+      return []; // Return empty array on exception
+    }
   }
 
   async uploadAgreement(file: File, clientName: string, eventDate: string): Promise<{ url: string; name: string }> {

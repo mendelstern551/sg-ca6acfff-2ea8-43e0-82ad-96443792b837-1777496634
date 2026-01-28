@@ -656,13 +656,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "issues_room_id_fkey"
-            columns: ["room_id"]
-            isOneToOne: false
-            referencedRelation: "rooms"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "issues_task_log_id_fkey"
             columns: ["task_log_id"]
             isOneToOne: false
@@ -1006,13 +999,6 @@ export type Database = {
             referencedRelation: "employees"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "room_cleaning_sessions_room_id_fkey"
-            columns: ["room_id"]
-            isOneToOne: false
-            referencedRelation: "rooms"
-            referencedColumns: ["id"]
-          },
         ]
       }
       room_tasks: {
@@ -1034,65 +1020,7 @@ export type Database = {
           room_id?: string | null
           task_name?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "room_tasks_room_id_fkey"
-            columns: ["room_id"]
-            isOneToOne: false
-            referencedRelation: "rooms"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      rooms: {
-        Row: {
-          bed_count: number | null
-          building_id: string | null
-          bunk_bed_count: number | null
-          capacity: number | null
-          created_at: string | null
-          floor: number | null
-          id: string
-          name: string
-          room_number: string | null
-          status: string | null
-          updated_at: string | null
-        }
-        Insert: {
-          bed_count?: number | null
-          building_id?: string | null
-          bunk_bed_count?: number | null
-          capacity?: number | null
-          created_at?: string | null
-          floor?: number | null
-          id?: string
-          name: string
-          room_number?: string | null
-          status?: string | null
-          updated_at?: string | null
-        }
-        Update: {
-          bed_count?: number | null
-          building_id?: string | null
-          bunk_bed_count?: number | null
-          capacity?: number | null
-          created_at?: string | null
-          floor?: number | null
-          id?: string
-          name?: string
-          room_number?: string | null
-          status?: string | null
-          updated_at?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "rooms_building_id_fkey"
-            columns: ["building_id"]
-            isOneToOne: false
-            referencedRelation: "buildings"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       task_completions: {
         Row: {
@@ -1202,13 +1130,6 @@ export type Database = {
             columns: ["employee_id"]
             isOneToOne: false
             referencedRelation: "employees"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "task_logs_room_id_fkey"
-            columns: ["room_id"]
-            isOneToOne: false
-            referencedRelation: "rooms"
             referencedColumns: ["id"]
           },
           {
