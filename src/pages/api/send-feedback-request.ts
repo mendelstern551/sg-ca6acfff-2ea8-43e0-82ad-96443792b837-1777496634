@@ -29,23 +29,14 @@ export default async function handler(
     const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Get SMTP credentials with fallbacks
-    const smtpUser = process.env.SMTP_USER || process.env.SMTP_AUTH_USER;
-    const smtpPass = process.env.SMTP_PASS || process.env.SMTP_AUTH_PASS;
-
-    if (!smtpUser || !smtpPass) {
-      console.error("Missing SMTP credentials");
-      return res.status(500).json({ error: "Server configuration error: Missing email credentials" });
-    }
-
     // Create email transporter
     const transporter = nodemailer.createTransport({
       host: process.env.SMTP_HOST || "smtp.gmail.com",
       port: parseInt(process.env.SMTP_PORT || "587"),
       secure: false,
       auth: {
-        user: smtpUser,
-        pass: smtpPass,
+        user: process.env.SMTP_USER,
+        pass: process.env.SMTP_PASS,
       },
     });
 

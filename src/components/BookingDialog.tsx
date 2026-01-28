@@ -24,7 +24,7 @@ type BookingInsert = Omit<Booking, "id" | "created_at" | "updated_at" | "payment
 interface BookingDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSave: (booking: BookingInsert, shouldSendEmail?: boolean) => void;
+  onSave: (booking: BookingInsert) => void;
   booking?: Booking;
   bookings: Booking[];
 }
@@ -210,9 +210,44 @@ export function BookingDialog({ open, onOpenChange, onSave, booking: editingBook
       recurring: false
     };
     
-    // Pass the email flag to parent via the bookingData
-    onSave(bookingData, sendConfirmationEmail && confirmed && !!contactEmail);
+    onSave(bookingData);
     onOpenChange(false);
+
+    // Send confirmation email if checkbox was checked and booking is confirmed
+    if (confirmed && sendConfirmationEmail && contactEmail) {
+      try {
+        const fullBookingData: Booking = {
+          ...bookingData,
+          id: editingBooking?.id || "temp-id",
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+          payments: []
+        };
+        
+        const result = await emailService.sendBookingConfirmation(fullBookingData);
+        
+        if (result.success) {
+          toast({
+            title: "Confirmation Email Sent! ✓",
+            description: `Booking confirmation sent to ${contactEmail}`,
+          });
+        } else {
+          toast({
+            title: "Email Not Sent",
+            description: result.error || "Failed to send confirmation email",
+            variant: "destructive"
+          });
+        }
+      } catch (error) {
+        console.error("Error sending confirmation email:", error);
+      }
+    } else if (confirmed && sendConfirmationEmail && !contactEmail) {
+      toast({
+        title: "No Email Address",
+        description: "Please provide a client email address to send confirmation",
+        variant: "destructive"
+      });
+    }
   };
   
   const handleBookingTypeChange = (value: string) => {

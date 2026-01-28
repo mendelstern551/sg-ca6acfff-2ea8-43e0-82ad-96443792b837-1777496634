@@ -371,37 +371,52 @@ export type Database = {
       }
       feedback_submissions: {
         Row: {
+          areas_of_improvement: string[] | null
           bonus_credit_amount: number | null
           bonus_credit_issued: boolean | null
           booking_id: string
-          comments: string | null
+          client_email: string
+          client_name: string
           created_at: string | null
+          feedback_text: string | null
           id: string
-          rating: number
+          metadata: Json | null
+          rating: number | null
           submission_date: string | null
           updated_at: string | null
+          would_recommend: boolean | null
         }
         Insert: {
+          areas_of_improvement?: string[] | null
           bonus_credit_amount?: number | null
           bonus_credit_issued?: boolean | null
           booking_id: string
-          comments?: string | null
+          client_email: string
+          client_name: string
           created_at?: string | null
+          feedback_text?: string | null
           id?: string
-          rating: number
+          metadata?: Json | null
+          rating?: number | null
           submission_date?: string | null
           updated_at?: string | null
+          would_recommend?: boolean | null
         }
         Update: {
+          areas_of_improvement?: string[] | null
           bonus_credit_amount?: number | null
           bonus_credit_issued?: boolean | null
           booking_id?: string
-          comments?: string | null
+          client_email?: string
+          client_name?: string
           created_at?: string | null
+          feedback_text?: string | null
           id?: string
-          rating?: number
+          metadata?: Json | null
+          rating?: number | null
           submission_date?: string | null
           updated_at?: string | null
+          would_recommend?: boolean | null
         }
         Relationships: [
           {
@@ -412,30 +427,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
-      }
-      id: {
-        Row: {
-          bonus_credit_amount: number | null
-          created_at: string
-          credit_issued: number | null
-          id: string
-          rating: number
-        }
-        Insert: {
-          bonus_credit_amount?: number | null
-          created_at: string
-          credit_issued?: number | null
-          id?: string
-          rating: number
-        }
-        Update: {
-          bonus_credit_amount?: number | null
-          created_at?: string
-          credit_issued?: number | null
-          id?: string
-          rating?: number
-        }
-        Relationships: []
       }
       invoices: {
         Row: {

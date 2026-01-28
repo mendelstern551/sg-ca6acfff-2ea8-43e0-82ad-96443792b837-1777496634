@@ -29,11 +29,10 @@ export default async function handler(
     return res.status(400).json({ error: "Missing required fields" });
   }
 
-  // Get SMTP credentials with fallbacks
-  const SMTP_HOST = process.env.SMTP_HOST || "smtp.gmail.com";
-  const SMTP_PORT = process.env.SMTP_PORT || "587";
-  const SMTP_USER = process.env.SMTP_USER || process.env.SMTP_AUTH_USER;
-  const SMTP_PASS = process.env.SMTP_PASS || process.env.SMTP_AUTH_PASS;
+  const SMTP_HOST = process.env.SMTP_HOST;
+  const SMTP_PORT = process.env.SMTP_PORT;
+  const SMTP_USER = process.env.SMTP_AUTH_USER;
+  const SMTP_PASS = process.env.SMTP_AUTH_PASS;
   const FROM_EMAIL = process.env.BOOKING_FROM_EMAIL || "booking@troutlakeresort.ca";
 
   // Log configuration (without password) for debugging

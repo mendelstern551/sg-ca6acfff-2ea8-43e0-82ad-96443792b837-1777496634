@@ -97,8 +97,8 @@ export const invoiceService = {
       base_price: bookingData.basePrice,
       deposit_amount: bookingData.depositAmount,
       balance_due: bookingData.balanceDue,
-      amount: bookingData.totalAmount,
       total_amount: bookingData.totalAmount,
+      amount: bookingData.totalAmount,
       status: "unpaid",
       notes: bookingData.notes
     };
