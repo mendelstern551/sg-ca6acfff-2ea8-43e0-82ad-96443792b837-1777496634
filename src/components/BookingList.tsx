@@ -1,3 +1,4 @@
+import React from "react";
 import { useState } from "react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
@@ -99,7 +100,7 @@ export function BookingList({ bookings, onEdit, onDelete, onUpdateBooking, expen
               .sort((a, b) => new Date(b.start_date).getTime() - new Date(a.start_date).getTime())
               .map((booking) => (
                 <>
-                  <TableRow key={booking.id} className="hover:bg-stone-50 dark:hover:bg-stone-800/50">
+                  <TableRow className="hover:bg-stone-50 dark:hover:bg-stone-800/50">
                     <TableCell>
                       <Button variant="ghost" size="icon" onClick={() => toggleExpand(booking.id)}>
                         {expandedBookingId === booking.id ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
