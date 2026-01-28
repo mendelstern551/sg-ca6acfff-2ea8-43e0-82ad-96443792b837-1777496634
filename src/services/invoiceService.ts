@@ -300,17 +300,24 @@ export const invoiceService = {
 
   async syncAllInvoicesWithPayments(): Promise<void> {
     try {
-      // Get all bookings with their payments
+      // Get all bookings with their payments using a join
       const { data: bookings, error } = await supabase
         .from("bookings")
-        .select("id, payments");
+        .select(`
+          id,
+          payments (
+            amount
+          )
+        `);
 
       if (error) throw error;
       if (!bookings) return;
 
       // Sync each booking's invoice with its payments
       for (const booking of bookings) {
-        await this.syncInvoiceWithPayments(booking.id, booking.payments || []);
+        // Cast to any to handle the join relationship property
+        const payments = (booking as any).payments || [];
+        await this.syncInvoiceWithPayments(booking.id, payments);
       }
     } catch (error) {
       console.error("Error syncing all invoices:", error);
