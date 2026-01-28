@@ -199,36 +199,10 @@ export const EMAIL_TEMPLATES: EmailTemplate[] = [
         Welcome to Trout Lake Resort! We've prepared a comprehensive information page to help make your stay as comfortable and enjoyable as possible.
       </div>
 
-      <div class="feature-grid">
-        <div class="feature">
-          <div class="feature-icon">
-            <div class="feature-icon-inner">🌤️</div>
-          </div>
-          <div class="feature-content">
-            <div class="feature-title">Local Weather Forecast</div>
-            <div class="feature-description">Stay updated with real-time weather conditions and 7-day forecasts for the Sainte-Agathe-des-Monts area. Plan your outdoor activities with confidence!</div>
-          </div>
-        </div>
-        
-        <div class="feature">
-          <div class="feature-icon">
-            <div class="feature-icon-inner">🕯️</div>
-          </div>
-          <div class="feature-content">
-            <div class="feature-title">Zmanim for the Area</div>
-            <div class="feature-description">Access daily Zmanim (Jewish prayer times) specific to our location, helping you maintain your schedule during your stay.</div>
-          </div>
-        </div>
-        
-        <div class="feature">
-          <div class="feature-icon">
-            <div class="feature-icon-inner">🗺️</div>
-          </div>
-          <div class="feature-content">
-            <div class="feature-title">Nearby Attractions & Activities</div>
-            <div class="feature-description">Discover local restaurants, hiking trails, shopping centers, and entertainment options. Everything you need to explore the beautiful Laurentians!</div>
-          </div>
-        </div>
+      <div style="text-align: center; margin: 40px 0;">
+        <p style="color: #1f2937; font-size: 18px; line-height: 1.8; margin: 0 0 20px 0;">
+          Our website contains everything you need for an amazing stay in the beautiful Laurentians. From local weather and helpful resources to nearby attractions and activities, it's your complete guide to the area.
+        </p>
       </div>
 
       <div class="cta-section">
