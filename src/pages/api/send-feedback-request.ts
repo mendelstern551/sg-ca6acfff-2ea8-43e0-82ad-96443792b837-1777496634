@@ -74,7 +74,7 @@ export default async function handler(
               </p>
 
               <p style="margin: 0 0 20px; color: #2d3748; font-size: 16px; line-height: 1.6;">
-                Thank you for choosing <strong>Trout Lake Resort</strong> in Sainte-Agathe for your recent <strong>${eventName}</strong> stay.
+                Thank you for choosing <strong>Trout Lake Resort</strong> in Sainte-Agathe for your recent stay.
               </p>
 
               <p style="margin: 0 0 20px; color: #2d3748; font-size: 16px; line-height: 1.6;">
