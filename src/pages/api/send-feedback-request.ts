@@ -25,10 +25,6 @@ export default async function handler(
       return res.status(400).json({ error: "Missing required fields" });
     }
 
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-    const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-    const supabase = createClient(supabaseUrl, supabaseKey);
-
     // Create email transporter
     const transporter = nodemailer.createTransport({
       host: process.env.SMTP_HOST || "smtp.gmail.com",
@@ -199,15 +195,29 @@ Your Perfect Getaway Destination
       html: htmlContent,
     });
 
-    // Log email in tracking system
-    await supabase.from("email_logs").insert({
-      booking_id: bookingId,
-      email_type: "feedback_request",
-      recipient_email: contactEmail,
-      subject: "We'd Love Your Feedback on Your Recent Stay at Trout Lake Resort",
-      sent_at: new Date().toISOString(),
-      status: "sent",
-    });
+    // ✅ LOG EMAIL TO DATABASE
+    try {
+      const supabaseForLogging = createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.SUPABASE_SERVICE_ROLE_KEY!
+      );
+
+      const { error: logError } = await supabaseForLogging.from("email_logs").insert({
+        booking_id: bookingId,
+        email_type: "feedback_request",
+        recipient_email: contactEmail,
+        recipient_name: contactName || null,
+        subject: "We'd Love Your Feedback on Your Recent Stay at Trout Lake Resort 🌟",
+        sent_at: new Date().toISOString(),
+        status: "sent",
+      });
+
+      if (logError) {
+        console.error("Error logging email to database:", logError);
+      }
+    } catch (logErr) {
+      console.error("Failed to log email:", logErr);
+    }
 
     return res.status(200).json({
       success: true,
@@ -215,6 +225,28 @@ Your Perfect Getaway Destination
     });
   } catch (error: any) {
     console.error("Error sending feedback request:", error);
+
+    // ✅ LOG FAILED EMAIL
+    try {
+      const supabaseForLogging = createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.SUPABASE_SERVICE_ROLE_KEY!
+      );
+
+      await supabaseForLogging.from("email_logs").insert({
+        booking_id: req.body.bookingId || null,
+        email_type: "feedback_request",
+        recipient_email: req.body.contactEmail || null,
+        recipient_name: req.body.contactName || null,
+        subject: "We'd Love Your Feedback on Your Recent Stay at Trout Lake Resort 🌟",
+        sent_at: new Date().toISOString(),
+        status: "failed",
+        error_message: error?.message || "Unknown error",
+      });
+    } catch (logErr) {
+      console.error("Failed to log failed email:", logErr);
+    }
+
     return res.status(500).json({
       error: "Failed to send feedback request email",
       details: error?.message,
