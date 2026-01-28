@@ -28,6 +28,15 @@ export default async function handler(
       return res.status(500).json({ error: "Email service not configured" });
     }
 
+    // Prepare attachments
+    const attachmentsList = [];
+    if (attachment_url && attachment_name) {
+      attachmentsList.push({
+        filename: attachment_name,
+        path: attachment_url,
+      });
+    }
+
     // Create nodemailer transporter with Gmail SMTP
     const transporter = nodemailer.createTransport({
       host: process.env.SMTP_HOST,
@@ -39,23 +48,14 @@ export default async function handler(
       },
     });
 
-    // Prepare email configuration
-    const mailOptions: any = {
-      from: `"Trout Lake Resort" <${process.env.SMTP_USER}>`,
+    // Send email using Nodemailer
+    const mailOptions = {
+      from: `"Trout Lake Resort" <info@troutlakeresort.ca>`,
       to: client_email,
       subject: subject,
       html: body,
+      attachments: attachmentsList,
     };
-
-    // Add attachment if provided
-    if (attachment_url && attachment_name) {
-      mailOptions.attachments = [
-        {
-          filename: attachment_name,
-          path: attachment_url,
-        },
-      ];
-    }
 
     // Send email via SMTP
     const info = await transporter.sendMail(mailOptions);
