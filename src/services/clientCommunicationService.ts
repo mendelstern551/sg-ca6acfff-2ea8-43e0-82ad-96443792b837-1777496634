@@ -142,7 +142,12 @@ class ClientCommunicationService {
       await this.sendEmailViaAPI(request);
     }
 
-    return data;
+    // Cast the string email_type from DB to EmailTemplateType enum
+    return {
+      ...data,
+      email_type: data.email_type as EmailTemplateType,
+      status: data.status as "sent" | "scheduled" | "failed"
+    };
   }
 
   private async sendEmailViaAPI(request: EmailSendRequest): Promise<void> {
@@ -166,7 +171,12 @@ class ClientCommunicationService {
       .order("created_at", { ascending: false });
 
     if (error) throw error;
-    return data || [];
+    
+    return (data || []).map(email => ({
+      ...email,
+      email_type: email.email_type as EmailTemplateType,
+      status: email.status as "sent" | "scheduled" | "failed"
+    }));
   }
 
   async getAllClientEmails(): Promise<ClientEmail[]> {
@@ -176,7 +186,12 @@ class ClientCommunicationService {
       .order("created_at", { ascending: false });
 
     if (error) throw error;
-    return data || [];
+    
+    return (data || []).map(email => ({
+      ...email,
+      email_type: email.email_type as EmailTemplateType,
+      status: email.status as "sent" | "scheduled" | "failed"
+    }));
   }
 
   async uploadAgreement(file: File, clientName: string, eventDate: string): Promise<{ url: string; name: string }> {

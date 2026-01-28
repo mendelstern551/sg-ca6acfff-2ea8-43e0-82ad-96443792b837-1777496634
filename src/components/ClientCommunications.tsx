@@ -80,7 +80,7 @@ export function ClientCommunications({ bookings, onRefresh }: ClientCommunicatio
   const applyTemplate = (template: EmailTemplate, booking: Booking) => {
     const variables = {
       client_name: booking.name,
-      event_date: format(new Date(booking.startDate), "MMM dd, yyyy"),
+      event_date: format(new Date(booking.start_date), "MMM dd, yyyy"),
       file_name: attachmentName || "rental_agreement.pdf",
     };
 
@@ -115,7 +115,7 @@ export function ClientCommunications({ bookings, onRefresh }: ClientCommunicatio
 
     setLoading(true);
     try {
-      const eventDate = format(new Date(selectedBooking.startDate), "yyyy-MM-dd");
+      const eventDate = format(new Date(selectedBooking.start_date), "yyyy-MM-dd");
       const { url, name } = await clientCommunicationService.uploadAgreement(
         file,
         selectedBooking.name,
@@ -178,7 +178,7 @@ export function ClientCommunications({ bookings, onRefresh }: ClientCommunicatio
       await clientCommunicationService.sendEmail({
         booking_id: selectedBooking.id,
         client_name: selectedBooking.name,
-        client_email: selectedBooking.email,
+        client_email: selectedBooking.contact_email || "",
         email_type: (selectedTemplate?.type || "custom") as EmailTemplateType,
         subject: emailSubject,
         body: emailBody,
@@ -191,7 +191,7 @@ export function ClientCommunications({ bookings, onRefresh }: ClientCommunicatio
         title: scheduled ? "Email Scheduled" : "Email Sent",
         description: scheduled
           ? `Email scheduled for ${format(new Date(scheduledDate), "MMM dd, yyyy")}`
-          : "Email sent successfully to " + selectedBooking.email,
+          : "Email sent successfully to " + (selectedBooking.contact_email || "client"),
       });
 
       resetForm();
@@ -270,7 +270,7 @@ export function ClientCommunications({ bookings, onRefresh }: ClientCommunicatio
               <SelectContent>
                 {bookings.map((booking) => (
                   <SelectItem key={booking.id} value={booking.id}>
-                    {booking.name} - {format(new Date(booking.startDate), "MMM dd, yyyy")} ({booking.email})
+                    {booking.name} - {format(new Date(booking.start_date), "MMM dd, yyyy")} ({booking.contact_email})
                   </SelectItem>
                 ))}
               </SelectContent>

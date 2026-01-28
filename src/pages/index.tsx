@@ -36,6 +36,7 @@ import { CornerNotifications } from "@/components/CornerNotifications";
 import { FeedbackDashboard } from "@/components/FeedbackDashboard";
 import { TableFilters, SortOrder, DateFilter, StatusFilter } from "@/components/TableFilters";
 import { QuickInsights, createInsight } from "@/components/QuickInsights";
+import { ClientCommunications } from "@/components/ClientCommunications";
 import { getDateRange, isDateInRange, sortByDate, searchInFields, saveFilterPreferences, loadFilterPreferences } from "@/lib/filterUtils";
 import { startOfDay, isAfter, isBefore, parseISO } from "date-fns";
 
@@ -813,7 +814,7 @@ export default function HomePage() {
         />
 
         <Tabs value={activeTab} onValueChange={(value) => { setActiveTab(value); if (value !== "expenses") setFilteredBookingId(undefined); }} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-8 lg:w-[1200px] bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 p-1">
+          <TabsList className="grid w-full grid-cols-9 lg:w-[1400px] bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 p-1">
             <TabsTrigger value="bookings">Bookings</TabsTrigger>
             <TabsTrigger value="calendar">Calendar</TabsTrigger>
             <TabsTrigger value="invoices">Invoices</TabsTrigger>
@@ -821,6 +822,7 @@ export default function HomePage() {
             <TabsTrigger value="expenses">Expenses</TabsTrigger>
             <TabsTrigger value="receipts">Receipts</TabsTrigger>
             <TabsTrigger value="manager">Manager</TabsTrigger>
+            <TabsTrigger value="communications">Communications</TabsTrigger>
             <TabsTrigger value="emails">Email History</TabsTrigger>
             <TabsTrigger value="feedback">Feedback</TabsTrigger>
           </TabsList>
@@ -920,6 +922,13 @@ export default function HomePage() {
             <Card className="bg-white dark:bg-stone-900 border-stone-200 dark:border-stone-800">
               <CardHeader><CardTitle>Manager Compensation</CardTitle></CardHeader>
               <CardContent><ManagerSalary bookings={bookings} onAddExpense={handleAddExpense} allExpenses={expenses} onExpensesUpdate={loadAllData} /></CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="communications">
+            <Card className="bg-white dark:bg-stone-900 border-stone-200 dark:border-stone-800">
+              <CardHeader><CardTitle>Client Communications</CardTitle></CardHeader>
+              <CardContent><ClientCommunications bookings={bookings} onRefresh={loadAllData} /></CardContent>
             </Card>
           </TabsContent>
 
