@@ -1,8 +1,7 @@
 import { useState, useEffect } from "react";
-import { Calendar, Users, DollarSign, FileText, Plus } from "lucide-react";
+import { Calendar, Users, DollarSign, FileText, Plus, Home, Receipt, Briefcase, Mail, MessageSquare, TrendingUp, BarChart3, Wrench } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ThemeSwitch } from "@/components/ThemeSwitch";
 import { BookingDialog } from "@/components/BookingDialog";
 import { BookingList } from "@/components/BookingList";
@@ -35,10 +34,9 @@ import { ReminderModal } from "@/components/ReminderModal";
 import { CornerNotifications } from "@/components/CornerNotifications";
 import { FeedbackDashboard } from "@/components/FeedbackDashboard";
 import { TableFilters, SortOrder, DateFilter, StatusFilter } from "@/components/TableFilters";
-import { QuickInsights, createInsight } from "@/components/QuickInsights";
 import { ClientCommunications } from "@/components/ClientCommunications";
-import { getDateRange, isDateInRange, sortByDate, searchInFields, saveFilterPreferences, loadFilterPreferences } from "@/lib/filterUtils";
-import { startOfDay, isAfter, isBefore, parseISO } from "date-fns";
+import { getDateRange, isDateInRange, sortByDate, searchInFields } from "@/lib/filterUtils";
+import { startOfDay, isAfter, isBefore } from "date-fns";
 
 type InvoiceRow = Database["public"]["Tables"]["invoices"]["Row"];
 type ExpenseInsert = Database["public"]["Tables"]["expenses"]["Insert"];
@@ -69,47 +67,31 @@ export default function HomePage() {
   const [reminderDialogOpen, setReminderDialogOpen] = useState(false);
   const [reminderRefreshKey, setReminderRefreshKey] = useState(0);
   
-  // 🔔 REMINDER SYSTEM STATE
   const [dueReminders, setDueReminders] = useState<Reminder[]>([]);
   const [minimizedReminders, setMinimizedReminders] = useState<Reminder[]>([]);
   const [currentReminder, setCurrentReminder] = useState<Reminder | undefined>();
 
   const { toast } = useToast();
 
-  // 🔍 FILTER STATE - Bookings
   const [bookingSearch, setBookingSearch] = useState("");
   const [bookingSortOrder, setBookingSortOrder] = useState<SortOrder>("latest");
   const [bookingDateFilter, setBookingDateFilter] = useState<DateFilter>("all");
   const [bookingCustomRange, setBookingCustomRange] = useState<{ from?: Date; to?: Date }>({});
   const [bookingStatusFilter, setBookingStatusFilter] = useState<StatusFilter>("all");
 
-  // 🔍 FILTER STATE - Invoices
   const [invoiceSearch, setInvoiceSearch] = useState("");
   const [invoiceSortOrder, setInvoiceSortOrder] = useState<SortOrder>("latest");
   const [invoiceDateFilter, setInvoiceDateFilter] = useState<DateFilter>("all");
   const [invoiceCustomRange, setInvoiceCustomRange] = useState<{ from?: Date; to?: Date }>({});
 
-  // 🔍 FILTER STATE - Expenses
   const [expenseSearch, setExpenseSearch] = useState("");
   const [expenseSortOrder, setExpenseSortOrder] = useState<SortOrder>("latest");
   const [expenseDateFilter, setExpenseDateFilter] = useState<DateFilter>("all");
   const [expenseCustomRange, setExpenseCustomRange] = useState<{ from?: Date; to?: Date }>({});
 
-  // 🔍 FILTER STATE - Emails
-  const [emailSearch, setEmailSearch] = useState("");
-  const [emailSortOrder, setEmailSortOrder] = useState<SortOrder>("latest");
-  const [emailDateFilter, setEmailDateFilter] = useState<DateFilter>("all");
-  const [emailCustomRange, setEmailCustomRange] = useState<{ from?: Date; to?: Date }>({});
-
-  const [bookingsFilter, setBookingsFilter] = useState("");
-  const [invoicesFilter, setInvoicesFilter] = useState("");
-  const [expensesFilter, setExpensesFilter] = useState("");
-  const [emailsFilter, setEmailsFilter] = useState("");
-
   useEffect(() => {
     loadAllData();
     
-    // ✅ DEBOUNCED SUBSCRIPTION: Only listen to critical tables + prevent rapid reloads
     let reloadTimeout: NodeJS.Timeout | null = null;
     
     const debouncedReload = () => {
@@ -164,7 +146,6 @@ export default function HomePage() {
     };
   }, []);
 
-  // 🔔 AUTO-CHECK FOR DUE REMINDERS (Every minute)
   useEffect(() => {
     const checkReminders = async () => {
       try {
@@ -176,7 +157,6 @@ export default function HomePage() {
         setDueReminders(due);
         setMinimizedReminders(minimized);
         
-        // Show center modal for first due reminder
         if (due.length > 0 && !currentReminder) {
           setCurrentReminder(due[0]);
         }
@@ -243,7 +223,6 @@ export default function HomePage() {
     }
   };
 
-  // 🔔 REMINDER HANDLER FUNCTIONS (Inside component)
   const handleCompleteReminder = async () => {
     if (!currentReminder) return;
     
@@ -254,12 +233,9 @@ export default function HomePage() {
         description: "Great job! Task marked as complete.",
       });
       
-      // Clear center modal first
       setCurrentReminder(undefined);
-      // Force refresh of all reminder states
       setReminderRefreshKey(prev => prev + 1);
       
-      // Manually refresh reminders to update corner notifications immediately
       const [due, minimized] = await Promise.all([
         reminderService.getDueReminders(),
         reminderService.getMinimizedReminders()
@@ -286,12 +262,9 @@ export default function HomePage() {
         description: `Reminder will reappear in ${minutes} minutes`,
       });
       
-      // Clear center modal first
       setCurrentReminder(undefined);
-      // Force refresh of all reminder states
       setReminderRefreshKey(prev => prev + 1);
       
-      // Manually refresh reminders to update corner notifications immediately
       const [due, minimized] = await Promise.all([
         reminderService.getDueReminders(),
         reminderService.getMinimizedReminders()
@@ -318,12 +291,9 @@ export default function HomePage() {
         description: `Moved to corner. Will remind again in ${minutes} minutes.`,
       });
       
-      // Clear center modal first
       setCurrentReminder(undefined);
-      // Force refresh of all reminder states
       setReminderRefreshKey(prev => prev + 1);
       
-      // Manually refresh reminders to update corner notifications immediately
       const [due, minimized] = await Promise.all([
         reminderService.getDueReminders(),
         reminderService.getMinimizedReminders()
@@ -350,12 +320,9 @@ export default function HomePage() {
         description: "Reminder has been dismissed",
       });
       
-      // Clear center modal first
       setCurrentReminder(undefined);
-      // Force refresh of all reminder states
       setReminderRefreshKey(prev => prev + 1);
       
-      // Manually refresh reminders to update corner notifications immediately
       const [due, minimized] = await Promise.all([
         reminderService.getDueReminders(),
         reminderService.getMinimizedReminders()
@@ -381,7 +348,6 @@ export default function HomePage() {
       });
       setReminderRefreshKey(prev => prev + 1);
       
-      // Manually refresh reminders
       const [due, minimized] = await Promise.all([
         reminderService.getDueReminders(),
         reminderService.getMinimizedReminders()
@@ -407,7 +373,6 @@ export default function HomePage() {
       });
       setReminderRefreshKey(prev => prev + 1);
       
-      // Manually refresh reminders
       const [due, minimized] = await Promise.all([
         reminderService.getDueReminders(),
         reminderService.getMinimizedReminders()
@@ -437,7 +402,6 @@ export default function HomePage() {
       if (balanceDue <= 0) paymentStatus = "paid";
       else if (amountPaid > 0) paymentStatus = "partial";
       
-      // Remove building_id and recurring to avoid schema cache issues
       const { building_id, recurring, ...cleanBookingData } = bookingData as any;
       
       const dataToSave: Omit<Booking, "id" | "created_at" | "updated_at" | "payments"> & { amount_paid: number, balance_due: number, payment_status: any } = {
@@ -460,7 +424,6 @@ export default function HomePage() {
         toast({ title: "Booking Created", description: "New booking has been created successfully." });
       }
 
-      // Auto-generate or refresh reminders for BOTH pending and confirmed bookings
       try {
         const significantChange = isNewBooking
           || editingBooking?.confirmed !== bookingData.confirmed
@@ -469,9 +432,7 @@ export default function HomePage() {
           || editingBooking?.contact_name !== bookingData.contact_name;
 
         if (significantChange) {
-          // Remove previous auto-generated reminders for this booking to avoid duplicates
           await reminderService.deleteBookingReminders(savedBookingId);
-          // Create fresh reminders based on current status and dates
           await reminderService.generateBookingReminders(savedBookingId, {
             eventName: bookingData.name,
             contactName: bookingData.contact_name,
@@ -484,7 +445,6 @@ export default function HomePage() {
         console.error("Error creating reminders:", reminderError);
       }
 
-      // Invoice generation only for confirmed bookings
       if (bookingData.confirmed) {
         try {
           const existingInvoice = await invoiceService.getInvoiceByBookingId(savedBookingId);
@@ -637,17 +597,14 @@ export default function HomePage() {
   const confirmedCount = bookings.filter(b => b.confirmed).length;
   const pendingCount = bookings.filter(b => !b.confirmed).length;
 
-  // 🔍 APPLY FILTERS - Bookings
   let filteredBookings = bookings;
   
-  // Search
   if (bookingSearch) {
     filteredBookings = filteredBookings.filter(b =>
       searchInFields(b, bookingSearch, ["name", "contact_name", "contact_email", "notes"])
     );
   }
   
-  // Date filter
   const bookingDateRange = getDateRange(bookingDateFilter, bookingCustomRange);
   if (bookingDateRange.from || bookingDateRange.to) {
     filteredBookings = filteredBookings.filter(b =>
@@ -655,7 +612,6 @@ export default function HomePage() {
     );
   }
   
-  // Status filter
   if (bookingStatusFilter !== "all") {
     const now = new Date();
     filteredBookings = filteredBookings.filter(b => {
@@ -670,10 +626,8 @@ export default function HomePage() {
     });
   }
   
-  // Sort
   filteredBookings = sortByDate(filteredBookings, b => b.start_date, bookingSortOrder);
 
-  // 🔍 APPLY FILTERS - Invoices
   let filteredInvoices = invoices;
   
   if (invoiceSearch) {
@@ -693,7 +647,6 @@ export default function HomePage() {
   
   filteredInvoices = sortByDate(filteredInvoices, inv => inv.created_at, invoiceSortOrder);
 
-  // 🔍 APPLY FILTERS - Expenses
   let filteredExpenses = allExpenses;
   
   if (expenseSearch) {
@@ -713,123 +666,135 @@ export default function HomePage() {
   
   filteredExpenses = sortByDate(filteredExpenses, exp => exp.expense_date, expenseSortOrder);
 
-  // 🔍 APPLY FILTERS - Emails
-  // Note: EmailHistory component fetches its own data, but we can pass filter props to it
-  // or wrap it to filter the displayed data if it accepts data as props.
-  // Looking at EmailHistory usage: <EmailHistory bookings={...} />
-  // It seems EmailHistory manages its own fetching. 
-  // For now, I'll pass the filter props to EmailHistory and let it handle or filter if possible.
-  // Actually, better approach: The EmailHistory component likely fetches data internally.
-  // I should check EmailHistory.tsx to see if I can lift the state or pass filters.
-  
-  // Let's modify EmailHistory to accept filter props or handle filtering internally.
-  // For this step, I will just add the filter controls to the Email tab wrapper in the next step.
-
-  // 🎯 QUICK INSIGHTS CALCULATIONS
-  const upcomingBookings = bookings
-    .filter(b => b.confirmed && isAfter(new Date(b.start_date), new Date()))
-    .sort((a, b) => new Date(a.start_date).getTime() - new Date(b.start_date).getTime());
-  
-  const nextEvent = upcomingBookings[0];
-  
-  const latestInvoice = [...invoices].sort((a, b) => 
-    new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-  )[0];
-  
-  const recentActivity = bookings
-    .sort((a, b) => new Date(b.updated_at || b.created_at).getTime() - new Date(a.updated_at || a.created_at).getTime())[0];
+  const navigationItems = [
+    { id: "bookings", label: "Bookings", icon: Calendar },
+    { id: "calendar", label: "Calendar", icon: Home },
+    { id: "invoices", label: "Invoices", icon: FileText },
+    { id: "budget", label: "Budget", icon: BarChart3 },
+    { id: "expenses", label: "Expenses", icon: DollarSign },
+    { id: "receipts", label: "Receipts", icon: Receipt },
+    { id: "manager", label: "Manager", icon: Briefcase },
+    { id: "communications", label: "Communications", icon: Mail },
+    { id: "emails", label: "Email History", icon: MessageSquare },
+    { id: "feedback", label: "Feedback", icon: MessageSquare },
+    { id: "insights", label: "Insights", icon: TrendingUp },
+  ];
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-amber-50 via-rose-50 to-blue-50 dark:from-stone-950 dark:via-slate-900 dark:to-indigo-950 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 dark:from-slate-950 dark:via-slate-900 dark:to-indigo-950 flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-500 mx-auto mb-4"></div>
-          <p className="text-stone-600 dark:text-stone-400">Loading your data...</p>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-slate-600 dark:text-slate-400">Loading your data...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-amber-50 via-rose-50 to-blue-50 dark:from-stone-950 dark:via-slate-900 dark:to-indigo-950">
-      <header className="border-b border-stone-200 dark:border-stone-800 bg-white/95 dark:bg-stone-900/95 backdrop-blur-sm sticky top-0 z-50 shadow-sm">
-        <div className="container mx-auto px-4 py-4"><div className="flex items-center justify-between">
-          <div><h1 className="text-2xl font-bold text-stone-900 dark:text-stone-100">Trout Lake Resort</h1><p className="text-sm text-stone-600 dark:text-stone-400 mt-1">Booking Management System</p></div><ThemeSwitch /></div></div>
-      </header>
-
-      <main className="container mx-auto px-4 py-8">
-        <div className="grid gap-6 md:grid-cols-4 mb-8">
-          <Card className="bg-white dark:bg-stone-900 border-stone-200 dark:border-stone-800 hover:shadow-lg transition-all duration-300">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2"><CardTitle className="text-sm font-medium text-stone-700 dark:text-stone-300">Total Bookings</CardTitle><div className="p-2 bg-amber-100 dark:bg-amber-900/30 rounded-lg"><Calendar className="h-4 w-4 text-amber-600 dark:text-amber-400" /></div></CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-stone-900 dark:text-stone-100">{bookings.length}</div>
-              <p className="text-xs text-stone-600 dark:text-stone-400 mt-1">
-                <span className="text-green-600 dark:text-green-400 font-medium">{confirmedCount} Confirmed</span>
-                {" • "}
-                <span className="text-orange-600 dark:text-orange-400 font-medium">{pendingCount} Pending</span>
-              </p>
-            </CardContent>
-          </Card>
-          <Card className="bg-white dark:bg-stone-900 border-stone-200 dark:border-stone-800 hover:shadow-lg transition-all duration-300">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2"><CardTitle className="text-sm font-medium text-stone-700 dark:text-stone-300">Total Guests</CardTitle><div className="p-2 bg-emerald-100 dark:bg-emerald-900/30 rounded-lg"><Users className="h-4 w-4 text-emerald-600 dark:text-emerald-400" /></div></CardHeader>
-            <CardContent><div className="text-2xl font-bold text-stone-900 dark:text-stone-100">{totalGuests}</div><p className="text-xs text-stone-600 dark:text-stone-400 mt-1">Expected attendees</p></CardContent>
-          </Card>
-          <Card className="bg-white dark:bg-stone-900 border-stone-200 dark:border-stone-800 hover:shadow-lg transition-all duration-300">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2"><CardTitle className="text-sm font-medium text-stone-700 dark:text-stone-300">Total Revenue</CardTitle><div className="p-2 bg-green-100 dark:bg-green-900/30 rounded-lg"><DollarSign className="h-4 w-4 text-green-600 dark:text-green-400" /></div></CardHeader>
-            <CardContent><div className="text-2xl font-bold text-green-600 dark:text-green-400">${totalRevenue.toLocaleString()}</div><p className="text-xs text-stone-600 dark:text-stone-400 mt-1">From all bookings</p></CardContent>
-          </Card>
-          <Card className="bg-white dark:bg-stone-900 border-stone-200 dark:border-stone-800 hover:shadow-lg transition-all duration-300">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2"><CardTitle className="text-sm font-medium text-stone-700 dark:text-stone-300">Net Profit</CardTitle><div className={`p-2 ${netProfit >= 0 ? 'bg-cyan-100 dark:bg-cyan-900/30' : 'bg-red-100 dark:bg-red-900/30'} rounded-lg`}><FileText className={`h-4 w-4 ${netProfit >= 0 ? 'text-cyan-600 dark:text-cyan-400' : 'text-red-600 dark:text-red-400'}`} /></div></CardHeader>
-            <CardContent><div className={`text-2xl font-bold ${netProfit >= 0 ? "text-cyan-600 dark:text-cyan-400" : "text-red-600 dark:text-red-400"}`}>${netProfit.toLocaleString()}</div><p className="text-xs text-stone-600 dark:text-stone-400 mt-1">Revenue - Expenses</p></CardContent>
-          </Card>
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 dark:from-slate-950 dark:via-slate-900 dark:to-indigo-950 flex">
+      {/* SIDEBAR NAVIGATION */}
+      <aside className="w-64 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 fixed h-screen overflow-y-auto">
+        <div className="p-6 border-b border-slate-200 dark:border-slate-800">
+          <h1 className="text-xl font-bold text-slate-900 dark:text-slate-100">Trout Lake Resort</h1>
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">Management System</p>
         </div>
+        
+        <nav className="p-4 space-y-1">
+          {navigationItems.map((item) => {
+            const Icon = item.icon;
+            const isActive = activeTab === item.id;
+            return (
+              <button
+                key={item.id}
+                onClick={() => {
+                  setActiveTab(item.id);
+                  if (item.id !== "expenses") setFilteredBookingId(undefined);
+                }}
+                className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 ${
+                  isActive
+                    ? "bg-blue-600 text-white shadow-md"
+                    : "text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
+                }`}
+              >
+                <Icon className="h-5 w-5" />
+                <span className="font-medium text-sm">{item.label}</span>
+              </button>
+            );
+          })}
+        </nav>
+        
+        <div className="p-4 border-t border-slate-200 dark:border-slate-800 mt-auto">
+          <div className="flex items-center justify-between">
+            <span className="text-sm text-slate-600 dark:text-slate-400">Theme</span>
+            <ThemeSwitch />
+          </div>
+        </div>
+      </aside>
 
-        <QuickInsights
-          insights={[
-            createInsight(
-              <Calendar className="h-5 w-5" />,
-              "Next Event",
-              nextEvent ? format(new Date(nextEvent.start_date), "MMM dd, yyyy") : "No upcoming events",
-              nextEvent ? `${nextEvent.name} • ${nextEvent.contact_name}` : undefined
-            ),
-            createInsight(
-              <FileText className="h-5 w-5" />,
-              "Latest Invoice",
-              latestInvoice ? latestInvoice.invoice_number : "No invoices",
-              latestInvoice ? `${latestInvoice.client_name} • $${Number(latestInvoice.total_amount).toFixed(2)}` : undefined
-            ),
-            createInsight(
-              <DollarSign className="h-5 w-5" />,
-              "Recent Activity",
-              recentActivity ? recentActivity.name : "No activity",
-              recentActivity ? format(new Date(recentActivity.updated_at || recentActivity.created_at), "MMM dd 'at' h:mm a") : undefined
-            ),
-            createInsight(
-              <Users className="h-5 w-5" />,
-              "Total Guests (All Time)",
-              totalGuests.toString(),
-              `Across ${bookings.length} bookings`
-            ),
-          ]}
-        />
+      {/* MAIN CONTENT */}
+      <main className="flex-1 ml-64">
+        <header className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 sticky top-0 z-40 backdrop-blur-sm">
+          <div className="px-8 py-6">
+            <div className="grid gap-6 md:grid-cols-3">
+              <Card className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950 dark:to-indigo-950 border-blue-200 dark:border-blue-800">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium text-blue-900 dark:text-blue-100">Total Bookings</CardTitle>
+                  <div className="p-2 bg-blue-600 rounded-lg">
+                    <Calendar className="h-5 w-5 text-white" />
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-3xl font-bold text-blue-900 dark:text-blue-100">{bookings.length}</div>
+                  <p className="text-xs text-blue-700 dark:text-blue-300 mt-1">
+                    <span className="font-semibold">{confirmedCount} Confirmed</span> • <span>{pendingCount} Pending</span>
+                  </p>
+                </CardContent>
+              </Card>
 
-        <Tabs value={activeTab} onValueChange={(value) => { setActiveTab(value); if (value !== "expenses") setFilteredBookingId(undefined); }} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-9 lg:w-[1400px] bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 p-1">
-            <TabsTrigger value="bookings">Bookings</TabsTrigger>
-            <TabsTrigger value="calendar">Calendar</TabsTrigger>
-            <TabsTrigger value="invoices">Invoices</TabsTrigger>
-            <TabsTrigger value="budget">Budget</TabsTrigger>
-            <TabsTrigger value="expenses">Expenses</TabsTrigger>
-            <TabsTrigger value="receipts">Receipts</TabsTrigger>
-            <TabsTrigger value="manager">Manager</TabsTrigger>
-            <TabsTrigger value="communications">Communications</TabsTrigger>
-            <TabsTrigger value="emails">Email History</TabsTrigger>
-            <TabsTrigger value="feedback">Feedback</TabsTrigger>
-          </TabsList>
+              <Card className="bg-gradient-to-br from-emerald-50 to-teal-50 dark:from-emerald-950 dark:to-teal-950 border-emerald-200 dark:border-emerald-800">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium text-emerald-900 dark:text-emerald-100">Total Revenue</CardTitle>
+                  <div className="p-2 bg-emerald-600 rounded-lg">
+                    <DollarSign className="h-5 w-5 text-white" />
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-3xl font-bold text-emerald-900 dark:text-emerald-100">${totalRevenue.toLocaleString()}</div>
+                  <p className="text-xs text-emerald-700 dark:text-emerald-300 mt-1">From all bookings</p>
+                </CardContent>
+              </Card>
 
-          <TabsContent value="bookings" className="space-y-4">
-            <Card className="bg-white dark:bg-stone-900 border-stone-200 dark:border-stone-800">
-              <CardHeader><div className="flex items-center justify-between"><div><CardTitle className="text-stone-900 dark:text-stone-100">All Bookings</CardTitle><CardDescription className="text-stone-600 dark:text-stone-400">Manage your Yom Tov, Shabaton, and Night Event bookings</CardDescription></div><Button className="bg-orange-600 hover:bg-orange-700 text-white shadow-md hover:shadow-lg transition-all" onClick={() => { setEditingBooking(undefined); setBookingDialogOpen(true); }}><Plus className="h-4 w-4 mr-2" />New Booking</Button></div></CardHeader>
+              <Card className={`bg-gradient-to-br ${netProfit >= 0 ? 'from-cyan-50 to-blue-50 dark:from-cyan-950 dark:to-blue-950 border-cyan-200 dark:border-cyan-800' : 'from-red-50 to-rose-50 dark:from-red-950 dark:to-rose-950 border-red-200 dark:border-red-800'}`}>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className={`text-sm font-medium ${netProfit >= 0 ? 'text-cyan-900 dark:text-cyan-100' : 'text-red-900 dark:text-red-100'}`}>Net Profit</CardTitle>
+                  <div className={`p-2 ${netProfit >= 0 ? 'bg-cyan-600' : 'bg-red-600'} rounded-lg`}>
+                    <TrendingUp className="h-5 w-5 text-white" />
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className={`text-3xl font-bold ${netProfit >= 0 ? 'text-cyan-900 dark:text-cyan-100' : 'text-red-900 dark:text-red-100'}`}>${netProfit.toLocaleString()}</div>
+                  <p className={`text-xs ${netProfit >= 0 ? 'text-cyan-700 dark:text-cyan-300' : 'text-red-700 dark:text-red-300'} mt-1`}>Revenue - Expenses</p>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+        </header>
+
+        <div className="p-8">
+          {activeTab === "bookings" && (
+            <Card className="bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800">
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle className="text-slate-900 dark:text-slate-100">All Bookings</CardTitle>
+                    <CardDescription className="text-slate-600 dark:text-slate-400">Manage your Yom Tov, Shabaton, and Night Event bookings</CardDescription>
+                  </div>
+                  <Button className="bg-blue-600 hover:bg-blue-700 text-white" onClick={() => { setEditingBooking(undefined); setBookingDialogOpen(true); }}>
+                    <Plus className="h-4 w-4 mr-2" />New Booking
+                  </Button>
+                </div>
+              </CardHeader>
               <CardContent>
                 <TableFilters
                   searchValue={bookingSearch}
@@ -848,7 +813,7 @@ export default function HomePage() {
                 />
                 
                 {filteredBookings.length === 0 ? (
-                  <div className="text-center py-12 text-stone-500 dark:text-stone-400">
+                  <div className="text-center py-12 text-slate-500 dark:text-slate-400">
                     <Calendar className="h-12 w-12 mx-auto mb-4 opacity-50" />
                     <p className="text-lg font-medium mb-2">No bookings found</p>
                     <p className="text-sm">Try adjusting your search or filters</p>
@@ -868,22 +833,86 @@ export default function HomePage() {
                 )}
               </CardContent>
             </Card>
-          </TabsContent>
+          )}
 
-          <TabsContent value="calendar" className="space-y-4"><BookingCalendar key={`calendar-${refreshKey}-${bookings.length}`} bookings={bookings} onBookingClick={handleEditBooking} onAddBooking={() => { setEditingBooking(undefined); setBookingDialogOpen(true); }} /></TabsContent>
+          {activeTab === "calendar" && (
+            <BookingCalendar key={`calendar-${refreshKey}-${bookings.length}`} bookings={bookings} onBookingClick={handleEditBooking} onAddBooking={() => { setEditingBooking(undefined); setBookingDialogOpen(true); }} />
+          )}
 
-          <TabsContent value="invoices" className="space-y-4">
-            <Card className="bg-white dark:bg-stone-900 border-stone-200 dark:border-stone-800">
-              <CardHeader><div className="flex items-center justify-between"><div><CardTitle className="text-stone-900 dark:text-stone-100 flex items-center gap-2"><FileText className="h-5 w-5 text-blue-600" />Invoice Management</CardTitle><CardDescription className="text-stone-600 dark:text-stone-400">View and manage all invoices for your bookings</CardDescription></div></div></CardHeader>
-              <CardContent>{filteredInvoices.length === 0 ? <div className="text-center py-12"><FileText className="h-16 w-16 mx-auto mb-4 text-blue-300 dark:text-blue-700" /><h3 className="text-lg font-medium text-stone-900 dark:text-stone-100 mb-2">No Invoices Found</h3><p className="text-stone-600 dark:text-stone-400 mb-6 max-w-md mx-auto">Try adjusting your search or filters</p></div> : <div className="space-y-3">{filteredInvoices.map((invoice) => { const booking = bookings.find(b => b.id === invoice.booking_id); return (<div key={invoice.id} className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 hover:border-blue-300 dark:hover:border-blue-600 transition-colors"><div className="flex-1"><div className="flex items-center gap-3 mb-2"><span className="font-mono text-sm font-semibold text-blue-600 dark:text-blue-400">{invoice.invoice_number}</span><Badge variant={invoice.balance_due > 0 ? "destructive" : "default"}>{invoice.balance_due > 0 ? "Outstanding" : "Paid"}</Badge></div><div className="text-sm text-stone-700 dark:text-stone-300"><p className="font-medium">{invoice.client_name}</p><p className="text-xs text-stone-500 dark:text-stone-400 mt-1">{format(new Date(invoice.event_date_start), "MMM d")} - {format(new Date(invoice.event_date_end), "MMM d, yyyy")} • {invoice.number_of_guests} guests</p></div></div><div className="flex items-center gap-4"><div className="text-right"><p className="text-lg font-bold text-stone-900 dark:text-stone-100">${Number(invoice.total_amount).toFixed(2)}</p>{invoice.balance_due > 0 && (<p className="text-xs text-orange-600 dark:text-orange-400">${Number(invoice.balance_due).toFixed(2)} due</p>)}</div><Button onClick={() => { if (booking) { setSelectedInvoiceBooking(booking); setInvoiceDialogOpen(true); } }} variant="outline" size="sm"><FileText className="h-4 w-4 mr-2" />View</Button></div></div>); })}</div>}</CardContent>
+          {activeTab === "invoices" && (
+            <Card className="bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800">
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle className="text-slate-900 dark:text-slate-100 flex items-center gap-2">
+                      <FileText className="h-5 w-5 text-blue-600" />Invoice Management
+                    </CardTitle>
+                    <CardDescription className="text-slate-600 dark:text-slate-400">View and manage all invoices for your bookings</CardDescription>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                {filteredInvoices.length === 0 ? (
+                  <div className="text-center py-12">
+                    <FileText className="h-16 w-16 mx-auto mb-4 text-blue-300 dark:text-blue-700" />
+                    <h3 className="text-lg font-medium text-slate-900 dark:text-slate-100 mb-2">No Invoices Found</h3>
+                    <p className="text-slate-600 dark:text-slate-400 mb-6 max-w-md mx-auto">Try adjusting your search or filters</p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {filteredInvoices.map((invoice) => {
+                      const booking = bookings.find(b => b.id === invoice.booking_id);
+                      return (
+                        <div key={invoice.id} className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 hover:border-blue-300 dark:hover:border-blue-600 transition-colors">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-3 mb-2">
+                              <span className="font-mono text-sm font-semibold text-blue-600 dark:text-blue-400">{invoice.invoice_number}</span>
+                              <Badge variant={invoice.balance_due > 0 ? "destructive" : "default"}>
+                                {invoice.balance_due > 0 ? "Outstanding" : "Paid"}
+                              </Badge>
+                            </div>
+                            <div className="text-sm text-slate-700 dark:text-slate-300">
+                              <p className="font-medium">{invoice.client_name}</p>
+                              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                                {format(new Date(invoice.event_date_start), "MMM d")} - {format(new Date(invoice.event_date_end), "MMM d, yyyy")} • {invoice.number_of_guests} guests
+                              </p>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-4">
+                            <div className="text-right">
+                              <p className="text-lg font-bold text-slate-900 dark:text-slate-100">${Number(invoice.total_amount).toFixed(2)}</p>
+                              {invoice.balance_due > 0 && (
+                                <p className="text-xs text-orange-600 dark:text-orange-400">${Number(invoice.balance_due).toFixed(2)} due</p>
+                              )}
+                            </div>
+                            <Button onClick={() => { if (booking) { setSelectedInvoiceBooking(booking); setInvoiceDialogOpen(true); } }} variant="outline" size="sm">
+                              <FileText className="h-4 w-4 mr-2" />View
+                            </Button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </CardContent>
             </Card>
-          </TabsContent>
+          )}
 
-          <TabsContent value="budget"><BudgetDashboard bookings={bookings} expenses={expenses} /></TabsContent>
+          {activeTab === "budget" && <BudgetDashboard bookings={bookings} expenses={expenses} />}
 
-          <TabsContent value="expenses" className="space-y-4">
-            <Card className="bg-white dark:bg-stone-900 border-stone-200 dark:border-stone-800">
-              <CardHeader><div className="flex items-center justify-between"><div><CardTitle className="text-stone-900 dark:text-stone-100">Expense Tracking</CardTitle><CardDescription className="text-stone-600 dark:text-stone-400">Record expenses with receipts</CardDescription></div><Button className="bg-orange-600 hover:bg-orange-700" onClick={() => { setEditingExpense(undefined); setExpenseDialogOpen(true); }}><Plus className="h-4 w-4 mr-2" />Add Expense</Button></div></CardHeader>
+          {activeTab === "expenses" && (
+            <Card className="bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800">
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle className="text-slate-900 dark:text-slate-100">Expense Tracking</CardTitle>
+                    <CardDescription className="text-slate-600 dark:text-slate-400">Record expenses with receipts</CardDescription>
+                  </div>
+                  <Button className="bg-blue-600 hover:bg-blue-700" onClick={() => { setEditingExpense(undefined); setExpenseDialogOpen(true); }}>
+                    <Plus className="h-4 w-4 mr-2" />Add Expense
+                  </Button>
+                </div>
+              </CardHeader>
               <CardContent>
                 <TableFilters
                   searchValue={expenseSearch}
@@ -901,7 +930,7 @@ export default function HomePage() {
                   <div className="text-center py-12">
                     <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
                     <p className="text-lg font-medium mb-2">No expenses found</p>
-                    <p className="text-sm text-stone-600 dark:text-stone-400">Try adjusting your search or filters</p>
+                    <p className="text-sm text-slate-600 dark:text-slate-400">Try adjusting your search or filters</p>
                   </div>
                 ) : (
                   <ExpenseList 
@@ -914,27 +943,27 @@ export default function HomePage() {
                 )}
               </CardContent>
             </Card>
-          </TabsContent>
+          )}
 
-          <TabsContent value="receipts"><ReceiptLibrary expenses={expenses} bookings={bookings} /></TabsContent>
+          {activeTab === "receipts" && <ReceiptLibrary expenses={expenses} bookings={bookings} />}
 
-          <TabsContent value="manager">
-            <Card className="bg-white dark:bg-stone-900 border-stone-200 dark:border-stone-800">
+          {activeTab === "manager" && (
+            <Card className="bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800">
               <CardHeader><CardTitle>Manager Compensation</CardTitle></CardHeader>
               <CardContent><ManagerSalary bookings={bookings} onAddExpense={handleAddExpense} allExpenses={expenses} onExpensesUpdate={loadAllData} /></CardContent>
             </Card>
-          </TabsContent>
+          )}
 
-          <TabsContent value="communications">
-            <Card className="bg-white dark:bg-stone-900 border-stone-200 dark:border-stone-800">
+          {activeTab === "communications" && (
+            <Card className="bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800">
               <CardHeader><CardTitle>Client Communications</CardTitle></CardHeader>
               <CardContent><ClientCommunications bookings={bookings} onRefresh={loadAllData} /></CardContent>
             </Card>
-          </TabsContent>
+          )}
 
-          <TabsContent value="emails"><EmailHistory bookings={bookings.map(b => ({ id: b.id, name: b.name, contact_name: b.contact_name }))} /></TabsContent>
+          {activeTab === "emails" && <EmailHistory bookings={bookings.map(b => ({ id: b.id, name: b.name, contact_name: b.contact_name }))} />}
 
-          <TabsContent value="feedback">
+          {activeTab === "feedback" && (
             <FeedbackDashboard 
               bookings={bookings} 
               onSendFeedbackRequest={async (booking) => {
@@ -976,8 +1005,107 @@ export default function HomePage() {
                 }
               }}
             />
-          </TabsContent>
-        </Tabs>
+          )}
+
+          {activeTab === "insights" && (
+            <Card className="bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <TrendingUp className="h-5 w-5 text-blue-600" />
+                  Interesting Facts & Insights
+                </CardTitle>
+                <CardDescription>Key statistics and insights about your resort operations</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+                  <Card className="bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-950 dark:to-pink-950 border-purple-200 dark:border-purple-800">
+                    <CardHeader>
+                      <CardTitle className="text-sm font-medium text-purple-900 dark:text-purple-100 flex items-center gap-2">
+                        <Users className="h-4 w-4" />
+                        Total Guests (All Time)
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-4xl font-bold text-purple-900 dark:text-purple-100">{totalGuests}</div>
+                      <p className="text-xs text-purple-700 dark:text-purple-300 mt-2">Across {bookings.length} bookings</p>
+                    </CardContent>
+                  </Card>
+
+                  <Card className="bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-950 dark:to-orange-950 border-amber-200 dark:border-amber-800">
+                    <CardHeader>
+                      <CardTitle className="text-sm font-medium text-amber-900 dark:text-amber-100 flex items-center gap-2">
+                        <Calendar className="h-4 w-4" />
+                        Average Guests per Booking
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-4xl font-bold text-amber-900 dark:text-amber-100">
+                        {bookings.length > 0 ? Math.round(totalGuests / bookings.length) : 0}
+                      </div>
+                      <p className="text-xs text-amber-700 dark:text-amber-300 mt-2">Per event average</p>
+                    </CardContent>
+                  </Card>
+
+                  <Card className="bg-gradient-to-br from-rose-50 to-red-50 dark:from-rose-950 dark:to-red-950 border-rose-200 dark:border-rose-800">
+                    <CardHeader>
+                      <CardTitle className="text-sm font-medium text-rose-900 dark:text-rose-100 flex items-center gap-2">
+                        <DollarSign className="h-4 w-4" />
+                        Average Revenue per Booking
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-4xl font-bold text-rose-900 dark:text-rose-100">
+                        ${bookings.length > 0 ? Math.round(totalRevenue / bookings.length).toLocaleString() : 0}
+                      </div>
+                      <p className="text-xs text-rose-700 dark:text-rose-300 mt-2">Per event average</p>
+                    </CardContent>
+                  </Card>
+
+                  <Card className="bg-gradient-to-br from-teal-50 to-cyan-50 dark:from-teal-950 dark:to-cyan-950 border-teal-200 dark:border-teal-800">
+                    <CardHeader>
+                      <CardTitle className="text-sm font-medium text-teal-900 dark:text-teal-100 flex items-center gap-2">
+                        <FileText className="h-4 w-4" />
+                        Total Invoices
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-4xl font-bold text-teal-900 dark:text-teal-100">{invoices.length}</div>
+                      <p className="text-xs text-teal-700 dark:text-teal-300 mt-2">Generated invoices</p>
+                    </CardContent>
+                  </Card>
+
+                  <Card className="bg-gradient-to-br from-indigo-50 to-blue-50 dark:from-indigo-950 dark:to-blue-950 border-indigo-200 dark:border-indigo-800">
+                    <CardHeader>
+                      <CardTitle className="text-sm font-medium text-indigo-900 dark:text-indigo-100 flex items-center gap-2">
+                        <Receipt className="h-4 w-4" />
+                        Total Expenses Recorded
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-4xl font-bold text-indigo-900 dark:text-indigo-100">{expenses.length}</div>
+                      <p className="text-xs text-indigo-700 dark:text-indigo-300 mt-2">Tracked expenses</p>
+                    </CardContent>
+                  </Card>
+
+                  <Card className="bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-950 dark:to-emerald-950 border-green-200 dark:border-green-800">
+                    <CardHeader>
+                      <CardTitle className="text-sm font-medium text-green-900 dark:text-green-100 flex items-center gap-2">
+                        <TrendingUp className="h-4 w-4" />
+                        Profit Margin
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-4xl font-bold text-green-900 dark:text-green-100">
+                        {totalRevenue > 0 ? Math.round((netProfit / totalRevenue) * 100) : 0}%
+                      </div>
+                      <p className="text-xs text-green-700 dark:text-green-300 mt-2">Overall margin</p>
+                    </CardContent>
+                  </Card>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+        </div>
       </main>
 
       <TaskSidebar onCreateReminder={() => setReminderDialogOpen(true)} refreshTrigger={reminderRefreshKey} />
