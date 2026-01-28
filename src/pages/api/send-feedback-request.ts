@@ -74,7 +74,7 @@ export default async function handler(
               </p>
 
               <p style="margin: 0 0 20px; color: #2d3748; font-size: 16px; line-height: 1.6;">
-                Thank you for choosing <strong style="color: #667eea;">Trout Lake Resort</strong> in Sainte-Agathe for your recent <strong>${eventName}</strong> stay.
+                Thank you for choosing <strong>Trout Lake Resort</strong> in Sainte-Agathe for your recent <strong>${eventName}</strong> stay.
               </p>
 
               <p style="margin: 0 0 20px; color: #2d3748; font-size: 16px; line-height: 1.6;">
@@ -165,7 +165,7 @@ We'd Love Your Feedback on Your Recent Stay at Trout Lake Resort
 
 Hi${contactName ? ` ${contactName}` : ""},
 
-Thank you again for choosing Trout Lake Resort in Sainte-Agathe for your recent ${eventName} stay.
+Thank you again for choosing Trout Lake Resort in Sainte-Agathe for your recent stay.
 We truly hope your experience was comfortable, enjoyable, and memorable.
 
 Your feedback is very important to us — it helps us continue improving and ensures every group enjoys the best stay possible.
