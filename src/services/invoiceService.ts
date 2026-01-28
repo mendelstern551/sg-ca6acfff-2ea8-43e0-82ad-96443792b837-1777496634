@@ -266,5 +266,54 @@ export const invoiceService = {
       console.error("Error fetching payment reminders:", error);
       return [];
     }
+  },
+
+  async syncInvoiceWithPayments(bookingId: string, payments: Array<{ amount: number }>): Promise<void> {
+    try {
+      const validPayments = payments.filter(p => p && p.amount && p.amount > 0);
+      const actualAmountPaid = validPayments.length > 0
+        ? validPayments.reduce((sum, p) => sum + p.amount, 0)
+        : 0;
+
+      const invoice = await this.getInvoiceByBookingId(bookingId);
+      if (!invoice) return;
+
+      const actualBalanceDue = invoice.total_amount - actualAmountPaid;
+
+      await retryWithBackoff(async () => {
+        const { error } = await supabase
+          .from("invoices")
+          .update({
+            deposit_amount: actualAmountPaid,
+            balance_due: actualBalanceDue,
+            amount: invoice.total_amount,
+            updated_at: new Date().toISOString()
+          })
+          .eq("booking_id", bookingId);
+
+        if (error) throw error;
+      });
+    } catch (error) {
+      console.error("Error syncing invoice with payments:", error);
+    }
+  },
+
+  async syncAllInvoicesWithPayments(): Promise<void> {
+    try {
+      // Get all bookings with their payments
+      const { data: bookings, error } = await supabase
+        .from("bookings")
+        .select("id, payments");
+
+      if (error) throw error;
+      if (!bookings) return;
+
+      // Sync each booking's invoice with its payments
+      for (const booking of bookings) {
+        await this.syncInvoiceWithPayments(booking.id, booking.payments || []);
+      }
+    } catch (error) {
+      console.error("Error syncing all invoices:", error);
+    }
   }
 };

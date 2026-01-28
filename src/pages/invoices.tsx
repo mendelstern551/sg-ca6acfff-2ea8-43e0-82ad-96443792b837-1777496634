@@ -30,6 +30,11 @@ export default function InvoicesPage() {
   const loadInvoices = async () => {
     try {
       setLoading(true);
+      
+      // First sync all invoices with their actual payment data
+      await invoiceService.syncAllInvoicesWithPayments();
+      
+      // Then fetch the updated invoice data
       const data = await invoiceService.getAllInvoices();
       setInvoices(data);
       setFilteredInvoices(data);

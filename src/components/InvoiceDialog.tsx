@@ -68,6 +68,15 @@ export function InvoiceDialog({ open, onOpenChange, booking }: InvoiceDialogProp
       // Load reminder history
       const reminders = await invoiceService.getPaymentReminders(booking.id);
       setReminderHistory(reminders);
+
+      // Sync invoice amounts with actual payments
+      await invoiceService.syncInvoiceWithPayments(booking.id, booking.payments || []);
+      
+      // Reload invoice to get updated amounts
+      const syncedInvoice = await invoiceService.getInvoiceByBookingId(booking.id);
+      if (syncedInvoice) {
+        setInvoice(syncedInvoice);
+      }
     } catch (error) {
       console.error("Error loading invoice:", error);
     } finally {
