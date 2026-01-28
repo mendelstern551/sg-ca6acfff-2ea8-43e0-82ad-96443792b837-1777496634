@@ -3,7 +3,10 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { MoreHorizontal, Calendar, Trash2, Edit, FileText, ChevronDown, ChevronUp, Eye, Mail } from "lucide-react";
+import { 
+  MoreHorizontal, Calendar, Trash2, Edit, FileText, ChevronDown, ChevronUp, 
+  Eye, Mail, Edit2, MapPin, Users, DollarSign, Phone, Receipt, CreditCard, AlertCircle 
+} from "lucide-react";
 import { format } from "date-fns";
 import { Expense, Booking, PaymentStatus } from "@/types/booking";
 import { formatCurrency } from "@/lib/bookingCalculations";
@@ -11,14 +14,16 @@ import { ClientDetailsDialog } from "./ClientDetailsDialog";
 
 interface BookingListProps {
   bookings: Booking[];
-  expenses: Expense[];
   onEdit: (booking: Booking) => void;
   onDelete: (bookingId: string) => void;
   onUpdateBooking: (booking: Booking) => void;
+  expenses: Expense[];
   onNavigateToExpenses: (bookingId: string) => void;
+  onEditPayment?: (booking: Booking, payment: any) => void;
+  onDeletePayment?: (paymentId: string, bookingId: string) => void;
 }
 
-export function BookingList({ bookings, expenses, onEdit, onDelete, onUpdateBooking, onNavigateToExpenses }: BookingListProps) {
+export function BookingList({ bookings, onEdit, onDelete, onUpdateBooking, expenses, onNavigateToExpenses, onEditPayment, onDeletePayment }: BookingListProps) {
   const [expandedBookingId, setExpandedBookingId] = useState<string | null>(null);
   const [clientDetailsOpen, setClientDetailsOpen] = useState(false);
   const [selectedBookingForDetails, setSelectedBookingForDetails] = useState<Booking | null>(null);
@@ -170,16 +175,41 @@ export function BookingList({ bookings, expenses, onEdit, onDelete, onUpdateBook
                           <div>
                             <h4 className="font-semibold mb-2">Payment History</h4>
                             {booking.payments && booking.payments.length > 0 ? (
-                              <ul className="space-y-2">
-                                {booking.payments.map((payment) => (
-                                  <li key={payment.id} className="text-sm flex justify-between">
-                                    <span>
-                                      {format(new Date(payment.payment_date), "MMM d, yyyy")} - {payment.payment_method}
-                                    </span>
-                                    <span className="font-medium">{formatCurrency(Number(payment.amount))}</span>
-                                  </li>
+                              <div className="space-y-2">
+                                {booking.payments.map((payment: any) => (
+                                  <div key={payment.id} className="flex items-center justify-between text-sm p-2 bg-muted/50 rounded">
+                                    <div>
+                                      <span className="font-medium">{formatCurrency(payment.amount)}</span>
+                                      <span className="text-muted-foreground ml-2">
+                                        {format(new Date(payment.payment_date), "MMM d, yyyy")}
+                                      </span>
+                                      {payment.payment_method && payment.payment_method !== "pending" && (
+                                        <Badge variant="outline" className="ml-2 text-xs">
+                                          {payment.payment_method.replace("_", " ")}
+                                        </Badge>
+                                      )}
+                                    </div>
+                                    <div className="flex gap-1">
+                                      <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={() => onEditPayment?.(booking, payment)}
+                                        className="h-7 px-2"
+                                      >
+                                        <Edit2 className="h-3 w-3" />
+                                      </Button>
+                                      <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={() => onDeletePayment?.(payment.id, booking.id)}
+                                        className="h-7 px-2 text-destructive hover:text-destructive"
+                                      >
+                                        <Trash2 className="h-3 w-3" />
+                                      </Button>
+                                    </div>
+                                  </div>
                                 ))}
-                              </ul>
+                              </div>
                             ) : (
                               <p className="text-sm text-stone-500">No payments recorded yet.</p>
                             )}

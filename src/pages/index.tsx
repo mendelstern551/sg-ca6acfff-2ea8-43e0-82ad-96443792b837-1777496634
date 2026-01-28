@@ -19,6 +19,7 @@ import { supabase } from "@/integrations/supabase/client";
 import type { Booking, Expense } from "@/types/booking";
 import { formatCurrency } from "@/lib/bookingCalculations";
 import { invoiceService } from "@/services/invoiceService";
+import { paymentService, Payment } from "@/services/paymentService";
 import type { Database } from "@/integrations/supabase/types";
 import { Badge } from "@/components/ui/badge";
 import { InvoiceDialog } from "@/components/InvoiceDialog";
@@ -52,6 +53,9 @@ export default function HomePage() {
   const [expenseDialogOpen, setExpenseDialogOpen] = useState(false);
   const [editingBooking, setEditingBooking] = useState<Booking | undefined>();
   const [editingExpense, setEditingExpense] = useState<Expense | undefined>();
+  const [editingPayment, setEditingPayment] = useState<Payment | undefined>();
+  const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
+  const [paymentBooking, setPaymentBooking] = useState<Booking | undefined>();
   const [refreshKey, setRefreshKey] = useState(0);
   const [filteredBookingId, setFilteredBookingId] = useState<string | undefined>();
   const [loading, setLoading] = useState(true);
@@ -590,6 +594,23 @@ export default function HomePage() {
     }
   };
 
+  const handleEditPayment = (booking: Booking, payment: Payment) => {
+    setEditingPayment(payment);
+    setPaymentBooking(booking);
+    setPaymentDialogOpen(true);
+  };
+
+  const handleDeletePayment = async (paymentId: string, bookingId: string) => {
+    try {
+      await paymentService.deletePayment(paymentId);
+      toast({ title: "Payment Deleted", description: "The payment has been deleted successfully." });
+      await loadAllData();
+    } catch (error) {
+      console.error("Error deleting payment:", error);
+      toast({ title: "Error", description: "Failed to delete payment.", variant: "destructive" });
+    }
+  };
+
   const handleAddExpense = async (expense: ExpenseInsert) => {
     try {
       await expenseService.createExpense(expense);
@@ -838,6 +859,8 @@ export default function HomePage() {
                     onUpdateBooking={handleUpdateBooking} 
                     expenses={expenses} 
                     onNavigateToExpenses={handleNavigateToExpenses} 
+                    onEditPayment={handleEditPayment}
+                    onDeletePayment={handleDeletePayment}
                   />
                 )}
               </CardContent>
@@ -976,6 +999,19 @@ export default function HomePage() {
       <BookingDialog open={bookingDialogOpen} onOpenChange={setBookingDialogOpen} onSave={handleSaveBooking} booking={editingBooking} bookings={bookings} />
       <ExpenseDialog open={expenseDialogOpen} onOpenChange={setExpenseDialogOpen} onSave={handleSaveExpense} expense={editingExpense} bookings={bookings} />
       {selectedInvoiceBooking && <InvoiceDialog open={invoiceDialogOpen} onOpenChange={setInvoiceDialogOpen} booking={selectedInvoiceBooking} />}
+      <PaymentDialog 
+        open={paymentDialogOpen} 
+        onOpenChange={(open) => {
+          setPaymentDialogOpen(open);
+          if (!open) {
+            setEditingPayment(undefined);
+            setPaymentBooking(undefined);
+          }
+        }}
+        booking={paymentBooking}
+        onPaymentAdded={loadAllData}
+        editingPayment={editingPayment}
+      />
     </div>
   );
 }

@@ -11,7 +11,7 @@ import { CalendarIcon } from "lucide-react";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import { Booking, PaymentMethod } from "@/types/booking";
-import { paymentService } from "@/services/paymentService";
+import { paymentService, Payment } from "@/services/paymentService";
 
 const paymentMethodLabels: Record<PaymentMethod, string> = {
   cash: "Cash",
@@ -29,9 +29,10 @@ interface PaymentDialogProps {
   onOpenChange: (open: boolean) => void;
   booking: Booking | undefined;
   onPaymentAdded: () => void;
+  editingPayment?: Payment;
 }
 
-export function PaymentDialog({ open, onOpenChange, booking, onPaymentAdded }: PaymentDialogProps) {
+export function PaymentDialog({ open, onOpenChange, booking, onPaymentAdded, editingPayment }: PaymentDialogProps) {
   const [amount, setAmount] = useState<number | "">("");
   const [paymentDate, setPaymentDate] = useState<Date | undefined>(new Date());
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("credit_card");
@@ -40,9 +41,16 @@ export function PaymentDialog({ open, onOpenChange, booking, onPaymentAdded }: P
 
   useEffect(() => {
     if (open) {
-      resetForm();
+      if (editingPayment) {
+        setAmount(editingPayment.amount);
+        setPaymentDate(new Date(editingPayment.payment_date));
+        setPaymentMethod(editingPayment.payment_method as PaymentMethod);
+        setNotes(editingPayment.notes || "");
+      } else {
+        resetForm();
+      }
     }
-  }, [open, booking]);
+  }, [open, booking, editingPayment]);
   
   const resetForm = () => {
     setAmount("");
@@ -62,18 +70,32 @@ export function PaymentDialog({ open, onOpenChange, booking, onPaymentAdded }: P
     }
 
     try {
-      await paymentService.createPayment({
-        booking_id: booking.id,
-        amount: Number(amount),
-        payment_date: paymentDate.toISOString(),
-        payment_method: paymentMethod,
-        notes,
-      });
+      if (editingPayment) {
+        await paymentService.updatePayment(editingPayment.id, {
+          amount: Number(amount),
+          payment_date: paymentDate.toISOString(),
+          payment_method: paymentMethod,
+          notes,
+        });
 
-      toast({
-        title: "Payment Recorded",
-        description: "The payment has been successfully added.",
-      });
+        toast({
+          title: "Payment Updated",
+          description: "The payment has been successfully updated.",
+        });
+      } else {
+        await paymentService.createPayment({
+          booking_id: booking.id,
+          amount: Number(amount),
+          payment_date: paymentDate.toISOString(),
+          payment_method: paymentMethod,
+          notes,
+        });
+
+        toast({
+          title: "Payment Recorded",
+          description: "The payment has been successfully added.",
+        });
+      }
 
       onPaymentAdded();
       onOpenChange(false);
@@ -91,8 +113,10 @@ export function PaymentDialog({ open, onOpenChange, booking, onPaymentAdded }: P
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Add Payment for {booking?.name}</DialogTitle>
-          <DialogDescription>Record a new payment for this booking.</DialogDescription>
+          <DialogTitle>{editingPayment ? "Edit" : "Add"} Payment for {booking?.name}</DialogTitle>
+          <DialogDescription>
+            {editingPayment ? "Update the payment details below." : "Record a new payment for this booking."}
+          </DialogDescription>
         </DialogHeader>
         <div className="space-y-4 py-4">
           <div className="space-y-2">
@@ -158,7 +182,7 @@ export function PaymentDialog({ open, onOpenChange, booking, onPaymentAdded }: P
           </div>
 
           <Button onClick={handleSavePayment} className="w-full">
-            Save Payment
+            {editingPayment ? "Update Payment" : "Save Payment"}
           </Button>
         </div>
       </DialogContent>
