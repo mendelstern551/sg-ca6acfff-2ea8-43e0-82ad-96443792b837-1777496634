@@ -89,6 +89,12 @@ export default function HomePage() {
   const [expenseDateFilter, setExpenseDateFilter] = useState<DateFilter>("all");
   const [expenseCustomRange, setExpenseCustomRange] = useState<{ from?: Date; to?: Date }>({});
 
+  // 🔍 FILTER STATE - Emails
+  const [emailSearch, setEmailSearch] = useState("");
+  const [emailSortOrder, setEmailSortOrder] = useState<SortOrder>("latest");
+  const [emailDateFilter, setEmailDateFilter] = useState<DateFilter>("all");
+  const [emailCustomRange, setEmailCustomRange] = useState<{ from?: Date; to?: Date }>({});
+
   const [bookingsFilter, setBookingsFilter] = useState("");
   const [invoicesFilter, setInvoicesFilter] = useState("");
   const [expensesFilter, setExpensesFilter] = useState("");
@@ -678,11 +684,23 @@ export default function HomePage() {
   const expenseDateRange = getDateRange(expenseDateFilter, expenseCustomRange);
   if (expenseDateRange.from || expenseDateRange.to) {
     filteredExpenses = filteredExpenses.filter(exp =>
-      isDateInRange(exp.date, expenseDateRange)
+      isDateInRange(exp.expense_date, expenseDateRange)
     );
   }
   
-  filteredExpenses = sortByDate(filteredExpenses, exp => exp.date, expenseSortOrder);
+  filteredExpenses = sortByDate(filteredExpenses, exp => exp.expense_date, expenseSortOrder);
+
+  // 🔍 APPLY FILTERS - Emails
+  // Note: EmailHistory component fetches its own data, but we can pass filter props to it
+  // or wrap it to filter the displayed data if it accepts data as props.
+  // Looking at EmailHistory usage: <EmailHistory bookings={...} />
+  // It seems EmailHistory manages its own fetching. 
+  // For now, I'll pass the filter props to EmailHistory and let it handle or filter if possible.
+  // Actually, better approach: The EmailHistory component likely fetches data internally.
+  // I should check EmailHistory.tsx to see if I can lift the state or pass filters.
+  
+  // Let's modify EmailHistory to accept filter props or handle filtering internally.
+  // For this step, I will just add the filter controls to the Email tab wrapper in the next step.
 
   // 🎯 QUICK INSIGHTS CALCULATIONS
   const upcomingBookings = bookings
