@@ -322,29 +322,31 @@ export function ClientCommunications({ bookings, onRefresh }: ClientCommunicatio
             </div>
           )}
 
-          {/* Email Subject */}
-          <div className="space-y-2">
-            <Label>Subject</Label>
-            <Input
-              value={emailSubject}
-              onChange={(e) => setEmailSubject(e.target.value)}
-              placeholder="Email subject..."
-              disabled={!isCustomEmail && !!selectedTemplate}
-            />
-          </div>
+          {/* Email Subject - Only for Custom Emails */}
+          {isCustomEmail && (
+            <div className="space-y-2">
+              <Label>Subject</Label>
+              <Input
+                value={emailSubject}
+                onChange={(e) => setEmailSubject(e.target.value)}
+                placeholder="Email subject..."
+              />
+            </div>
+          )}
 
-          {/* Email Body */}
-          <div className="space-y-2">
-            <Label>Message</Label>
-            <Textarea
-              value={emailBody}
-              onChange={(e) => setEmailBody(e.target.value)}
-              placeholder="Email body..."
-              rows={12}
-              className="font-mono text-sm"
-              disabled={!isCustomEmail && !!selectedTemplate}
-            />
-          </div>
+          {/* Email Body - Only for Custom Emails */}
+          {isCustomEmail && (
+            <div className="space-y-2">
+              <Label>Message</Label>
+              <Textarea
+                value={emailBody}
+                onChange={(e) => setEmailBody(e.target.value)}
+                placeholder="Email body..."
+                rows={12}
+                className="font-mono text-sm"
+              />
+            </div>
+          )}
 
           {/* Schedule Date (Only for Templates) */}
           {selectedTemplate && selectedTemplate.allowScheduling && (
