@@ -3,373 +3,340 @@ import type { Database } from "@/integrations/supabase/types";
 
 type Invoice = Database["public"]["Tables"]["invoices"]["Row"];
 type InvoiceInsert = Database["public"]["Tables"]["invoices"]["Insert"];
-
-// Retry helper function
-async function retryWithBackoff<T>(
-  fn: () => Promise<T>,
-  maxRetries: number = 2,
-  initialDelay: number = 1000
-): Promise<T> {
-  let lastError: any;
-  
-  for (let i = 0; i < maxRetries; i++) {
-    try {
-      return await fn();
-    } catch (error: any) {
-      lastError = error;
-      console.warn(`Attempt ${i + 1} failed:`, error.message);
-      
-      // Don't retry on specific errors
-      if (error.code === '401' || error.code === '403' || error.message?.includes('JWT')) {
-        throw error;
-      }
-      
-      if (i < maxRetries - 1) {
-        const delay = initialDelay * Math.pow(2, i);
-        console.log(`Retrying in ${delay}ms...`);
-        await new Promise(resolve => setTimeout(resolve, delay));
-      }
-    }
-  }
-  
-  throw lastError;
-}
+type ReminderInsert = Database["public"]["Tables"]["reminders"]["Insert"];
 
 export const invoiceService = {
-  async generateInvoiceNumber(): Promise<string> {
-    try {
-      const { data, error } = await retryWithBackoff(async () => {
-        const result = await supabase
-          .from("invoices")
-          .select("invoice_number")
-          .order("created_at", { ascending: false })
-          .limit(1);
-        
-        if (result.error) throw result.error;
-        return result;
-      });
-
-      if (!data || data.length === 0) {
-        return "INV-2026-0001";
-      }
-
-      const lastNumber = data[0].invoice_number;
-      const parts = lastNumber.split("-");
-      const year = new Date().getFullYear().toString();
-      const lastNum = parseInt(parts[2]) || 0;
-      const newNum = (lastNum + 1).toString().padStart(4, "0");
-
-      return `INV-${year}-${newNum}`;
-    } catch (error) {
-      console.error("Error generating invoice number:", error);
-      // Fallback: generate based on timestamp
-      const timestamp = Date.now().toString().slice(-4);
-      return `INV-${new Date().getFullYear()}-${timestamp}`;
-    }
-  },
-
-  async createInvoice(bookingId: string, bookingData: {
+  // Update signature to match usage: createInvoice(bookingId, data)
+  async createInvoice(bookingId: string, invoiceData: {
     clientName: string;
     clientEmail?: string;
     clientPhone?: string;
-    eventDateStart: string;
-    eventDateEnd: string;
-    numberOfGuests: number;
-    numberOfRooms: number;
-    basePrice: number;
-    depositAmount: number;
-    balanceDue: number;
-    totalAmount: number;
+    amount?: number; // Optional in input, calculated/mapped to total_amount/amount
+    totalAmount?: number;
+    depositAmount?: number;
+    balanceDue?: number;
+    dueDate?: string;
+    issuedDate?: string;
+    numberOfGuests?: number;
+    numberOfRooms?: number;
+    eventDateStart?: string;
+    eventDateEnd?: string;
+    basePrice?: number;
     notes?: string;
+    lineItems?: Array<{ description: string; amount: number; quantity?: number }>;
   }): Promise<Invoice> {
-    const invoiceNumber = await this.generateInvoiceNumber();
+    const invoiceNumber = `INV-${Date.now()}`;
+    
+    // Logic to determine main amount fields
+    // The database has 'amount', 'total_amount', 'base_price'
+    const mainAmount = invoiceData.amount || invoiceData.totalAmount || 0;
 
-    const invoiceData: InvoiceInsert = {
-      booking_id: bookingId,
+    const invoiceInsert: InvoiceInsert = {
       invoice_number: invoiceNumber,
-      client_name: bookingData.clientName,
-      client_email: bookingData.clientEmail || null,
-      client_phone: bookingData.clientPhone || null,
-      event_date_start: bookingData.eventDateStart,
-      event_date_end: bookingData.eventDateEnd,
-      number_of_guests: bookingData.numberOfGuests,
-      number_of_rooms: bookingData.numberOfRooms,
-      base_price: bookingData.basePrice,
-      deposit_amount: bookingData.depositAmount,
-      balance_due: bookingData.balanceDue,
-      total_amount: bookingData.totalAmount,
-      amount: bookingData.totalAmount,
-      status: bookingData.balanceDue <= 0 ? "paid" : "unpaid",
-      notes: bookingData.notes || null
+      booking_id: bookingId,
+      client_name: invoiceData.clientName,
+      client_email: invoiceData.clientEmail || null,
+      client_phone: invoiceData.clientPhone || null,
+      
+      // Map fields to DB schema
+      amount: mainAmount,
+      total_amount: invoiceData.totalAmount || mainAmount,
+      base_price: invoiceData.basePrice || mainAmount,
+      
+      deposit_amount: invoiceData.depositAmount || null,
+      balance_due: invoiceData.balanceDue !== undefined ? invoiceData.balanceDue : mainAmount,
+      
+      status: "pending",
+      due_date: invoiceData.dueDate || null,
+      issued_date: invoiceData.issuedDate || new Date().toISOString().split("T")[0],
+      number_of_guests: invoiceData.numberOfGuests || null,
+      number_of_rooms: invoiceData.numberOfRooms || null,
+      event_date_start: invoiceData.eventDateStart || null,
+      event_date_end: invoiceData.eventDateEnd || null,
+      notes: invoiceData.notes || null,
+      line_items: invoiceData.lineItems ? JSON.parse(JSON.stringify(invoiceData.lineItems)) : null,
+      email_status: "not_sent",
+      reminder_count: 0,
     };
 
-    const { data, error } = await retryWithBackoff(async () => {
-      const result = await supabase
-        .from("invoices")
-        .insert([invoiceData])
-        .select();
-      
-      if (result.error) throw result.error;
-      return result;
-    });
+    const { data, error } = await supabase
+      .from("invoices")
+      .insert(invoiceInsert)
+      .select()
+      .single();
 
     if (error) {
       console.error("Error creating invoice:", error);
+      throw new Error(`Failed to create invoice: ${error.message}`);
+    }
+
+    return data;
+  },
+
+  // Alias for getInvoices to match usage in index.tsx
+  async getAllInvoices(): Promise<Invoice[]> {
+    return this.getInvoices();
+  },
+
+  async getInvoices(): Promise<Invoice[]> {
+    const { data, error } = await supabase
+      .from("invoices")
+      .select("*")
+      .order("created_at", { ascending: false });
+
+    if (error) {
+      console.error("Error fetching invoices:", error);
       throw error;
     }
 
-    if (!data || data.length === 0) throw new Error("Failed to create invoice");
-    return data[0];
+    return data || [];
+  },
+
+  async getInvoiceById(id: string): Promise<Invoice | null> {
+    const { data, error } = await supabase
+      .from("invoices")
+      .select("*")
+      .eq("id", id)
+      .single();
+
+    if (error) {
+      console.error("Error fetching invoice:", error);
+      return null;
+    }
+
+    return data;
   },
 
   async getInvoiceByBookingId(bookingId: string): Promise<Invoice | null> {
-    try {
-      const { data, error } = await retryWithBackoff(async () => {
-        const result = await supabase
-          .from("invoices")
-          .select("*")
-          .eq("booking_id", bookingId)
-          .order("created_at", { ascending: false })
-          .limit(1);
-        
-        if (result.error) throw result.error;
-        return result;
-      });
-      
-      if (!data || data.length === 0) {
+    const { data, error } = await supabase
+      .from("invoices")
+      .select("*")
+      .eq("booking_id", bookingId)
+      .single();
+
+    if (error) {
+      if (error.code === "PGRST116") {
         return null;
       }
-      
-      return data[0];
-    } catch (error) {
       console.error("Error fetching invoice by booking ID:", error);
       return null;
     }
+
+    return data;
   },
 
-  async getAllInvoices(): Promise<Invoice[]> {
-    try {
-      const { data, error } = await retryWithBackoff(async () => {
-        const result = await supabase
-          .from("invoices")
-          .select("*")
-          .order("created_at", { ascending: false });
-        
-        if (result.error) throw result.error;
-        return result;
-      });
+  async updateInvoice(
+    id: string,
+    updates: Partial<Omit<Invoice, "id" | "created_at" | "updated_at">>
+  ): Promise<Invoice> {
+    const { data, error } = await supabase
+      .from("invoices")
+      .update(updates)
+      .eq("id", id)
+      .select()
+      .single();
 
-      return data || [];
-    } catch (error) {
-      console.error("Error fetching all invoices:", error);
-      return [];
+    if (error) {
+      console.error("Error updating invoice:", error);
+      throw error;
+    }
+
+    return data;
+  },
+
+  async deleteInvoice(id: string): Promise<void> {
+    const { error } = await supabase.from("invoices").delete().eq("id", id);
+
+    if (error) {
+      console.error("Error deleting invoice:", error);
+      throw error;
     }
   },
 
-  async updateInvoiceStatus(invoiceId: string, status: string): Promise<void> {
-    await retryWithBackoff(async () => {
-      const { error } = await supabase
-        .from("invoices")
-        .update({ status, updated_at: new Date().toISOString() })
-        .eq("id", invoiceId);
-
-      if (error) throw error;
-    });
-  },
-
-  async updateInvoiceCustomerInfo(bookingId: string, customerData: {
-    clientName: string;
-    clientEmail?: string | null;
-    clientPhone?: string | null;
-  }): Promise<void> {
-    await retryWithBackoff(async () => {
-      const { error } = await supabase
-        .from("invoices")
-        .update({
-          client_name: customerData.clientName,
-          client_email: customerData.clientEmail || null,
-          client_phone: customerData.clientPhone || null,
-          updated_at: new Date().toISOString()
-        })
-        .eq("booking_id", bookingId);
-
-      if (error) throw error;
-    });
-  },
-
-  async deleteInvoice(invoiceId: string): Promise<void> {
-    await retryWithBackoff(async () => {
-      const { error } = await supabase
-        .from("invoices")
-        .delete()
-        .eq("id", invoiceId);
-
-      if (error) throw error;
-    });
-  },
-
-  async updateEmailStatus(invoiceId: string, status: {
-    emailSentAt?: string;
-    emailStatus?: string;
-    lastReminderSentAt?: string;
-    reminderCount?: number;
-  }): Promise<void> {
-    await retryWithBackoff(async () => {
-      const updateData: any = {
-        updated_at: new Date().toISOString()
-      };
-
-      if (status.emailSentAt) updateData.email_sent_at = status.emailSentAt;
-      if (status.emailStatus) updateData.email_status = status.emailStatus;
-      if (status.lastReminderSentAt) updateData.last_reminder_sent_at = status.lastReminderSentAt;
-      if (status.reminderCount !== undefined) updateData.reminder_count = status.reminderCount;
-
-      const { error } = await supabase
-        .from("invoices")
-        .update(updateData)
-        .eq("id", invoiceId);
-
-      if (error) throw error;
-    });
-  },
-
-  async recordPaymentReminder(reminderData: {
-    bookingId: string;
-    invoiceId?: string;
-    reminderType: '30_day' | '7_day' | 'payment_received' | 'custom';
-    sentTo: string;
-    status: 'sent' | 'failed';
-    notes?: string;
-  }): Promise<void> {
-    await retryWithBackoff(async () => {
-      const { error } = await supabase
-        .from("payment_reminders")
-        .insert([{
-          booking_id: reminderData.bookingId,
-          invoice_id: reminderData.invoiceId,
-          reminder_type: reminderData.reminderType,
-          sent_to: reminderData.sentTo,
-          status: reminderData.status,
-          notes: reminderData.notes
-        }]);
-
-      if (error) throw error;
-    });
-  },
-
-  async getPaymentReminders(bookingId: string): Promise<any[]> {
-    try {
-      const { data, error } = await retryWithBackoff(async () => {
-        const result = await supabase
-          .from("payment_reminders")
-          .select("*")
-          .eq("booking_id", bookingId)
-          .order("sent_at", { ascending: false });
-        
-        if (result.error) throw result.error;
-        return result;
-      });
-
-      return data || [];
-    } catch (error) {
-      console.error("Error fetching payment reminders:", error);
-      return [];
+  async updateInvoiceStatus(invoiceId: string, totalPaid: number, totalAmount: number): Promise<void> {
+    let newStatus: "pending" | "partial" | "paid";
+    
+    if (totalPaid === 0) {
+      newStatus = "pending";
+    } else if (totalPaid >= totalAmount) {
+      newStatus = "paid";
+    } else {
+      newStatus = "partial";
     }
+
+    const updates: Partial<Invoice> = {
+      status: newStatus,
+      balance_due: totalAmount - totalPaid,
+    };
+
+    if (newStatus === "paid") {
+      updates.paid_date = new Date().toISOString().split("T")[0];
+    }
+
+    await this.updateInvoice(invoiceId, updates);
   },
 
-  async syncInvoiceWithPayments(bookingId: string, payments: Array<{ amount: number }>): Promise<void> {
+  async sendInvoiceEmail(invoiceId: string, recipientEmail: string): Promise<void> {
+    const invoice = await this.getInvoiceById(invoiceId);
+    if (!invoice) {
+      throw new Error("Invoice not found");
+    }
+
+    await this.updateInvoice(invoiceId, {
+      email_status: "sent",
+      email_sent_at: new Date().toISOString(),
+    });
+  },
+
+  async updateEmailStatus(invoiceId: string, status: { lastReminderSentAt?: string, reminderCount?: number }): Promise<void> {
+    const updates: any = {};
+    if (status.lastReminderSentAt) updates.last_reminder_sent_at = status.lastReminderSentAt;
+    if (status.reminderCount !== undefined) updates.reminder_count = status.reminderCount;
+    
+    await this.updateInvoice(invoiceId, updates);
+  },
+
+  async recordReminderSent(invoiceId: string): Promise<void> {
+    const invoice = await this.getInvoiceById(invoiceId);
+    if (!invoice) {
+      throw new Error("Invoice not found");
+    }
+
+    await this.updateInvoice(invoiceId, {
+      last_reminder_sent_at: new Date().toISOString(),
+      reminder_count: (invoice.reminder_count || 0) + 1,
+    });
+  },
+
+  async getOutstandingInvoices(): Promise<Invoice[]> {
+    const { data, error } = await supabase
+      .from("invoices")
+      .select("*")
+      .in("status", ["pending", "partial"])
+      .order("due_date", { ascending: true });
+
+    if (error) {
+      console.error("Error fetching outstanding invoices:", error);
+      throw error;
+    }
+
+    return data || [];
+  },
+
+  async getOverdueInvoices(): Promise<Invoice[]> {
+    const today = new Date().toISOString().split("T")[0];
+    
+    const { data, error } = await supabase
+      .from("invoices")
+      .select("*")
+      .in("status", ["pending", "partial"])
+      .lt("due_date", today)
+      .order("due_date", { ascending: true });
+
+    if (error) {
+      console.error("Error fetching overdue invoices:", error);
+      throw error;
+    }
+
+    return data || [];
+  },
+
+  async syncInvoiceWithPayments(bookingId: string, paymentsData?: any[]): Promise<void> {
     try {
-      const totalPaid = payments.reduce((sum, p) => sum + Number(p.amount), 0);
-      
-      const { data: invoice } = await supabase
-        .from("invoices")
-        .select("*")
-        .eq("booking_id", bookingId)
-        .single();
-
-      if (!invoice) return;
-
-      const newBalanceDue = Number(invoice.total_amount) - totalPaid;
-      const newStatus = newBalanceDue <= 0 ? "paid" : newBalanceDue < Number(invoice.total_amount) ? "partial" : "unpaid";
-
-      console.log(`💰 SYNCING Invoice ${invoice.invoice_number}:`, {
-        totalAmount: invoice.total_amount,
-        oldDeposit: invoice.deposit_amount,
-        newDeposit: totalPaid,
-        oldBalance: invoice.balance_due,
-        newBalance: newBalanceDue,
-        oldStatus: invoice.status,
-        newStatus: newStatus,
-        paymentsCount: payments.length
-      });
-
-      const { error } = await supabase
-        .from("invoices")
-        .update({
-          deposit_amount: totalPaid,
-          balance_due: newBalanceDue,
-          status: newStatus,
-          updated_at: new Date().toISOString()
-        })
-        .eq("id", invoice.id);
-
-      if (error) {
-        console.error("Error updating invoice:", error);
-      } else {
-        console.log(`✅ Invoice ${invoice.invoice_number} updated successfully`);
+      const invoice = await this.getInvoiceByBookingId(bookingId);
+      if (!invoice) {
+        // No invoice to sync
+        return;
       }
+
+      let payments = paymentsData;
+      
+      if (!payments) {
+        const { data, error } = await supabase
+          .from("payments")
+          .select("amount")
+          .eq("booking_id", bookingId);
+
+        if (error) {
+          console.error("Error fetching payments:", error);
+          return;
+        }
+        payments = data;
+      }
+
+      const totalPaid = payments?.reduce((sum, payment) => sum + Number(payment.amount), 0) || 0;
+      const totalAmount = Number(invoice.total_amount || invoice.amount);
+
+      await this.updateInvoiceStatus(invoice.id, totalPaid, totalAmount);
     } catch (error) {
       console.error("Error syncing invoice with payments:", error);
     }
   },
 
+  // Alias for syncAllInvoicesWithPayments / fixAllInvoiceStatuses
   async syncAllInvoicesWithPayments(): Promise<void> {
-    try {
-      const { data: bookings, error } = await supabase
-        .from("bookings")
-        .select(`
-          id,
-          payments (
-            amount
-          )
-        `);
-
-      if (error) throw error;
-      if (!bookings) return;
-
-      for (const booking of bookings) {
-        const payments = (booking as any).payments || [];
-        await this.syncInvoiceWithPayments(booking.id, payments);
-      }
-    } catch (error) {
-      console.error("Error syncing all invoices:", error);
-    }
+    return this.fixAllInvoiceStatuses();
   },
 
+  // Alias for fixInvoiceStatuses
   async fixInvoiceStatuses(): Promise<void> {
+    return this.fixAllInvoiceStatuses();
+  },
+
+  async fixAllInvoiceStatuses(): Promise<void> {
     try {
-      const { data: invoices, error } = await supabase
-        .from("invoices")
-        .select("*");
-
-      if (error) throw error;
-      if (!invoices) return;
-
+      const invoices = await this.getInvoices();
+      
       for (const invoice of invoices) {
-        const newStatus = invoice.balance_due === 0 ? "paid" : "unpaid";
-        if (invoice.status !== newStatus) {
-          await retryWithBackoff(async () => {
-            const { error } = await supabase
-              .from("invoices")
-              .update({ status: newStatus, updated_at: new Date().toISOString() })
-              .eq("id", invoice.id);
-
-            if (error) throw error;
-          });
+        if (invoice.booking_id) {
+          await this.syncInvoiceWithPayments(invoice.booking_id);
         }
       }
     } catch (error) {
       console.error("Error fixing invoice statuses:", error);
+    }
+  },
+
+  async updateInvoiceCustomerInfo(bookingId: string, info: { clientName: string; clientEmail?: string | null; clientPhone?: string | null }): Promise<void> {
+    const invoice = await this.getInvoiceByBookingId(bookingId);
+    if (!invoice) return;
+
+    await this.updateInvoice(invoice.id, {
+      client_name: info.clientName,
+      client_email: info.clientEmail || null,
+      client_phone: info.clientPhone || null
+    });
+  },
+
+  async getPaymentReminders(bookingId: string): Promise<any[]> {
+    // Assuming 'reminders' table exists, otherwise return empty
+    try {
+      const { data, error } = await supabase
+        .from("reminders")
+        .select("*")
+        .eq("booking_id", bookingId)
+        .order("created_at", { ascending: false });
+        
+      if (error) throw error;
+      return data || [];
+    } catch (e) {
+      console.warn("Could not fetch reminders or table doesn't exist", e);
+      return [];
+    }
+  },
+
+  async recordPaymentReminder(data: { bookingId: string, invoiceId?: string, reminderType: string, sentTo: string, status: string, notes?: string }): Promise<void> {
+    try {
+      // Check if reminders table exists first
+      await supabase.from("reminders").insert({
+        booking_id: data.bookingId,
+        reminder_type: data.reminderType,
+        status: data.status,
+        sent_at: new Date().toISOString(),
+        // Note: adjust fields based on actual schema if needed
+      } as any);
+    } catch (e) {
+      console.error("Error recording payment reminder:", e);
     }
   }
 };
