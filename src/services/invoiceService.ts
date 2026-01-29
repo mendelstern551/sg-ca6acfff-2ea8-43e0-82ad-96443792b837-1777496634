@@ -322,5 +322,34 @@ export const invoiceService = {
     } catch (error) {
       console.error("Error syncing all invoices:", error);
     }
+  },
+
+  async fixInvoiceStatuses(): Promise<void> {
+    try {
+      // Get all invoices
+      const { data: invoices, error } = await supabase
+        .from("invoices")
+        .select("*");
+
+      if (error) throw error;
+      if (!invoices) return;
+
+      // Update status based on balance_due
+      for (const invoice of invoices) {
+        const newStatus = invoice.balance_due === 0 ? "paid" : "unpaid";
+        if (invoice.status !== newStatus) {
+          await retryWithBackoff(async () => {
+            const { error } = await supabase
+              .from("invoices")
+              .update({ status: newStatus, updated_at: new Date().toISOString() })
+              .eq("id", invoice.id);
+
+            if (error) throw error;
+          });
+        }
+      }
+    } catch (error) {
+      console.error("Error fixing invoice statuses:", error);
+    }
   }
 };
