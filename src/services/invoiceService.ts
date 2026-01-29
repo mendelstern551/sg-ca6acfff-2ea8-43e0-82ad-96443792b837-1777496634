@@ -247,7 +247,7 @@ export const invoiceService = {
   },
 
   // Singular version called by some components
-  async syncInvoiceWithPayments(invoiceId: string) {
+  async syncInvoiceWithPayments(invoiceId: string, payments?: any[]) {
     try {
       const { data: invoice } = await supabase
         .from('invoices')
@@ -257,22 +257,25 @@ export const invoiceService = {
         
       if (!invoice) return;
 
-      const { data: payments } = await supabase
-        .from('payments')
-        .select('amount')
-        .eq('invoice_id', invoiceId);
-          
-      if (payments) {
-        const totalPaid = payments.reduce((sum, p) => sum + Number(p.amount), 0);
-        const total = Number(invoice.total_amount || 0);
-        const balance = total - totalPaid;
-        const status = balance <= 0 ? 'paid' : (totalPaid > 0 ? 'partial' : 'pending');
-        
-        await this.updateInvoice(invoiceId, {
-          balance_due: balance,
-          status: status
-        });
+      // If payments array is provided, use it; otherwise fetch from database
+      let paymentsData = payments;
+      if (!paymentsData) {
+        const { data } = await supabase
+          .from('payments')
+          .select('amount')
+          .eq('invoice_id', invoiceId);
+        paymentsData = data || [];
       }
+          
+      const totalPaid = paymentsData.reduce((sum, p) => sum + Number(p.amount || 0), 0);
+      const total = Number(invoice.total_amount || 0);
+      const balance = total - totalPaid;
+      const status = balance <= 0 ? 'paid' : (totalPaid > 0 ? 'partial' : 'pending');
+      
+      await this.updateInvoice(invoiceId, {
+        balance_due: balance,
+        status: status
+      });
     } catch (error) {
       console.error("Error syncing invoice:", error);
     }
