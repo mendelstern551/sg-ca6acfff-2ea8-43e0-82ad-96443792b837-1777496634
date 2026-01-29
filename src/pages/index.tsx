@@ -186,6 +186,26 @@ export default function HomePage() {
       const invoicesData = results[2].status === 'fulfilled' ? results[2].value : [];
       const managerData = results[3].status === 'fulfilled' ? results[3].value : [];
 
+      // DIAGNOSTIC: Log invoice data to see what's being loaded
+      console.log('📊 DIAGNOSTIC - Loaded Data:', {
+        bookingsCount: bookingsData.length,
+        invoicesCount: invoicesData.length,
+        invoicesData: invoicesData.map(inv => ({
+          number: inv.invoice_number,
+          client: inv.client_name,
+          total: inv.total_amount,
+          deposit: inv.deposit_amount,
+          balance: inv.balance_due,
+          status: inv.status
+        }))
+      });
+
+      // DIAGNOSTIC: Check booking payment status
+      bookingsData.forEach(b => {
+        const paymentsTotal = b.payments?.reduce((sum, p) => sum + Number(p.amount), 0) || 0;
+        console.log(`📋 Booking: ${b.name} - Paid: $${paymentsTotal}, Total: $${b.total_cost}, Status: ${b.payment_status}`);
+      });
+
       results.forEach((result, index) => {
         if (result.status === 'rejected') {
           const serviceName = ['Bookings', 'Expenses', 'Invoices', 'Manager'][index];

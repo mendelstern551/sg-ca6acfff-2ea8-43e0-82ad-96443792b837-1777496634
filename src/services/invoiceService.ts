@@ -270,29 +270,45 @@ export const invoiceService = {
 
   async syncInvoiceWithPayments(bookingId: string, payments: Array<{ amount: number }>): Promise<void> {
     try {
-      const validPayments = payments.filter(p => p && p.amount && p.amount > 0);
-      const actualAmountPaid = validPayments.length > 0
-        ? validPayments.reduce((sum, p) => sum + p.amount, 0)
-        : 0;
+      const totalPaid = payments.reduce((sum, p) => sum + Number(p.amount), 0);
+      
+      const { data: invoice } = await supabase
+        .from("invoices")
+        .select("*")
+        .eq("booking_id", bookingId)
+        .single();
 
-      const invoice = await this.getInvoiceByBookingId(bookingId);
       if (!invoice) return;
 
-      const actualBalanceDue = invoice.total_amount - actualAmountPaid;
+      const newBalanceDue = Number(invoice.total_amount) - totalPaid;
+      const newStatus = newBalanceDue <= 0 ? "paid" : newBalanceDue < Number(invoice.total_amount) ? "partial" : "unpaid";
 
-      await retryWithBackoff(async () => {
-        const { error } = await supabase
-          .from("invoices")
-          .update({
-            deposit_amount: actualAmountPaid,
-            balance_due: actualBalanceDue,
-            amount: invoice.total_amount,
-            updated_at: new Date().toISOString()
-          })
-          .eq("booking_id", bookingId);
-
-        if (error) throw error;
+      console.log(`💰 SYNCING Invoice ${invoice.invoice_number}:`, {
+        totalAmount: invoice.total_amount,
+        oldDeposit: invoice.deposit_amount,
+        newDeposit: totalPaid,
+        oldBalance: invoice.balance_due,
+        newBalance: newBalanceDue,
+        oldStatus: invoice.status,
+        newStatus: newStatus,
+        paymentsCount: payments.length
       });
+
+      const { error } = await supabase
+        .from("invoices")
+        .update({
+          deposit_amount: totalPaid,
+          balance_due: newBalanceDue,
+          status: newStatus,
+          updated_at: new Date().toISOString()
+        })
+        .eq("id", invoice.id);
+
+      if (error) {
+        console.error("Error updating invoice:", error);
+      } else {
+        console.log(`✅ Invoice ${invoice.invoice_number} updated successfully`);
+      }
     } catch (error) {
       console.error("Error syncing invoice with payments:", error);
     }
