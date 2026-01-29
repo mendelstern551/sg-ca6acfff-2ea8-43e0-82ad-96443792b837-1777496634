@@ -1,8 +1,5 @@
 import type { Booking } from "@/types/booking";
-import type { Database } from "@/integrations/supabase/types";
-import { invoiceService } from "@/services/invoiceService";
-
-type Invoice = Database["public"]["Tables"]["invoices"]["Row"];
+import { invoiceService, type InvoiceWithDetails } from "@/services/invoiceService";
 
 interface EmailResponse {
   success: boolean;
@@ -15,7 +12,7 @@ export const emailService = {
    * Send invoice email to client
    */
   async sendInvoiceEmail(
-    invoice: Invoice,
+    invoice: InvoiceWithDetails,
     booking: Booking
   ): Promise<EmailResponse> {
     try {
@@ -44,6 +41,9 @@ export const emailService = {
         throw new Error(data.error || "Failed to send email");
       }
 
+      // Update email status
+      await invoiceService.updateEmailStatus(invoice.id, 'sent');
+
       return {
         success: true,
         message: "Invoice sent successfully!",
@@ -60,7 +60,7 @@ export const emailService = {
 
   async sendPaymentReminder(
     booking: any,
-    invoice: any,
+    invoice: InvoiceWithDetails | null,
     reminderType: '30_day' | '7_day' | 'payment_received'
   ): Promise<{ success: boolean; error?: string }> {
     try {
@@ -74,32 +74,12 @@ export const emailService = {
 
       if (response.ok && result.success) {
         // Record reminder in database
-        await invoiceService.recordPaymentReminder({
-          bookingId: booking.id,
-          invoiceId: invoice?.id,
-          reminderType,
-          sentTo: booking.contact_email,
-          status: 'sent'
-        });
-
-        // Update invoice reminder tracking
         if (invoice) {
-          await invoiceService.updateEmailStatus(invoice.id, {
-            lastReminderSentAt: new Date().toISOString(),
-            reminderCount: (invoice.reminder_count || 0) + 1
-          });
+          await invoiceService.recordPaymentReminder(invoice.id, 'email');
         }
 
         return { success: true };
       } else {
-        await invoiceService.recordPaymentReminder({
-          bookingId: booking.id,
-          invoiceId: invoice?.id,
-          reminderType,
-          sentTo: booking.contact_email,
-          status: 'failed',
-          notes: result.error
-        });
         throw new Error(result.error || "Failed to send reminder");
       }
     } catch (error: any) {

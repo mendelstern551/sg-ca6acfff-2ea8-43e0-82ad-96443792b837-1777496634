@@ -2,19 +2,16 @@ import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { invoiceService } from "@/services/invoiceService";
+import { invoiceService, type InvoiceWithDetails } from "@/services/invoiceService";
 import { format } from "date-fns";
 import { FileText, Download, Eye, Search, Filter, Loader2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import type { Database } from "@/integrations/supabase/types";
-
-type Invoice = Database["public"]["Tables"]["invoices"]["Row"];
 
 export default function InvoicesPage() {
-  const [invoices, setInvoices] = useState<Invoice[]>([]);
-  const [filteredInvoices, setFilteredInvoices] = useState<Invoice[]>([]);
+  const [invoices, setInvoices] = useState<InvoiceWithDetails[]>([]);
+  const [filteredInvoices, setFilteredInvoices] = useState<InvoiceWithDetails[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
@@ -72,7 +69,7 @@ export default function InvoicesPage() {
     setFilteredInvoices(filtered);
   };
 
-  const handleDownloadPDF = (invoice: Invoice) => {
+  const handleDownloadPDF = (invoice: InvoiceWithDetails) => {
     const printWindow = window.open("", "_blank");
     if (!printWindow) return;
 

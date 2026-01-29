@@ -2,15 +2,12 @@ import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Booking } from "@/types/booking";
-import { invoiceService } from "@/services/invoiceService";
+import { invoiceService, type InvoiceWithDetails } from "@/services/invoiceService";
 import { emailService } from "@/services/emailService";
 import { format } from "date-fns";
 import { Download, Loader2, FileText, Mail, Phone, Send, Clock, CheckCircle, XCircle, AlertCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import type { Database } from "@/integrations/supabase/types";
 import { Badge } from "@/components/ui/badge";
-
-type Invoice = Database["public"]["Tables"]["invoices"]["Row"];
 
 interface InvoiceDialogProps {
   open: boolean;
@@ -19,7 +16,7 @@ interface InvoiceDialogProps {
 }
 
 export function InvoiceDialog({ open, onOpenChange, booking }: InvoiceDialogProps) {
-  const [invoice, setInvoice] = useState<Invoice | null>(null);
+  const [invoice, setInvoice] = useState<InvoiceWithDetails | null>(null);
   const [loading, setLoading] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [sendingEmail, setSendingEmail] = useState(false);
