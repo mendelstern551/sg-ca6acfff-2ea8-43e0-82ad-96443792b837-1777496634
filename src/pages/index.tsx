@@ -17,7 +17,7 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import type { Booking, Expense } from "@/types/booking";
 import { formatCurrency } from "@/lib/bookingCalculations";
-import { invoiceService } from "@/services/invoiceService";
+import { invoiceService, type InvoiceWithDetails } from "@/services/invoiceService";
 import { paymentService, Payment } from "@/services/paymentService";
 import type { Database } from "@/integrations/supabase/types";
 import { Badge } from "@/components/ui/badge";
@@ -38,7 +38,6 @@ import { ClientCommunications } from "@/components/ClientCommunications";
 import { getDateRange, isDateInRange, sortByDate, searchInFields } from "@/lib/filterUtils";
 import { startOfDay } from "date-fns";
 
-type InvoiceRow = Database["public"]["Tables"]["invoices"]["Row"];
 type ExpenseInsert = Database["public"]["Tables"]["expenses"]["Insert"];
 type BookingInsert = Database["public"]["Tables"]["bookings"]["Insert"];
 type BookingUpdate = Database["public"]["Tables"]["bookings"]["Update"];
@@ -60,7 +59,7 @@ export default function HomePage() {
   const [filteredBookingId, setFilteredBookingId] = useState<string | undefined>();
   const [loading, setLoading] = useState(true);
 
-  const [invoices, setInvoices] = useState<InvoiceRow[]>([]);
+  const [invoices, setInvoices] = useState<InvoiceWithDetails[]>([]);
   const [selectedInvoiceBooking, setSelectedInvoiceBooking] = useState<Booking | undefined>();
   const [invoiceDialogOpen, setInvoiceDialogOpen] = useState(false);
 
