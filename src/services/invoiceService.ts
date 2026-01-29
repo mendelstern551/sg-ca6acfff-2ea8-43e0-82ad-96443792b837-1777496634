@@ -1,87 +1,51 @@
 import { supabase } from "@/integrations/supabase/client";
-import type { Database } from "@/integrations/supabase/types";
 
-type Invoice = Database["public"]["Tables"]["invoices"]["Row"];
-type InvoiceInsert = Database["public"]["Tables"]["invoices"]["Insert"];
-type ReminderInsert = Database["public"]["Tables"]["reminders"]["Insert"];
+// Define the shape that the UI expects (flattened invoice + booking details)
+export interface InvoiceWithDetails {
+  id: string;
+  booking_id: string;
+  invoice_number: string;
+  amount: number;
+  total_amount: number | null;
+  deposit_amount: number | null;
+  balance_due: number | null;
+  status: string;
+  due_date: string | null;
+  paid_date: string | null;
+  payment_method: string | null;
+  client_name: string | null;
+  client_email: string | null;
+  client_phone: string | null;
+  notes: string | null;
+  email_status: string | null;
+  email_sent_at: string | null;
+  created_at: string;
+  updated_at: string;
+  // Flattened booking details mapped for UI
+  event_date_start?: string;
+  event_date_end?: string;
+  number_of_guests?: number;
+  number_of_rooms?: number;
+  base_price?: number;
+  reminder_count?: number;
+  last_reminder_sent_at?: string;
+}
 
 export const invoiceService = {
-  // Update signature to match usage: createInvoice(bookingId, data)
-  async createInvoice(bookingId: string, invoiceData: {
-    clientName: string;
-    clientEmail?: string;
-    clientPhone?: string;
-    amount?: number; // Optional in input, calculated/mapped to total_amount/amount
-    totalAmount?: number;
-    depositAmount?: number;
-    balanceDue?: number;
-    dueDate?: string;
-    issuedDate?: string;
-    numberOfGuests?: number;
-    numberOfRooms?: number;
-    eventDateStart?: string;
-    eventDateEnd?: string;
-    basePrice?: number;
-    notes?: string;
-    lineItems?: Array<{ description: string; amount: number; quantity?: number }>;
-  }): Promise<Invoice> {
-    const invoiceNumber = `INV-${Date.now()}`;
-    
-    // Logic to determine main amount fields
-    // The database has 'amount', 'total_amount', 'base_price'
-    const mainAmount = invoiceData.amount || invoiceData.totalAmount || 0;
-
-    const invoiceInsert: InvoiceInsert = {
-      invoice_number: invoiceNumber,
-      booking_id: bookingId,
-      client_name: invoiceData.clientName,
-      client_email: invoiceData.clientEmail || null,
-      client_phone: invoiceData.clientPhone || null,
-      
-      // Map fields to DB schema
-      amount: mainAmount,
-      total_amount: invoiceData.totalAmount || mainAmount,
-      base_price: invoiceData.basePrice || mainAmount,
-      
-      deposit_amount: invoiceData.depositAmount || null,
-      balance_due: invoiceData.balanceDue !== undefined ? invoiceData.balanceDue : mainAmount,
-      
-      status: "pending",
-      due_date: invoiceData.dueDate || null,
-      issued_date: invoiceData.issuedDate || new Date().toISOString().split("T")[0],
-      number_of_guests: invoiceData.numberOfGuests || null,
-      number_of_rooms: invoiceData.numberOfRooms || null,
-      event_date_start: invoiceData.eventDateStart || null,
-      event_date_end: invoiceData.eventDateEnd || null,
-      notes: invoiceData.notes || null,
-      line_items: invoiceData.lineItems ? JSON.parse(JSON.stringify(invoiceData.lineItems)) : null,
-      email_status: "not_sent",
-      reminder_count: 0,
-    };
-
+  async getAllInvoices(): Promise<InvoiceWithDetails[]> {
+    // Select specific columns from bookings to avoid errors
     const { data, error } = await supabase
       .from("invoices")
-      .insert(invoiceInsert)
-      .select()
-      .single();
-
-    if (error) {
-      console.error("Error creating invoice:", error);
-      throw new Error(`Failed to create invoice: ${error.message}`);
-    }
-
-    return data;
-  },
-
-  // Alias for getInvoices to match usage in index.tsx
-  async getAllInvoices(): Promise<Invoice[]> {
-    return this.getInvoices();
-  },
-
-  async getInvoices(): Promise<Invoice[]> {
-    const { data, error } = await supabase
-      .from("invoices")
-      .select("*")
+      .select(`
+        *,
+        bookings (
+          start_date,
+          end_date,
+          number_of_guests,
+          number_of_rooms,
+          total_cost
+        )
+      `)
       .order("created_at", { ascending: false });
 
     if (error) {
@@ -89,254 +53,216 @@ export const invoiceService = {
       throw error;
     }
 
-    return data || [];
+    // Flatten and map the data to match UI expectations
+    return (data || []).map((invoice: any) => ({
+      ...invoice,
+      event_date_start: invoice.bookings?.start_date,
+      event_date_end: invoice.bookings?.end_date,
+      number_of_guests: invoice.bookings?.number_of_guests,
+      number_of_rooms: invoice.bookings?.number_of_rooms,
+      base_price: invoice.bookings?.total_cost || invoice.amount,
+    }));
   },
 
-  async getInvoiceById(id: string): Promise<Invoice | null> {
+  async getInvoiceById(id: string) {
     const { data, error } = await supabase
       .from("invoices")
-      .select("*")
+      .select(`
+        *,
+        bookings (
+          start_date,
+          end_date,
+          number_of_guests,
+          number_of_rooms,
+          total_cost
+        )
+      `)
       .eq("id", id)
       .single();
 
-    if (error) {
-      console.error("Error fetching invoice:", error);
-      return null;
-    }
-
-    return data;
+    if (error) throw error;
+    
+    // Return mapped data
+    return {
+      ...data,
+      event_date_start: data.bookings?.start_date,
+      event_date_end: data.bookings?.end_date,
+      number_of_guests: data.bookings?.number_of_guests,
+      number_of_rooms: data.bookings?.number_of_rooms,
+      base_price: data.bookings?.total_cost || data.amount,
+    };
   },
 
-  async getInvoiceByBookingId(bookingId: string): Promise<Invoice | null> {
-    const { data, error } = await supabase
-      .from("invoices")
+  async createInvoice(bookingId: string, invoiceData: any) {
+    console.log("Creating invoice for booking:", bookingId);
+
+    // 1. Get the booking details first using CORRECT column names
+    const { data: booking, error: bookingError } = await supabase
+      .from("bookings")
       .select("*")
-      .eq("booking_id", bookingId)
+      .eq("id", bookingId)
       .single();
 
-    if (error) {
-      if (error.code === "PGRST116") {
-        return null;
-      }
-      console.error("Error fetching invoice by booking ID:", error);
-      return null;
+    if (bookingError) {
+      console.error("Error fetching booking for invoice:", bookingError);
+      throw bookingError;
     }
 
-    return data;
-  },
+    // 2. Prepare the invoice payload matching the EXACT database schema
+    // Mapping bookings columns (contact_name) to invoices columns (client_name)
+    const totalCost = booking?.total_cost || invoiceData.amount || 0;
+    const deposit = invoiceData.deposit_amount || 0;
 
-  async updateInvoice(
-    id: string,
-    updates: Partial<Omit<Invoice, "id" | "created_at" | "updated_at">>
-  ): Promise<Invoice> {
+    const invoicePayload = {
+      booking_id: bookingId,
+      invoice_number: invoiceData.invoice_number || `INV-${Date.now()}`,
+      // Use booking cost if available
+      amount: totalCost,
+      total_amount: totalCost,
+      deposit_amount: deposit,
+      balance_due: totalCost - deposit,
+      status: invoiceData.status || 'pending',
+      due_date: invoiceData.due_date,
+      // Map booking contact info to invoice client info
+      client_name: booking?.contact_name || invoiceData.client_name,
+      client_email: booking?.contact_email || invoiceData.client_email,
+      client_phone: booking?.contact_phone || invoiceData.client_phone,
+      notes: invoiceData.notes,
+      email_status: 'not_sent'
+    };
+
+    console.log("Inserting invoice payload:", invoicePayload);
+
     const { data, error } = await supabase
       .from("invoices")
-      .update(updates)
-      .eq("id", id)
+      .insert(invoicePayload)
       .select()
       .single();
 
     if (error) {
-      console.error("Error updating invoice:", error);
+      console.error("Supabase insert error:", error);
       throw error;
     }
 
     return data;
   },
 
-  async deleteInvoice(id: string): Promise<void> {
-    const { error } = await supabase.from("invoices").delete().eq("id", id);
-
-    if (error) {
-      console.error("Error deleting invoice:", error);
-      throw error;
-    }
-  },
-
-  async updateInvoiceStatus(invoiceId: string, totalPaid: number, totalAmount: number): Promise<void> {
-    let newStatus: "pending" | "partial" | "paid";
+  async updateInvoice(id: string, updates: any) {
+    // Filter updates to only include valid columns
+    const allowedColumns = [
+      'amount', 'total_amount', 'deposit_amount', 'balance_due', 
+      'status', 'due_date', 'paid_date', 'payment_method', 
+      'client_name', 'client_email', 'client_phone', 'notes',
+      'email_status', 'email_sent_at'
+    ];
     
-    if (totalPaid === 0) {
-      newStatus = "pending";
-    } else if (totalPaid >= totalAmount) {
-      newStatus = "paid";
-    } else {
-      newStatus = "partial";
-    }
-
-    const updates: Partial<Invoice> = {
-      status: newStatus,
-      balance_due: totalAmount - totalPaid,
-    };
-
-    if (newStatus === "paid") {
-      updates.paid_date = new Date().toISOString().split("T")[0];
-    }
-
-    await this.updateInvoice(invoiceId, updates);
-  },
-
-  async sendInvoiceEmail(invoiceId: string, recipientEmail: string): Promise<void> {
-    const invoice = await this.getInvoiceById(invoiceId);
-    if (!invoice) {
-      throw new Error("Invoice not found");
-    }
-
-    await this.updateInvoice(invoiceId, {
-      email_status: "sent",
-      email_sent_at: new Date().toISOString(),
+    const filteredUpdates: any = {};
+    Object.keys(updates).forEach(key => {
+      if (allowedColumns.includes(key)) {
+        filteredUpdates[key] = updates[key];
+      }
     });
-  },
 
-  async updateEmailStatus(invoiceId: string, status: { lastReminderSentAt?: string, reminderCount?: number }): Promise<void> {
-    const updates: any = {};
-    if (status.lastReminderSentAt) updates.last_reminder_sent_at = status.lastReminderSentAt;
-    if (status.reminderCount !== undefined) updates.reminder_count = status.reminderCount;
-    
-    await this.updateInvoice(invoiceId, updates);
-  },
-
-  async recordReminderSent(invoiceId: string): Promise<void> {
-    const invoice = await this.getInvoiceById(invoiceId);
-    if (!invoice) {
-      throw new Error("Invoice not found");
-    }
-
-    await this.updateInvoice(invoiceId, {
-      last_reminder_sent_at: new Date().toISOString(),
-      reminder_count: (invoice.reminder_count || 0) + 1,
-    });
-  },
-
-  async getOutstandingInvoices(): Promise<Invoice[]> {
     const { data, error } = await supabase
       .from("invoices")
-      .select("*")
-      .in("status", ["pending", "partial"])
-      .order("due_date", { ascending: true });
+      .update(filteredUpdates)
+      .eq("id", id)
+      .select()
+      .single();
 
-    if (error) {
-      console.error("Error fetching outstanding invoices:", error);
-      throw error;
-    }
-
-    return data || [];
+    if (error) throw error;
+    return data;
   },
 
-  async getOverdueInvoices(): Promise<Invoice[]> {
-    const today = new Date().toISOString().split("T")[0];
-    
+  async updateInvoiceCustomerInfo(bookingId: string, customerInfo: any) {
     const { data, error } = await supabase
       .from("invoices")
+      .update({
+        client_name: customerInfo.client_name,
+        client_email: customerInfo.client_email,
+        client_phone: customerInfo.client_phone
+      })
+      .eq("booking_id", bookingId);
+
+    if (error) throw error;
+    return data;
+  },
+
+  async getPaymentReminders(invoiceId: string) {
+    // Check if reminders table exists first
+    const { error: checkError } = await supabase.from('reminders').select('id').limit(1);
+    if (checkError) return []; // Return empty if table issue
+
+    const { data, error } = await supabase
+      .from("reminders")
       .select("*")
-      .in("status", ["pending", "partial"])
-      .lt("due_date", today)
-      .order("due_date", { ascending: true });
+      .eq("invoice_id", invoiceId)
+      .order("created_at", { ascending: false });
 
-    if (error) {
-      console.error("Error fetching overdue invoices:", error);
-      throw error;
-    }
-
-    return data || [];
+    if (error) throw error;
+    return data;
   },
 
-  async syncInvoiceWithPayments(bookingId: string, paymentsData?: any[]): Promise<void> {
+  async recordPaymentReminder(invoiceId: string, type: 'email' | 'sms') {
     try {
-      const invoice = await this.getInvoiceByBookingId(bookingId);
-      if (!invoice) {
-        // No invoice to sync
-        return;
-      }
+      // Update invoice email status
+      await this.updateInvoice(invoiceId, {
+        email_status: 'sent',
+        email_sent_at: new Date().toISOString()
+      });
 
-      let payments = paymentsData;
-      
-      if (!payments) {
-        const { data, error } = await supabase
-          .from("payments")
-          .select("amount")
-          .eq("booking_id", bookingId);
-
-        if (error) {
-          console.error("Error fetching payments:", error);
-          return;
-        }
-        payments = data;
-      }
-
-      const totalPaid = payments?.reduce((sum, payment) => sum + Number(payment.amount), 0) || 0;
-      const totalAmount = Number(invoice.total_amount || invoice.amount);
-
-      await this.updateInvoiceStatus(invoice.id, totalPaid, totalAmount);
-    } catch (error) {
-      console.error("Error syncing invoice with payments:", error);
-    }
-  },
-
-  // Alias for syncAllInvoicesWithPayments / fixAllInvoiceStatuses
-  async syncAllInvoicesWithPayments(): Promise<void> {
-    return this.fixAllInvoiceStatuses();
-  },
-
-  // Alias for fixInvoiceStatuses
-  async fixInvoiceStatuses(): Promise<void> {
-    return this.fixAllInvoiceStatuses();
-  },
-
-  async fixAllInvoiceStatuses(): Promise<void> {
-    try {
-      const invoices = await this.getInvoices();
-      
-      for (const invoice of invoices) {
-        if (invoice.booking_id) {
-          await this.syncInvoiceWithPayments(invoice.booking_id);
-        }
-      }
-    } catch (error) {
-      console.error("Error fixing invoice statuses:", error);
-    }
-  },
-
-  async updateInvoiceCustomerInfo(bookingId: string, info: { clientName: string; clientEmail?: string | null; clientPhone?: string | null }): Promise<void> {
-    const invoice = await this.getInvoiceByBookingId(bookingId);
-    if (!invoice) return;
-
-    await this.updateInvoice(invoice.id, {
-      client_name: info.clientName,
-      client_email: info.clientEmail || null,
-      client_phone: info.clientPhone || null
-    });
-  },
-
-  async getPaymentReminders(bookingId: string): Promise<any[]> {
-    // Assuming 'reminders' table exists, otherwise return empty
-    try {
-      const { data, error } = await supabase
+      // Insert into reminders table if it exists
+      const { error } = await supabase
         .from("reminders")
-        .select("*")
-        .eq("booking_id", bookingId)
-        .order("created_at", { ascending: false });
+        .insert({
+          invoice_id: invoiceId,
+          reminder_type: type,
+          status: 'sent',
+          sent_at: new Date().toISOString()
+        });
         
-      if (error) throw error;
-      return data || [];
-    } catch (e) {
-      console.warn("Could not fetch reminders or table doesn't exist", e);
-      return [];
-    }
-  },
-
-  async recordPaymentReminder(data: { bookingId: string, invoiceId?: string, reminderType: string, sentTo: string, status: string, notes?: string }): Promise<void> {
-    try {
-      // Check if reminders table exists first
-      await supabase.from("reminders").insert({
-        booking_id: data.bookingId,
-        reminder_type: data.reminderType,
-        status: data.status,
-        sent_at: new Date().toISOString(),
-        // Note: adjust fields based on actual schema if needed
-      } as any);
+      if (error) console.warn("Could not record reminder history:", error);
     } catch (e) {
       console.error("Error recording payment reminder:", e);
     }
+  },
+
+  async updateEmailStatus(id: string, status: string) {
+    return this.updateInvoice(id, { 
+      email_status: status,
+      email_sent_at: status === 'sent' ? new Date().toISOString() : null
+    });
+  },
+
+  async syncAllInvoicesWithPayments() {
+    try {
+      const { data: invoices } = await supabase.from('invoices').select('id, total_amount');
+      if (!invoices) return;
+
+      for (const invoice of invoices) {
+        const { data: payments } = await supabase
+          .from('payments')
+          .select('amount')
+          .eq('invoice_id', invoice.id);
+          
+        if (payments) {
+          const totalPaid = payments.reduce((sum, p) => sum + Number(p.amount), 0);
+          const total = Number(invoice.total_amount || 0);
+          const balance = total - totalPaid;
+          const status = balance <= 0 ? 'paid' : (totalPaid > 0 ? 'partial' : 'pending');
+          
+          await this.updateInvoice(invoice.id, {
+            balance_due: balance,
+            status: status
+          });
+        }
+      }
+    } catch (error) {
+      console.error("Error syncing invoices:", error);
+    }
+  },
+
+  async fixInvoiceStatuses() {
+    return this.syncAllInvoicesWithPayments();
   }
 };

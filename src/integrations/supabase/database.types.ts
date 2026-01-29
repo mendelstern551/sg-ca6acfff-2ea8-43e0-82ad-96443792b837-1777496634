@@ -297,13 +297,6 @@ export type Database = {
             referencedRelation: "bookings"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "email_logs_invoice_id_fkey"
-            columns: ["invoice_id"]
-            isOneToOne: false
-            referencedRelation: "invoices"
-            referencedColumns: ["id"]
-          },
         ]
       }
       email_tracking: {
@@ -541,87 +534,63 @@ export type Database = {
         Row: {
           amount: number
           balance_due: number | null
-          base_price: number | null
           booking_id: string | null
           client_email: string | null
-          client_name: string
+          client_name: string | null
           client_phone: string | null
           created_at: string | null
           deposit_amount: number | null
           due_date: string | null
           email_sent_at: string | null
           email_status: string | null
-          event_date_end: string | null
-          event_date_start: string | null
           id: string
           invoice_number: string
-          issued_date: string | null
-          last_reminder_sent_at: string | null
-          line_items: Json | null
           notes: string | null
-          number_of_guests: number | null
-          number_of_rooms: number | null
           paid_date: string | null
-          reminder_count: number | null
-          status: string | null
+          payment_method: string | null
+          status: string
           total_amount: number | null
           updated_at: string | null
         }
         Insert: {
           amount: number
           balance_due?: number | null
-          base_price?: number | null
           booking_id?: string | null
           client_email?: string | null
-          client_name: string
+          client_name?: string | null
           client_phone?: string | null
           created_at?: string | null
           deposit_amount?: number | null
           due_date?: string | null
           email_sent_at?: string | null
           email_status?: string | null
-          event_date_end?: string | null
-          event_date_start?: string | null
           id?: string
           invoice_number: string
-          issued_date?: string | null
-          last_reminder_sent_at?: string | null
-          line_items?: Json | null
           notes?: string | null
-          number_of_guests?: number | null
-          number_of_rooms?: number | null
           paid_date?: string | null
-          reminder_count?: number | null
-          status?: string | null
+          payment_method?: string | null
+          status?: string
           total_amount?: number | null
           updated_at?: string | null
         }
         Update: {
           amount?: number
           balance_due?: number | null
-          base_price?: number | null
           booking_id?: string | null
           client_email?: string | null
-          client_name?: string
+          client_name?: string | null
           client_phone?: string | null
           created_at?: string | null
           deposit_amount?: number | null
           due_date?: string | null
           email_sent_at?: string | null
           email_status?: string | null
-          event_date_end?: string | null
-          event_date_start?: string | null
           id?: string
           invoice_number?: string
-          issued_date?: string | null
-          last_reminder_sent_at?: string | null
-          line_items?: Json | null
           notes?: string | null
-          number_of_guests?: number | null
-          number_of_rooms?: number | null
           paid_date?: string | null
-          reminder_count?: number | null
-          status?: string | null
+          payment_method?: string | null
+          status?: string
           total_amount?: number | null
           updated_at?: string | null
         }
@@ -833,13 +802,6 @@ export type Database = {
             referencedRelation: "bookings"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "payment_reminders_invoice_id_fkey"
-            columns: ["invoice_id"]
-            isOneToOne: false
-            referencedRelation: "invoices"
-            referencedColumns: ["id"]
-          },
         ]
       }
       payments: {
@@ -885,13 +847,6 @@ export type Database = {
             columns: ["booking_id"]
             isOneToOne: false
             referencedRelation: "bookings"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "payments_invoice_id_fkey"
-            columns: ["invoice_id"]
-            isOneToOne: false
-            referencedRelation: "invoices"
             referencedColumns: ["id"]
           },
         ]
