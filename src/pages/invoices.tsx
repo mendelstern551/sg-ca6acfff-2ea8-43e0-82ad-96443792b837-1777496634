@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -8,6 +7,7 @@ import { format } from "date-fns";
 import { FileText, Download, Eye, Search, Filter, Loader2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useToast } from "@/hooks/use-toast";
 import type { Database } from "@/integrations/supabase/types";
 
 type Invoice = Database["public"]["Tables"]["invoices"]["Row"];
@@ -15,9 +15,10 @@ type Invoice = Database["public"]["Tables"]["invoices"]["Row"];
 export default function InvoicesPage() {
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [filteredInvoices, setFilteredInvoices] = useState<Invoice[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const { toast } = useToast();
 
   useEffect(() => {
     loadInvoices();
@@ -29,19 +30,26 @@ export default function InvoicesPage() {
 
   const loadInvoices = async () => {
     try {
-      setLoading(true);
+      setIsLoading(true);
       
-      // First sync all invoices with their actual payment data
+      // First sync all invoices with their payments
       await invoiceService.syncAllInvoicesWithPayments();
       
-      // Then fetch the updated invoice data
-      const data = await invoiceService.getAllInvoices();
-      setInvoices(data);
-      setFilteredInvoices(data);
+      // Then fix any invoice statuses that are incorrect
+      await invoiceService.fixInvoiceStatuses();
+      
+      // Now load the updated invoices
+      const invoices = await invoiceService.getAllInvoices();
+      setInvoices(invoices);
     } catch (error) {
       console.error("Error loading invoices:", error);
+      toast({
+        title: "Error",
+        description: "Failed to load invoices. Please try again.",
+        variant: "destructive",
+      });
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
   };
 
@@ -206,7 +214,7 @@ export default function InvoicesPage() {
   const totalPaid = filteredInvoices.filter(inv => inv.status === "paid").reduce((sum, inv) => sum + Number(inv.total_amount), 0);
   const totalOutstanding = filteredInvoices.filter(inv => inv.status === "unpaid").reduce((sum, inv) => sum + Number(inv.balance_due), 0);
 
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-blue-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 p-6">
         <div className="flex items-center justify-center h-96">
