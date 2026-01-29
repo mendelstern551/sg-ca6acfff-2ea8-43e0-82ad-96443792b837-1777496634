@@ -50,7 +50,7 @@ export const invoiceService = {
       });
 
       if (!data || data.length === 0) {
-        return "INV-2025-0001";
+        return "INV-2026-0001";
       }
 
       const lastNumber = data[0].invoice_number;
@@ -88,8 +88,8 @@ export const invoiceService = {
       booking_id: bookingId,
       invoice_number: invoiceNumber,
       client_name: bookingData.clientName,
-      client_email: bookingData.clientEmail,
-      client_phone: bookingData.clientPhone,
+      client_email: bookingData.clientEmail || null,
+      client_phone: bookingData.clientPhone || null,
       event_date_start: bookingData.eventDateStart,
       event_date_end: bookingData.eventDateEnd,
       number_of_guests: bookingData.numberOfGuests,
@@ -99,8 +99,8 @@ export const invoiceService = {
       balance_due: bookingData.balanceDue,
       total_amount: bookingData.totalAmount,
       amount: bookingData.totalAmount,
-      status: "unpaid",
-      notes: bookingData.notes
+      status: bookingData.balanceDue <= 0 ? "paid" : "unpaid",
+      notes: bookingData.notes || null
     };
 
     const { data, error } = await retryWithBackoff(async () => {
@@ -112,6 +112,11 @@ export const invoiceService = {
       if (result.error) throw result.error;
       return result;
     });
+
+    if (error) {
+      console.error("Error creating invoice:", error);
+      throw error;
+    }
 
     if (!data || data.length === 0) throw new Error("Failed to create invoice");
     return data[0];
@@ -138,7 +143,7 @@ export const invoiceService = {
       return data[0];
     } catch (error) {
       console.error("Error fetching invoice by booking ID:", error);
-      return null; // Return null on error to prevent blocking UI
+      return null;
     }
   },
 
@@ -157,7 +162,6 @@ export const invoiceService = {
       return data || [];
     } catch (error) {
       console.error("Error fetching all invoices:", error);
-      // Return empty array on error to prevent UI crash
       return [];
     }
   },
@@ -206,18 +210,23 @@ export const invoiceService = {
 
   async updateEmailStatus(invoiceId: string, status: {
     emailSentAt?: string;
-    emailSentTo?: string;
-    emailStatus?: 'pending' | 'sent' | 'failed';
+    emailStatus?: string;
     lastReminderSentAt?: string;
     reminderCount?: number;
   }): Promise<void> {
     await retryWithBackoff(async () => {
+      const updateData: any = {
+        updated_at: new Date().toISOString()
+      };
+
+      if (status.emailSentAt) updateData.email_sent_at = status.emailSentAt;
+      if (status.emailStatus) updateData.email_status = status.emailStatus;
+      if (status.lastReminderSentAt) updateData.last_reminder_sent_at = status.lastReminderSentAt;
+      if (status.reminderCount !== undefined) updateData.reminder_count = status.reminderCount;
+
       const { error } = await supabase
         .from("invoices")
-        .update({
-          ...status,
-          updated_at: new Date().toISOString()
-        })
+        .update(updateData)
         .eq("id", invoiceId);
 
       if (error) throw error;
@@ -316,7 +325,6 @@ export const invoiceService = {
 
   async syncAllInvoicesWithPayments(): Promise<void> {
     try {
-      // Get all bookings with their payments using a join
       const { data: bookings, error } = await supabase
         .from("bookings")
         .select(`
@@ -329,9 +337,7 @@ export const invoiceService = {
       if (error) throw error;
       if (!bookings) return;
 
-      // Sync each booking's invoice with its payments
       for (const booking of bookings) {
-        // Cast to any to handle the join relationship property
         const payments = (booking as any).payments || [];
         await this.syncInvoiceWithPayments(booking.id, payments);
       }
@@ -342,7 +348,6 @@ export const invoiceService = {
 
   async fixInvoiceStatuses(): Promise<void> {
     try {
-      // Get all invoices
       const { data: invoices, error } = await supabase
         .from("invoices")
         .select("*");
@@ -350,7 +355,6 @@ export const invoiceService = {
       if (error) throw error;
       if (!invoices) return;
 
-      // Update status based on balance_due
       for (const invoice of invoices) {
         const newStatus = invoice.balance_due === 0 ? "paid" : "unpaid";
         if (invoice.status !== newStatus) {
