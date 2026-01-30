@@ -83,6 +83,11 @@ export default function HomePage() {
   const [invoiceDateFilter, setInvoiceDateFilter] = useState<DateFilter>("all");
   const [invoiceCustomRange, setInvoiceCustomRange] = useState<{ from?: Date; to?: Date }>({});
 
+  const [expenseSearch, setExpenseSearch] = useState("");
+  const [expenseSortOrder, setExpenseSortOrder] = useState<SortOrder>("latest");
+  const [expenseDateFilter, setExpenseDateFilter] = useState<DateFilter>("all");
+  const [expenseCustomRange, setExpenseCustomRange] = useState<{ from?: Date; to?: Date }>({});
+
   useEffect(() => {
     loadAllData();
     
