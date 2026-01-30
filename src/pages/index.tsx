@@ -464,7 +464,7 @@ export default function HomePage() {
         console.error("Error creating reminders:", reminderError);
       }
 
-      if (bookingData.confirmed) {
+      if (!editingBooking && bookingData.confirmed) {
         try {
           const existingInvoice = await invoiceService.getInvoiceByBookingId(savedBookingId);
           if (!existingInvoice) {
@@ -1101,9 +1101,9 @@ export default function HomePage() {
                 
                 {filteredInvoices.length === 0 ? (
                   <div className="text-center py-12">
-                    <FileText className="h-16 w-16 mx-auto mb-4 text-blue-300 dark:text-blue-700" />
-                    <h3 className="text-lg font-medium text-slate-900 dark:text-slate-100 mb-2">No Invoices Found</h3>
-                    <p className="text-slate-600 dark:text-slate-400 mb-6 max-w-md mx-auto">Try adjusting your search or filters</p>
+                    <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                    <p className="text-lg font-medium mb-2">No invoices found</p>
+                    <p className="text-sm text-slate-600 dark:text-slate-400">Try adjusting your search or filters</p>
                   </div>
                 ) : (
                   <div className="space-y-3">
