@@ -83,20 +83,20 @@ export default function HomePage() {
   const [invoiceDateFilter, setInvoiceDateFilter] = useState<DateFilter>("all");
   const [invoiceCustomRange, setInvoiceCustomRange] = useState<{ from?: Date; to?: Date }>({});
 
-  const [expenseSearch, setExpenseSearch] = useState("");
-  const [expenseSortOrder, setExpenseSortOrder] = useState<SortOrder>("latest");
-  const [expenseDateFilter, setExpenseDateFilter] = useState<DateFilter>("all");
-  const [expenseCustomRange, setExpenseCustomRange] = useState<{ from?: Date; to?: Date }>({});
-
   useEffect(() => {
     loadAllData();
     
     let reloadTimeout: NodeJS.Timeout | null = null;
+    let isReloading = false;
     
     const debouncedReload = () => {
+      if (isReloading) return;
       if (reloadTimeout) clearTimeout(reloadTimeout);
       reloadTimeout = setTimeout(() => {
-        loadAllData();
+        isReloading = true;
+        loadAllData().finally(() => {
+          isReloading = false;
+        });
       }, 500);
     };
     
@@ -464,15 +464,24 @@ export default function HomePage() {
         console.error("Error creating reminders:", reminderError);
       }
 
-      if (!editingBooking && bookingData.confirmed) {
+      // Create invoice for confirmed bookings (both new and updated)
+      if (bookingData.confirmed) {
         try {
           const existingInvoice = await invoiceService.getInvoiceByBookingId(savedBookingId);
           if (!existingInvoice) {
             await invoiceService.createInvoice(savedBookingId, {
-              clientName: bookingData.contact_name, clientEmail: bookingData.contact_email || undefined, clientPhone: bookingData.contact_phone || undefined,
-              eventDateStart: bookingData.start_date, eventDateEnd: bookingData.end_date, numberOfGuests: bookingData.number_of_guests,
-              numberOfRooms: bookingData.number_of_rooms || 1, basePrice: bookingData.total_cost, depositAmount: amountPaid,
-              balanceDue: balanceDue, totalAmount: bookingData.total_cost, notes: bookingData.notes || undefined
+              clientName: bookingData.contact_name, 
+              clientEmail: bookingData.contact_email || undefined, 
+              clientPhone: bookingData.contact_phone || undefined,
+              eventDateStart: bookingData.start_date, 
+              eventDateEnd: bookingData.end_date, 
+              numberOfGuests: bookingData.number_of_guests,
+              numberOfRooms: bookingData.number_of_rooms || 1, 
+              basePrice: bookingData.total_cost, 
+              depositAmount: amountPaid,
+              balanceDue: balanceDue, 
+              totalAmount: bookingData.total_cost, 
+              notes: bookingData.notes || undefined
             });
             toast({ title: "✓ Invoice Generated", description: "An invoice has been automatically created.", variant: "default" });
           }
