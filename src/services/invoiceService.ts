@@ -162,8 +162,9 @@ export const invoiceService = {
       throw error;
     }
 
-    // RPC returns an array, get the first item
-    return Array.isArray(data) ? data[0] : data;
+    // RPC returns JSON, parse and map to expected format
+    const invoice = typeof data === 'string' ? JSON.parse(data) : data;
+    return this._mapToInvoiceWithDetails(invoice);
   },
 
   async updateInvoice(id: string, updates: any) {
