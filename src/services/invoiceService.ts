@@ -36,43 +36,32 @@ export const invoiceService = {
   _mapToInvoiceWithDetails(invoice: any): InvoiceWithDetails {
     // Handle case where booking might be null or missing
     const booking = invoice.bookings;
-    
+
     return {
       ...invoice,
       // Map nested booking details to top-level properties
-      event_date_start: booking?.start_date,
-      event_date_end: booking?.end_date,
-      number_of_guests: booking?.number_of_guests,
-      number_of_rooms: booking?.number_of_rooms,
+      event_date_start: booking?.start_date ?? invoice.booking_start_date ?? null,
+      event_date_end: booking?.end_date ?? invoice.booking_end_date ?? null,
+      number_of_guests: booking?.number_of_guests ?? invoice.booking_number_of_guests ?? null,
+      number_of_rooms: booking?.number_of_rooms ?? invoice.booking_number_of_rooms ?? null,
       // Use invoice amount or fallback to booking cost
-      base_price: invoice.amount || booking?.total_cost || 0,
+      base_price: invoice.amount || booking?.total_cost || invoice.booking_total_cost || 0,
       // Default missing optional fields
-      reminder_count: 0,
-      last_reminder_sent_at: invoice.email_sent_at
+      reminder_count: invoice.reminder_count ?? 0,
+      last_reminder_sent_at: invoice.last_reminder_sent_at ?? invoice.email_sent_at ?? null
     };
   },
 
   async getAllInvoices(): Promise<InvoiceWithDetails[]> {
-    const { data, error } = await supabase
-      .from("invoices")
-      .select(`
-        *,
-        bookings (
-          start_date,
-          end_date,
-          number_of_guests,
-          number_of_rooms,
-          total_cost
-        )
-      `)
-      .order("created_at", { ascending: false });
+    const { data, error } = await supabase.rpc("get_invoices_with_booking");
 
     if (error) {
-      console.error("Error fetching invoices:", error);
+      console.error("Error fetching invoices via RPC:", error);
       throw error;
     }
 
-    return (data || []).map(this._mapToInvoiceWithDetails);
+    const rows = data ?? [];
+    return rows.map((row: any) => this._mapToInvoiceWithDetails(row));
   },
 
   async getInvoiceById(id: string): Promise<InvoiceWithDetails> {
@@ -147,7 +136,7 @@ export const invoiceService = {
       total_amount: totalCost,
       deposit_amount: deposit,
       balance_due: totalCost - deposit,
-      status: invoiceData.status || 'pending',
+      status: invoiceData.status || "pending",
       due_date: invoiceData.due_date || null,
       client_name: booking?.contact_name || invoiceData.client_name || null,
       client_email: booking?.contact_email || invoiceData.client_email || null,
@@ -221,11 +210,11 @@ export const invoiceService = {
     return data || [];
   },
 
-  async recordPaymentReminder(invoiceId: string, type: 'email' | 'sms') {
+  async recordPaymentReminder(invoiceId: string, type: "email" | "sms") {
     try {
       // 1. Update invoice status
       await this.updateInvoice(invoiceId, {
-        email_status: 'sent',
+        email_status: "sent",
         email_sent_at: new Date().toISOString()
       });
 
@@ -235,13 +224,13 @@ export const invoiceService = {
         .insert({
           title: `Payment Reminder (${type})`,
           description: `Automated payment reminder sent via ${type}`,
-          related_type: 'invoice',
+          related_type: "invoice",
           related_id: invoiceId,
-          status: 'completed',
-          category: 'payment',
+          status: "completed",
+          category: "payment",
           auto_generated: true,
           // due_date is required by schema, setting to now
-          due_date: new Date().toISOString() 
+          due_date: new Date().toISOString()
         });
         
       if (error) console.warn("Could not record reminder log:", error);
@@ -253,7 +242,7 @@ export const invoiceService = {
   async updateEmailStatus(id: string, status: string) {
     return this.updateInvoice(id, { 
       email_status: status,
-      email_sent_at: status === 'sent' ? new Date().toISOString() : null
+      email_sent_at: status === "sent" ? new Date().toISOString() : null
     });
   },
 
@@ -261,9 +250,9 @@ export const invoiceService = {
   async syncInvoiceWithPayments(invoiceId: string, payments?: any[]) {
     try {
       const { data: invoice } = await supabase
-        .from('invoices')
-        .select('total_amount')
-        .eq('id', invoiceId)
+        .from("invoices")
+        .select("total_amount")
+        .eq("id", invoiceId)
         .single();
         
       if (!invoice) return;
@@ -272,16 +261,16 @@ export const invoiceService = {
       let paymentsData = payments;
       if (!paymentsData) {
         const { data } = await supabase
-          .from('payments')
-          .select('amount')
-          .eq('invoice_id', invoiceId);
+          .from("payments")
+          .select("amount")
+          .eq("invoice_id", invoiceId);
         paymentsData = data || [];
       }
           
       const totalPaid = paymentsData.reduce((sum, p) => sum + Number(p.amount || 0), 0);
       const total = Number(invoice.total_amount || 0);
       const balance = total - totalPaid;
-      const status = balance <= 0 ? 'paid' : (totalPaid > 0 ? 'partial' : 'pending');
+      const status = balance <= 0 ? "paid" : (totalPaid > 0 ? "partial" : "pending");
       
       await this.updateInvoice(invoiceId, {
         balance_due: balance,
@@ -294,7 +283,7 @@ export const invoiceService = {
 
   async syncAllInvoicesWithPayments() {
     try {
-      const { data: invoices } = await supabase.from('invoices').select('id');
+      const { data: invoices } = await supabase.from("invoices").select("id");
       if (!invoices) return;
       
       for (const invoice of invoices) {

@@ -1220,6 +1220,31 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      get_invoices_with_booking: {
+        Args: never
+        Returns: {
+          amount: number
+          balance_due: number
+          booking_end_date: string
+          booking_id: string
+          booking_number_of_guests: number
+          booking_number_of_rooms: number
+          booking_start_date: string
+          booking_total_cost: number
+          client_email: string
+          client_name: string
+          client_phone: string
+          created_at: string
+          deposit_amount: number
+          due_date: string
+          id: string
+          invoice_number: string
+          notes: string
+          status: string
+          total_amount: number
+          updated_at: string
+        }[]
+      }
       get_monthly_manager_salary: {
         Args: { p_manager_id: string; p_month: string }
         Returns: {
