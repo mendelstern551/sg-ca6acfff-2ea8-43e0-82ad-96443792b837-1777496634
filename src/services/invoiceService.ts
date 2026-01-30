@@ -124,63 +124,85 @@ export const invoiceService = {
   async createInvoice(bookingId: string, invoiceData: any) {
     console.log("Creating invoice for booking:", bookingId);
 
-    // 1. Get the booking details first
-    const { data: booking, error: bookingError } = await supabase
-      .from("bookings")
-      .select("*")
-      .eq("id", bookingId)
-      .single();
+    try {
+      // 1. Get the booking details first
+      const { data: booking, error: bookingError } = await supabase
+        .from("bookings")
+        .select("*")
+        .eq("id", bookingId)
+        .single();
 
-    if (bookingError) {
-      console.error("Error fetching booking for invoice:", bookingError);
-      throw bookingError;
-    }
+      if (bookingError) {
+        console.error("Error fetching booking for invoice:", bookingError);
+        throw bookingError;
+      }
 
-    // 2. Prepare payload - EXCLUDE 'amount' column to bypass cache issue
-    // Database trigger will auto-set it from total_amount
-    const totalCost = booking?.total_cost || invoiceData.amount || 0;
-    const deposit = invoiceData.deposit_amount || 0;
+      // 2. Calculate amounts
+      const totalCost = booking?.total_cost || invoiceData.amount || 0;
+      const deposit = invoiceData.deposit_amount || 0;
+      const balance = totalCost - deposit;
 
-    const invoicePayload = {
-      booking_id: bookingId,
-      invoice_number: invoiceData.invoice_number || `INV-${Date.now()}`,
-      // amount: removed - database trigger will set it automatically
-      total_amount: totalCost,
-      deposit_amount: deposit,
-      balance_due: totalCost - deposit,
-      status: invoiceData.status || "pending",
-      due_date: invoiceData.due_date || null,
-      client_name: booking?.contact_name || invoiceData.client_name || null,
-      client_email: booking?.contact_email || invoiceData.client_email || null,
-      client_phone: booking?.contact_phone || invoiceData.client_phone || null,
-      notes: invoiceData.notes || null
-    };
+      // 3. Calculate due date (30 days from now if not provided)
+      let dueDate = invoiceData.due_date;
+      if (!dueDate && booking?.start_date) {
+        // Set due date to 7 days before event start
+        const eventDate = new Date(booking.start_date);
+        eventDate.setDate(eventDate.getDate() - 7);
+        dueDate = eventDate.toISOString().split('T')[0];
+      } else if (!dueDate) {
+        // Default to 30 days from now
+        const thirtyDaysFromNow = new Date();
+        thirtyDaysFromNow.setDate(thirtyDaysFromNow.getDate() + 30);
+        dueDate = thirtyDaysFromNow.toISOString().split('T')[0];
+      }
 
-    console.log("Creating invoice with payload (amount auto-set by trigger):", invoicePayload);
+      // 4. Prepare minimal payload with explicit column names
+      const invoicePayload = {
+        booking_id: bookingId,
+        invoice_number: invoiceData.invoice_number || `INV-${Date.now()}`,
+        amount: totalCost,
+        total_amount: totalCost,
+        deposit_amount: deposit,
+        balance_due: balance,
+        status: invoiceData.status || "pending",
+        due_date: dueDate,
+        client_name: booking?.contact_name || invoiceData.client_name || null,
+        client_email: booking?.contact_email || invoiceData.client_email || null,
+        client_phone: booking?.contact_phone || invoiceData.client_phone || null,
+        notes: invoiceData.notes || null,
+        email_status: null,
+        email_sent_at: null
+      };
 
-    // 3. Direct insert - trigger handles amount column
-    const { data, error } = await supabase
-      .from("invoices")
-      .insert(invoicePayload)
-      .select(`
-        *,
-        bookings (
-          start_date,
-          end_date,
-          number_of_guests,
-          number_of_rooms,
-          total_cost
-        )
-      `)
-      .single();
+      console.log("Creating invoice with payload:", invoicePayload);
 
-    if (error) {
-      console.error("Error creating invoice:", error);
+      // 5. Insert the invoice
+      const { data, error } = await supabase
+        .from("invoices")
+        .insert(invoicePayload)
+        .select(`
+          *,
+          bookings (
+            start_date,
+            end_date,
+            number_of_guests,
+            number_of_rooms,
+            total_cost
+          )
+        `)
+        .single();
+
+      if (error) {
+        console.error("Error creating invoice:", error);
+        throw error;
+      }
+
+      console.log("Invoice created successfully:", data);
+      return this._mapToInvoiceWithDetails(data);
+    } catch (error) {
+      console.error("Exception in createInvoice:", error);
       throw error;
     }
-
-    console.log("Invoice created successfully:", data);
-    return this._mapToInvoiceWithDetails(data);
   },
 
   async updateInvoice(id: string, updates: any) {
