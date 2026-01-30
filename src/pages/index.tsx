@@ -407,6 +407,19 @@ export default function HomePage() {
     if (savingBooking) return;
 
     setSavingBooking(true);
+
+    const withTimeout = async <T,>(promise: Promise<T>, ms: number, label: string): Promise<T> => {
+      let timeoutId: ReturnType<typeof setTimeout> | undefined;
+      const timeoutPromise = new Promise<never>((_, reject) => {
+        timeoutId = setTimeout(() => reject(new Error(`${label} timed out after ${ms}ms`)), ms);
+      });
+      try {
+        return await Promise.race([promise, timeoutPromise]);
+      } finally {
+        if (timeoutId) clearTimeout(timeoutId);
+      }
+    };
+
     try {
       const existingPaymentsTotal = editingBooking?.payments?.reduce((sum, p) => sum + Number(p.amount), 0) || 0;
       const balanceDue = bookingData.total_cost - existingPaymentsTotal;
@@ -435,14 +448,22 @@ export default function HomePage() {
       const isNewBooking = !editingBooking;
 
       if (editingBooking) {
-        await bookingService.updateBooking(editingBooking.id, dataToSave as BookingUpdate);
+        await withTimeout(
+          bookingService.updateBooking(editingBooking.id, dataToSave as BookingUpdate),
+          15000,
+          "Update booking"
+        );
         savedBookingId = editingBooking.id;
         toast({
           title: "Booking Updated",
           description: `Balance due recalculated: ${formatCurrency(balanceDue)}`,
         });
       } else {
-        const newBooking = await bookingService.createBooking(dataToSave as BookingInsert);
+        const newBooking = await withTimeout(
+          bookingService.createBooking(dataToSave as BookingInsert),
+          15000,
+          "Create booking"
+        );
         savedBookingId = newBooking.id;
         toast({
           title: "Booking Created",
@@ -469,28 +490,36 @@ export default function HomePage() {
           setReminderRefreshKey((prev) => prev + 1);
         }
       } catch (reminderError) {
-        console.error("Error creating reminders:", reminderError);
+        console.error("Reminder generation failed (booking still saved):", reminderError);
       }
 
       if (bookingData.confirmed) {
         try {
-          const existingInvoice = await invoiceService.getInvoiceByBookingId(savedBookingId);
+          const existingInvoice = await withTimeout(
+            invoiceService.getInvoiceByBookingId(savedBookingId),
+            15000,
+            "Check invoice"
+          );
 
           if (!existingInvoice) {
-            const invoiceResult = await invoiceService.createInvoice(savedBookingId, {
-              clientName: bookingData.contact_name,
-              clientEmail: bookingData.contact_email || undefined,
-              clientPhone: bookingData.contact_phone || undefined,
-              eventDateStart: bookingData.start_date,
-              eventDateEnd: bookingData.end_date,
-              numberOfGuests: bookingData.number_of_guests,
-              numberOfRooms: bookingData.number_of_rooms || 1,
-              basePrice: bookingData.total_cost,
-              depositAmount: existingPaymentsTotal,
-              balanceDue: balanceDue,
-              totalAmount: bookingData.total_cost,
-              notes: bookingData.notes || undefined,
-            });
+            const invoiceResult = await withTimeout(
+              invoiceService.createInvoice(savedBookingId, {
+                clientName: bookingData.contact_name,
+                clientEmail: bookingData.contact_email || undefined,
+                clientPhone: bookingData.contact_phone || undefined,
+                eventDateStart: bookingData.start_date,
+                eventDateEnd: bookingData.end_date,
+                numberOfGuests: bookingData.number_of_guests,
+                numberOfRooms: bookingData.number_of_rooms || 1,
+                basePrice: bookingData.total_cost,
+                depositAmount: existingPaymentsTotal,
+                balanceDue: balanceDue,
+                totalAmount: bookingData.total_cost,
+                notes: bookingData.notes || undefined,
+              }),
+              15000,
+              "Create invoice"
+            );
 
             toast({
               title: "✓ Invoice Generated",
@@ -508,14 +537,20 @@ export default function HomePage() {
         }
       }
 
-      await loadAllData();
+      await withTimeout(loadAllData(), 20000, "Reload data");
       setEditingBooking(undefined);
       setRefreshKey((prev) => prev + 1);
     } catch (error: any) {
-      console.error("Error saving booking:", error);
+      console.error("Booking save failed (raw):", error);
+      const message =
+        error?.message ||
+        error?.details ||
+        error?.hint ||
+        "Failed to save booking. Please try again.";
+
       toast({
         title: "Booking Save Failed",
-        description: error?.message || "Failed to save booking. Please try again.",
+        description: message,
         variant: "destructive",
       });
     } finally {
@@ -1091,7 +1126,7 @@ export default function HomePage() {
                   <div className="text-center py-12 text-slate-500 dark:text-slate-400">
                     <Calendar className="h-12 w-12 mx-auto mb-4 opacity-50" />
                     <p className="text-lg font-medium mb-2">No bookings found</p>
-                    <p className="text-sm">Try adjusting your search or filters</p>
+                    <p className="text-sm text-slate-600 dark:text-slate-400">Try adjusting your search or filters</p>
                   </div>
                 ) : (
                   <BookingList 
