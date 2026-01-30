@@ -58,6 +58,7 @@ export default function HomePage() {
   const [refreshKey, setRefreshKey] = useState(0);
   const [filteredBookingId, setFilteredBookingId] = useState<string | undefined>();
   const [loading, setLoading] = useState(true);
+  const [savingBooking, setSavingBooking] = useState(false);
 
   const [invoices, setInvoices] = useState<InvoiceWithDetails[]>([]);
   const [selectedInvoiceBooking, setSelectedInvoiceBooking] = useState<Booking | undefined>();
@@ -191,39 +192,19 @@ export default function HomePage() {
         managerService.getAllCompensation()
       ]);
 
-      const bookingsData = results[0].status === 'fulfilled' ? results[0].value : [];
-      const expensesData = results[1].status === 'fulfilled' ? results[1].value : [];
-      const invoicesData = results[2].status === 'fulfilled' ? results[2].value : [];
-      const managerData = results[3].status === 'fulfilled' ? results[3].value : [];
-
-      // DIAGNOSTIC: Log invoice data to see what's being loaded
-      console.log('📊 DIAGNOSTIC - Loaded Data:', {
-        bookingsCount: bookingsData.length,
-        invoicesCount: invoicesData.length,
-        invoicesData: invoicesData.map(inv => ({
-          number: inv.invoice_number,
-          client: inv.client_name,
-          total: inv.total_amount,
-          deposit: inv.deposit_amount,
-          balance: inv.balance_due,
-          status: inv.status
-        }))
-      });
-
-      // DIAGNOSTIC: Check booking payment status
-      bookingsData.forEach(b => {
-        const paymentsTotal = b.payments?.reduce((sum, p) => sum + Number(p.amount), 0) || 0;
-        console.log(`📋 Booking: ${b.name} - Paid: $${paymentsTotal}, Total: $${b.total_cost}, Status: ${b.payment_status}`);
-      });
+      const bookingsData = results[0].status === "fulfilled" ? results[0].value : [];
+      const expensesData = results[1].status === "fulfilled" ? results[1].value : [];
+      const invoicesData = results[2].status === "fulfilled" ? results[2].value : [];
+      const managerData = results[3].status === "fulfilled" ? results[3].value : [];
 
       results.forEach((result, index) => {
-        if (result.status === 'rejected') {
-          const serviceName = ['Bookings', 'Expenses', 'Invoices', 'Manager'][index];
+        if (result.status === "rejected") {
+          const serviceName = ["Bookings", "Expenses", "Invoices", "Manager"][index];
           console.error(`${serviceName} service error:`, result.reason);
         }
       });
 
-      const bookingsWithPayments = bookingsData.map(b => ({
+      const bookingsWithPayments = bookingsData.map((b) => ({
         ...b,
         payments: b.payments || [],
       }));
@@ -233,20 +214,19 @@ export default function HomePage() {
       setInvoices(invoicesData);
       setManagerCompensations(managerData);
 
-      if (results[0].status === 'rejected' || results[1].status === 'rejected') {
+      if (results[0].status === "rejected" || results[1].status === "rejected") {
         toast({
           title: "Partial Load Failure",
           description: "Some data couldn't be loaded. Retrying automatically...",
-          variant: "destructive"
+          variant: "destructive",
         });
       }
-
     } catch (error) {
       console.error("Error loading data:", error);
       toast({
         title: "Error Loading Data",
         description: "Failed to load data. The app will retry automatically every 30 seconds.",
-        variant: "destructive"
+        variant: "destructive",
       });
     } finally {
       setLoading(false);
@@ -424,21 +404,31 @@ export default function HomePage() {
   };
 
   const handleSaveBooking = async (bookingData: Omit<Booking, "id" | "created_at" | "updated_at" | "payments">) => {
+    if (savingBooking) return;
+
+    setSavingBooking(true);
     try {
-      const amountPaid = editingBooking?.payments?.reduce((sum, p) => sum + Number(p.amount), 0) || 0;
-      const balanceDue = bookingData.total_cost - amountPaid;
+      const existingPaymentsTotal = editingBooking?.payments?.reduce((sum, p) => sum + Number(p.amount), 0) || 0;
+      const balanceDue = bookingData.total_cost - existingPaymentsTotal;
 
       let paymentStatus: "pending" | "partial" | "paid" = "pending";
       if (balanceDue <= 0) paymentStatus = "paid";
-      else if (amountPaid > 0) paymentStatus = "partial";
-      
-      const { building_id, recurring, ...cleanBookingData } = bookingData as any;
-      
-      const dataToSave: Omit<Booking, "id" | "created_at" | "updated_at" | "payments"> & { amount_paid: number, balance_due: number, payment_status: any } = {
-          ...cleanBookingData,
-          amount_paid: amountPaid,
-          balance_due: balanceDue,
-          payment_status: paymentStatus
+      else if (existingPaymentsTotal > 0) paymentStatus = "partial";
+
+      const { building_id, recurring, ...cleanBookingData } = bookingData as unknown as {
+        building_id?: unknown;
+        recurring?: unknown;
+      };
+
+      const dataToSave: Omit<Booking, "id" | "created_at" | "updated_at" | "payments"> & {
+        amount_paid: number;
+        balance_due: number;
+        payment_status: "pending" | "partial" | "paid";
+      } = {
+        ...(cleanBookingData as any),
+        amount_paid: existingPaymentsTotal,
+        balance_due: balanceDue,
+        payment_status: paymentStatus,
       };
 
       let savedBookingId: string;
@@ -447,19 +437,26 @@ export default function HomePage() {
       if (editingBooking) {
         await bookingService.updateBooking(editingBooking.id, dataToSave as BookingUpdate);
         savedBookingId = editingBooking.id;
-        toast({ title: "Booking Updated", description: `Balance due recalculated: ${formatCurrency(balanceDue)}` });
+        toast({
+          title: "Booking Updated",
+          description: `Balance due recalculated: ${formatCurrency(balanceDue)}`,
+        });
       } else {
         const newBooking = await bookingService.createBooking(dataToSave as BookingInsert);
         savedBookingId = newBooking.id;
-        toast({ title: "Booking Created", description: "New booking has been created successfully." });
+        toast({
+          title: "Booking Created",
+          description: "New booking has been created successfully.",
+        });
       }
 
       try {
-        const significantChange = isNewBooking
-          || editingBooking?.confirmed !== bookingData.confirmed
-          || editingBooking?.start_date !== bookingData.start_date
-          || editingBooking?.name !== bookingData.name
-          || editingBooking?.contact_name !== bookingData.contact_name;
+        const significantChange =
+          isNewBooking ||
+          editingBooking?.confirmed !== bookingData.confirmed ||
+          editingBooking?.start_date !== bookingData.start_date ||
+          editingBooking?.name !== bookingData.name ||
+          editingBooking?.contact_name !== bookingData.contact_name;
 
         if (significantChange) {
           await reminderService.deleteBookingReminders(savedBookingId);
@@ -467,65 +464,62 @@ export default function HomePage() {
             eventName: bookingData.name,
             contactName: bookingData.contact_name,
             startDate: new Date(bookingData.start_date),
-            isPending: !bookingData.confirmed
+            isPending: !bookingData.confirmed,
           });
-          setReminderRefreshKey(prev => prev + 1);
+          setReminderRefreshKey((prev) => prev + 1);
         }
       } catch (reminderError) {
         console.error("Error creating reminders:", reminderError);
       }
 
-      // ✅ FIX #2: Improved invoice auto-creation logic
       if (bookingData.confirmed) {
         try {
-          console.log("🔍 Checking for existing invoice for booking:", savedBookingId);
           const existingInvoice = await invoiceService.getInvoiceByBookingId(savedBookingId);
-          
+
           if (!existingInvoice) {
-            console.log("📝 No invoice found. Creating new invoice for confirmed booking:", savedBookingId);
-            
             const invoiceResult = await invoiceService.createInvoice(savedBookingId, {
-              clientName: bookingData.contact_name, 
-              clientEmail: bookingData.contact_email || undefined, 
+              clientName: bookingData.contact_name,
+              clientEmail: bookingData.contact_email || undefined,
               clientPhone: bookingData.contact_phone || undefined,
-              eventDateStart: bookingData.start_date, 
-              eventDateEnd: bookingData.end_date, 
+              eventDateStart: bookingData.start_date,
+              eventDateEnd: bookingData.end_date,
               numberOfGuests: bookingData.number_of_guests,
-              numberOfRooms: bookingData.number_of_rooms || 1, 
-              basePrice: bookingData.total_cost, 
-              depositAmount: amountPaid,
-              balanceDue: balanceDue, 
-              totalAmount: bookingData.total_cost, 
-              notes: bookingData.notes || undefined
+              numberOfRooms: bookingData.number_of_rooms || 1,
+              basePrice: bookingData.total_cost,
+              depositAmount: existingPaymentsTotal,
+              balanceDue: balanceDue,
+              totalAmount: bookingData.total_cost,
+              notes: bookingData.notes || undefined,
             });
-            
-            console.log("✅ Invoice created successfully:", invoiceResult);
-            
-            toast({ 
-              title: "✓ Invoice Generated", 
-              description: `Invoice ${invoiceResult.invoice_number || ''} created successfully.`, 
-              variant: "default" 
+
+            toast({
+              title: "✓ Invoice Generated",
+              description: `Invoice ${invoiceResult.invoice_number || ""} created successfully.`,
+              variant: "default",
             });
-          } else {
-            console.log("ℹ️ Invoice already exists for booking:", savedBookingId, "Invoice:", existingInvoice.invoice_number);
           }
         } catch (invoiceError: any) {
-          console.error("❌ Error creating invoice:", invoiceError);
-          toast({ 
-            title: "Invoice Creation Failed", 
-            description: `Booking saved, but invoice creation failed: ${invoiceError.message || 'Unknown error'}`, 
-            variant: "destructive" 
+          console.error("Invoice creation failed:", invoiceError);
+          toast({
+            title: "Invoice Creation Failed",
+            description: invoiceError?.message || "Booking saved, but invoice creation failed.",
+            variant: "destructive",
           });
         }
       }
 
-      // ✅ FIX #1: Manual reload after save instead of relying on realtime subscriptions
       await loadAllData();
       setEditingBooking(undefined);
-      setRefreshKey(prev => prev + 1);
-    } catch (error) {
+      setRefreshKey((prev) => prev + 1);
+    } catch (error: any) {
       console.error("Error saving booking:", error);
-      toast({ title: "Error", description: "Failed to save booking. Please try again.", variant: "destructive" });
+      toast({
+        title: "Booking Save Failed",
+        description: error?.message || "Failed to save booking. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setSavingBooking(false);
     }
   };
   
@@ -977,7 +971,7 @@ export default function HomePage() {
                         {upcomingBookings.slice(0, 5).map((booking) => (
                           <div 
                             key={booking.id} 
-                            className="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-800 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors cursor-pointer"
+                            className="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-800 rounded-lg hover:border-blue-300 dark:hover:border-blue-600 transition-colors cursor-pointer"
                             onClick={() => handleEditBooking(booking)}
                           >
                             <div>
@@ -1063,8 +1057,16 @@ export default function HomePage() {
                     <CardTitle className="text-slate-900 dark:text-slate-100">All Bookings</CardTitle>
                     <CardDescription className="text-slate-600 dark:text-slate-400">Manage your Yom Tov, Shabaton, and Night Event bookings</CardDescription>
                   </div>
-                  <Button className="bg-blue-600 hover:bg-blue-700 text-white" onClick={() => { setEditingBooking(undefined); setBookingDialogOpen(true); }}>
-                    <Plus className="h-4 w-4 mr-2" />New Booking
+                  <Button
+                    className="bg-blue-600 hover:bg-blue-700 text-white"
+                    disabled={savingBooking}
+                    onClick={() => {
+                      setEditingBooking(undefined);
+                      setBookingDialogOpen(true);
+                    }}
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    {savingBooking ? "Saving..." : "New Booking"}
                   </Button>
                 </div>
               </CardHeader>
@@ -1305,10 +1307,7 @@ export default function HomePage() {
                 <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
                   <Card className="bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-950 dark:to-pink-950 border-purple-200 dark:border-purple-800">
                     <CardHeader>
-                      <CardTitle className="text-sm font-medium text-purple-900 dark:text-purple-100 flex items-center gap-2">
-                        <Users className="h-4 w-4" />
-                        Total Guests (All Time)
-                      </CardTitle>
+                      <CardTitle className="text-sm font-medium text-purple-900 dark:text-purple-100">Total Guests (All Time)</CardTitle>
                     </CardHeader>
                     <CardContent>
                       <div className="text-4xl font-bold text-purple-900 dark:text-purple-100">{totalGuests}</div>
@@ -1318,10 +1317,7 @@ export default function HomePage() {
 
                   <Card className="bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-950 dark:to-orange-950 border-amber-200 dark:border-amber-800">
                     <CardHeader>
-                      <CardTitle className="text-sm font-medium text-amber-900 dark:text-amber-100 flex items-center gap-2">
-                        <Calendar className="h-4 w-4" />
-                        Average Guests per Booking
-                      </CardTitle>
+                      <CardTitle className="text-sm font-medium text-amber-900 dark:text-amber-100">Average Guests per Booking</CardTitle>
                     </CardHeader>
                     <CardContent>
                       <div className="text-4xl font-bold text-amber-900 dark:text-amber-100">
@@ -1333,10 +1329,7 @@ export default function HomePage() {
 
                   <Card className="bg-gradient-to-br from-rose-50 to-red-50 dark:from-rose-950 dark:to-red-950 border-rose-200 dark:border-rose-800">
                     <CardHeader>
-                      <CardTitle className="text-sm font-medium text-rose-900 dark:text-rose-100 flex items-center gap-2">
-                        <DollarSign className="h-4 w-4" />
-                        Average Revenue per Booking
-                      </CardTitle>
+                      <CardTitle className="text-sm font-medium text-rose-900 dark:text-rose-100">Average Revenue per Booking</CardTitle>
                     </CardHeader>
                     <CardContent>
                       <div className="text-4xl font-bold text-rose-900 dark:text-rose-100">
@@ -1348,10 +1341,7 @@ export default function HomePage() {
 
                   <Card className="bg-gradient-to-br from-teal-50 to-cyan-50 dark:from-teal-950 dark:to-cyan-950 border-teal-200 dark:border-teal-800">
                     <CardHeader>
-                      <CardTitle className="text-sm font-medium text-teal-900 dark:text-teal-100 flex items-center gap-2">
-                        <FileText className="h-4 w-4" />
-                        Total Invoices
-                      </CardTitle>
+                      <CardTitle className="text-sm font-medium text-teal-900 dark:text-teal-100">Total Invoices</CardTitle>
                     </CardHeader>
                     <CardContent>
                       <div className="text-4xl font-bold text-teal-900 dark:text-teal-100">{invoices.length}</div>
@@ -1361,10 +1351,7 @@ export default function HomePage() {
 
                   <Card className="bg-gradient-to-br from-indigo-50 to-blue-50 dark:from-indigo-950 dark:to-blue-950 border-indigo-200 dark:border-indigo-800">
                     <CardHeader>
-                      <CardTitle className="text-sm font-medium text-indigo-900 dark:text-indigo-100 flex items-center gap-2">
-                        <Receipt className="h-4 w-4" />
-                        Total Expenses Recorded
-                      </CardTitle>
+                      <CardTitle className="text-sm font-medium text-indigo-900 dark:text-indigo-100">Total Expenses Recorded</CardTitle>
                     </CardHeader>
                     <CardContent>
                       <div className="text-4xl font-bold text-indigo-900 dark:text-indigo-100">{expenses.length}</div>
@@ -1374,10 +1361,7 @@ export default function HomePage() {
 
                   <Card className="bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-950 dark:to-emerald-950 border-green-200 dark:border-green-800">
                     <CardHeader>
-                      <CardTitle className="text-sm font-medium text-green-900 dark:text-green-100 flex items-center gap-2">
-                        <TrendingUp className="h-4 w-4" />
-                        Profit Margin
-                      </CardTitle>
+                      <CardTitle className="text-sm font-medium text-green-900 dark:text-green-100">Profit Margin</CardTitle>
                     </CardHeader>
                     <CardContent>
                       <div className="text-4xl font-bold text-green-900 dark:text-green-100">
