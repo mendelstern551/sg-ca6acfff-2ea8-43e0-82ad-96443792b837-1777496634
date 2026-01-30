@@ -91,6 +91,11 @@ export default function HomePage() {
   useEffect(() => {
     loadAllData();
     
+    // ✅ FIX #1: Disable realtime subscriptions temporarily to prevent freezing
+    // The issue is that rapid database changes trigger multiple reloads
+    // We'll rely on manual refreshes after save operations instead
+    
+    /* DISABLED REALTIME SUBSCRIPTIONS - CAUSING FREEZING
     let reloadTimeout: NodeJS.Timeout | null = null;
     let isReloading = false;
     
@@ -102,7 +107,7 @@ export default function HomePage() {
         loadAllData().finally(() => {
           isReloading = false;
         });
-      }, 2000); // ✅ INCREASED from 500ms to 2000ms to prevent freezing
+      }, 2000);
     };
     
     const bookingsChannel = supabase
@@ -148,6 +153,7 @@ export default function HomePage() {
       expensesChannel.unsubscribe();
       invoicesChannel.unsubscribe();
     };
+    */
   }, []);
 
   useEffect(() => {
@@ -469,12 +475,14 @@ export default function HomePage() {
         console.error("Error creating reminders:", reminderError);
       }
 
-      // Create invoice for confirmed bookings (both new and updated)
+      // ✅ FIX #2: Improved invoice auto-creation logic
       if (bookingData.confirmed) {
         try {
+          console.log("🔍 Checking for existing invoice for booking:", savedBookingId);
           const existingInvoice = await invoiceService.getInvoiceByBookingId(savedBookingId);
+          
           if (!existingInvoice) {
-            console.log("📝 Creating invoice for confirmed booking:", savedBookingId);
+            console.log("📝 No invoice found. Creating new invoice for confirmed booking:", savedBookingId);
             
             const invoiceResult = await invoiceService.createInvoice(savedBookingId, {
               clientName: bookingData.contact_name, 
@@ -499,7 +507,7 @@ export default function HomePage() {
               variant: "default" 
             });
           } else {
-            console.log("ℹ️ Invoice already exists for booking:", savedBookingId);
+            console.log("ℹ️ Invoice already exists for booking:", savedBookingId, "Invoice:", existingInvoice.invoice_number);
           }
         } catch (invoiceError: any) {
           console.error("❌ Error creating invoice:", invoiceError);
@@ -511,6 +519,7 @@ export default function HomePage() {
         }
       }
 
+      // ✅ FIX #1: Manual reload after save instead of relying on realtime subscriptions
       await loadAllData();
       setEditingBooking(undefined);
       setRefreshKey(prev => prev + 1);
