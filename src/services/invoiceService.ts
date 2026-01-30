@@ -53,10 +53,22 @@ export const invoiceService = {
   },
 
   async getAllInvoices(): Promise<InvoiceWithDetails[]> {
-    const { data, error } = await supabase.rpc("get_invoices_with_booking");
+    const { data, error } = await supabase
+      .from("invoices")
+      .select(`
+        *,
+        bookings (
+          start_date,
+          end_date,
+          number_of_guests,
+          number_of_rooms,
+          total_cost
+        )
+      `)
+      .order("created_at", { ascending: false });
 
     if (error) {
-      console.error("Error fetching invoices via RPC:", error);
+      console.error("Error fetching invoices:", error);
       throw error;
     }
 
