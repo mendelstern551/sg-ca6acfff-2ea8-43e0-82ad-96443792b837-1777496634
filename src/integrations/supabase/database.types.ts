@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-empty-object-type */
+ 
 export type Json =
   | string
   | number
@@ -1220,6 +1220,43 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      create_invoice_safe: {
+        Args: {
+          p_amount: number
+          p_balance_due: number
+          p_booking_id: string
+          p_client_email: string
+          p_client_name: string
+          p_client_phone: string
+          p_deposit_amount: number
+          p_due_date: string
+          p_invoice_number: string
+          p_notes: string
+          p_status: string
+          p_total_amount: number
+        }
+        Returns: {
+          amount: number
+          balance_due: number
+          booking_id: string
+          client_email: string
+          client_name: string
+          client_phone: string
+          created_at: string
+          deposit_amount: number
+          due_date: string
+          email_sent_at: string
+          email_status: string
+          id: string
+          invoice_number: string
+          notes: string
+          paid_date: string
+          payment_method: string
+          status: string
+          total_amount: number
+          updated_at: string
+        }[]
+      }
       get_monthly_manager_salary: {
         Args: { p_manager_id: string; p_month: string }
         Returns: {

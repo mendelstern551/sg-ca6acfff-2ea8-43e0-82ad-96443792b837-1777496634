@@ -139,36 +139,31 @@ export const invoiceService = {
     const totalCost = booking?.total_cost || invoiceData.amount || 0;
     const deposit = invoiceData.deposit_amount || 0;
 
-    const invoicePayload = {
-      booking_id: bookingId,
-      invoice_number: invoiceData.invoice_number || `INV-${Date.now()}`,
-      amount: totalCost,
-      total_amount: totalCost,
-      deposit_amount: deposit,
-      balance_due: totalCost - deposit,
-      status: invoiceData.status || 'pending',
-      due_date: invoiceData.due_date,
-      client_name: booking?.contact_name || invoiceData.client_name,
-      client_email: booking?.contact_email || invoiceData.client_email,
-      client_phone: booking?.contact_phone || invoiceData.client_phone,
-      notes: invoiceData.notes,
-      email_status: 'not_sent'
-    };
+    console.log("Using RPC to create invoice (bypassing REST API cache)");
 
-    console.log("Inserting invoice payload:", invoicePayload);
-
-    const { data, error } = await supabase
-      .from("invoices")
-      .insert(invoicePayload)
-      .select()
-      .single();
+    // 3. Use RPC call instead of direct insert to bypass schema cache
+    const { data, error } = await supabase.rpc('create_invoice_safe', {
+      p_booking_id: bookingId,
+      p_invoice_number: invoiceData.invoice_number || `INV-${Date.now()}`,
+      p_amount: totalCost,
+      p_total_amount: totalCost,
+      p_deposit_amount: deposit,
+      p_balance_due: totalCost - deposit,
+      p_status: invoiceData.status || 'pending',
+      p_due_date: invoiceData.due_date || null,
+      p_client_name: booking?.contact_name || invoiceData.client_name || null,
+      p_client_email: booking?.contact_email || invoiceData.client_email || null,
+      p_client_phone: booking?.contact_phone || invoiceData.client_phone || null,
+      p_notes: invoiceData.notes || null
+    });
 
     if (error) {
-      console.error("Supabase insert error:", error);
+      console.error("RPC create_invoice_safe error:", error);
       throw error;
     }
 
-    return data;
+    // RPC returns an array, get the first item
+    return Array.isArray(data) ? data[0] : data;
   },
 
   async updateInvoice(id: string, updates: any) {
