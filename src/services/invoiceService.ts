@@ -142,7 +142,7 @@ export const invoiceService = {
     console.log("Using RPC to create invoice (bypassing REST API cache)");
 
     // 3. Use RPC call instead of direct insert to bypass schema cache
-    const { data, error } = await supabase.rpc('create_invoice_safe', {
+    const { data, error } = await supabase.rpc('insert_invoice_direct', {
       p_booking_id: bookingId,
       p_invoice_number: invoiceData.invoice_number || `INV-${Date.now()}`,
       p_amount: totalCost,
@@ -158,7 +158,7 @@ export const invoiceService = {
     });
 
     if (error) {
-      console.error("RPC create_invoice_safe error:", error);
+      console.error("RPC insert_invoice_direct error:", error);
       throw error;
     }
 
