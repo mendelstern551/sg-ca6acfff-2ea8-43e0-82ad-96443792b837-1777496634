@@ -135,36 +135,51 @@ export const invoiceService = {
       throw bookingError;
     }
 
-    // 2. Prepare payload
+    // 2. Prepare payload - EXCLUDE 'amount' column to bypass cache issue
+    // Database trigger will auto-set it from total_amount
     const totalCost = booking?.total_cost || invoiceData.amount || 0;
     const deposit = invoiceData.deposit_amount || 0;
 
-    console.log("Using RPC to create invoice (bypassing REST API cache)");
+    const invoicePayload = {
+      booking_id: bookingId,
+      invoice_number: invoiceData.invoice_number || `INV-${Date.now()}`,
+      // amount: removed - database trigger will set it automatically
+      total_amount: totalCost,
+      deposit_amount: deposit,
+      balance_due: totalCost - deposit,
+      status: invoiceData.status || 'pending',
+      due_date: invoiceData.due_date || null,
+      client_name: booking?.contact_name || invoiceData.client_name || null,
+      client_email: booking?.contact_email || invoiceData.client_email || null,
+      client_phone: booking?.contact_phone || invoiceData.client_phone || null,
+      notes: invoiceData.notes || null
+    };
 
-    // 3. Use RPC call instead of direct insert to bypass schema cache
-    const { data, error } = await supabase.rpc('insert_invoice_direct', {
-      p_booking_id: bookingId,
-      p_invoice_number: invoiceData.invoice_number || `INV-${Date.now()}`,
-      p_amount: totalCost,
-      p_total_amount: totalCost,
-      p_deposit_amount: deposit,
-      p_balance_due: totalCost - deposit,
-      p_status: invoiceData.status || 'pending',
-      p_due_date: invoiceData.due_date || null,
-      p_client_name: booking?.contact_name || invoiceData.client_name || null,
-      p_client_email: booking?.contact_email || invoiceData.client_email || null,
-      p_client_phone: booking?.contact_phone || invoiceData.client_phone || null,
-      p_notes: invoiceData.notes || null
-    });
+    console.log("Creating invoice with payload (amount auto-set by trigger):", invoicePayload);
+
+    // 3. Direct insert - trigger handles amount column
+    const { data, error } = await supabase
+      .from("invoices")
+      .insert(invoicePayload)
+      .select(`
+        *,
+        bookings (
+          start_date,
+          end_date,
+          number_of_guests,
+          number_of_rooms,
+          total_cost
+        )
+      `)
+      .single();
 
     if (error) {
-      console.error("RPC insert_invoice_direct error:", error);
+      console.error("Error creating invoice:", error);
       throw error;
     }
 
-    // RPC returns JSON, parse and map to expected format
-    const invoice = typeof data === 'string' ? JSON.parse(data) : data;
-    return this._mapToInvoiceWithDetails(invoice);
+    console.log("Invoice created successfully:", data);
+    return this._mapToInvoiceWithDetails(data);
   },
 
   async updateInvoice(id: string, updates: any) {

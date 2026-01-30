@@ -553,7 +553,7 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
-          amount: number
+          amount?: number
           balance_due?: number | null
           booking_id?: string | null
           client_email?: string | null
