@@ -102,7 +102,7 @@ export default function HomePage() {
         loadAllData().finally(() => {
           isReloading = false;
         });
-      }, 500);
+      }, 2000); // ✅ INCREASED from 500ms to 2000ms to prevent freezing
     };
     
     const bookingsChannel = supabase
@@ -474,7 +474,9 @@ export default function HomePage() {
         try {
           const existingInvoice = await invoiceService.getInvoiceByBookingId(savedBookingId);
           if (!existingInvoice) {
-            await invoiceService.createInvoice(savedBookingId, {
+            console.log("📝 Creating invoice for confirmed booking:", savedBookingId);
+            
+            const invoiceResult = await invoiceService.createInvoice(savedBookingId, {
               clientName: bookingData.contact_name, 
               clientEmail: bookingData.contact_email || undefined, 
               clientPhone: bookingData.contact_phone || undefined,
@@ -488,11 +490,24 @@ export default function HomePage() {
               totalAmount: bookingData.total_cost, 
               notes: bookingData.notes || undefined
             });
-            toast({ title: "✓ Invoice Generated", description: "An invoice has been automatically created.", variant: "default" });
+            
+            console.log("✅ Invoice created successfully:", invoiceResult);
+            
+            toast({ 
+              title: "✓ Invoice Generated", 
+              description: `Invoice ${invoiceResult.invoice_number || ''} created successfully.`, 
+              variant: "default" 
+            });
+          } else {
+            console.log("ℹ️ Invoice already exists for booking:", savedBookingId);
           }
-        } catch (invoiceError) {
-          console.error("Error creating invoice:", invoiceError);
-          toast({ title: "Invoice Creation Failed", description: "Booking saved, but invoice creation failed.", variant: "destructive" });
+        } catch (invoiceError: any) {
+          console.error("❌ Error creating invoice:", invoiceError);
+          toast({ 
+            title: "Invoice Creation Failed", 
+            description: `Booking saved, but invoice creation failed: ${invoiceError.message || 'Unknown error'}`, 
+            variant: "destructive" 
+          });
         }
       }
 
