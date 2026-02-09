@@ -602,6 +602,13 @@ export type Database = {
             referencedRelation: "bookings"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "invoices_new_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
         ]
       }
       issues: {
@@ -1220,6 +1227,19 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      create_invoice_bypass: {
+        Args: {
+          p_balance_due: number
+          p_booking_id: string
+          p_client_name: string
+          p_deposit_amount: number
+          p_due_date: string
+          p_invoice_number: string
+          p_status: string
+          p_total_amount: number
+        }
+        Returns: Json
+      }
       get_invoices_with_booking: {
         Args: never
         Returns: {
