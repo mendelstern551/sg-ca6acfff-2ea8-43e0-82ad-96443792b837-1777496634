@@ -10,7 +10,7 @@ export default async function handler(
   }
 
   try {
-    // Get environment variables
+    // Get environment variables with explicit checks
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
     const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
@@ -19,8 +19,9 @@ export default async function handler(
     console.log("supabaseUrl:", supabaseUrl);
     console.log("serviceRoleKey exists:", !!serviceRoleKey);
     console.log("serviceRoleKey length:", serviceRoleKey?.length);
-    console.log("serviceRoleKey first 20 chars:", serviceRoleKey?.substring(0, 20));
-    console.log("All env vars starting with SUPABASE:", Object.keys(process.env).filter(k => k.includes("SUPABASE")));
+    console.log("serviceRoleKey first 50 chars:", serviceRoleKey?.substring(0, 50));
+    console.log("Expected URL:", "https://qyphrzzhclfdkfjrsqsj.supabase.co");
+    console.log("URLs match:", supabaseUrl === "https://qyphrzzhclfdkfjrsqsj.supabase.co");
     console.log("===================================");
 
     // Validate environment variables
@@ -32,7 +33,23 @@ export default async function handler(
         keyLength: serviceRoleKey?.length
       });
       return res.status(500).json({ 
-        error: "Server configuration error: Missing Supabase credentials" 
+        error: "Server configuration error: Missing Supabase credentials",
+        debug: {
+          hasUrl: !!supabaseUrl,
+          hasKey: !!serviceRoleKey,
+          urlValue: supabaseUrl
+        }
+      });
+    }
+
+    // Validate the key format (should be a JWT)
+    if (!serviceRoleKey.startsWith("eyJ")) {
+      console.error("Invalid service role key format - not a JWT");
+      return res.status(500).json({
+        error: "Invalid service role key format",
+        debug: {
+          keyPrefix: serviceRoleKey.substring(0, 20)
+        }
       });
     }
 
@@ -64,6 +81,14 @@ export default async function handler(
       });
     }
 
+    console.log("Creating invoice with data:", {
+      booking_id: bookingId,
+      client_name: clientName,
+      total_amount: totalAmount,
+      deposit_amount: depositAmount || 0,
+      balance_due: balanceDue || totalAmount
+    });
+
     // Insert invoice directly using admin client
     const { data: invoice, error } = await supabaseAdmin
       .from("invoices")
@@ -86,10 +111,12 @@ export default async function handler(
       console.error("Database error creating invoice:", error);
       return res.status(500).json({ 
         error: error.message,
-        details: error
+        details: error,
+        hint: "Check if RLS policies allow service_role to insert"
       });
     }
 
+    console.log("Invoice created successfully:", invoice);
     return res.status(200).json({ invoice });
 
   } catch (error) {

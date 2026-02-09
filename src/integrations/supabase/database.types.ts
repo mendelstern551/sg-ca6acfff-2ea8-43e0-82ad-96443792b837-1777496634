@@ -738,6 +738,7 @@ export type Database = {
       manager_payments: {
         Row: {
           amount: number
+          compensation_id: string | null
           created_at: string | null
           id: string
           manager_id: string
@@ -746,6 +747,7 @@ export type Database = {
         }
         Insert: {
           amount: number
+          compensation_id?: string | null
           created_at?: string | null
           id?: string
           manager_id: string
@@ -754,6 +756,7 @@ export type Database = {
         }
         Update: {
           amount?: number
+          compensation_id?: string | null
           created_at?: string | null
           id?: string
           manager_id?: string
@@ -761,6 +764,13 @@ export type Database = {
           payment_date?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "manager_payments_compensation_id_fkey"
+            columns: ["compensation_id"]
+            isOneToOne: false
+            referencedRelation: "manager_compensation"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "manager_payments_manager_id_fkey"
             columns: ["manager_id"]
