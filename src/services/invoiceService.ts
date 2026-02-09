@@ -3,9 +3,10 @@ import { supabase } from "@/integrations/supabase/client";
 // Schema validation - verify PostgREST can see critical columns
 async function validateInvoiceSchema() {
   try {
+    // Test ONLY the columns we'll actually use (avoid 'amount' entirely)
     const { data, error } = await supabase
       .from("invoices")
-      .select("id, amount, total_amount, balance_due")
+      .select("id, total_amount, balance_due")
       .limit(1);
     
     if (error) {
@@ -33,7 +34,6 @@ export interface InvoiceWithDetails {
   id: string;
   booking_id: string | null;
   invoice_number: string;
-  amount: number;
   total_amount: number | null;
   deposit_amount: number | null;
   balance_due: number | null;
@@ -72,8 +72,8 @@ export const invoiceService = {
       event_date_end: booking?.end_date ?? invoice.booking_end_date ?? null,
       number_of_guests: booking?.number_of_guests ?? invoice.booking_number_of_guests ?? null,
       number_of_rooms: booking?.number_of_rooms ?? invoice.booking_number_of_rooms ?? null,
-      // Use invoice amount or fallback to booking cost
-      base_price: invoice.amount || booking?.total_cost || invoice.booking_total_cost || 0,
+      // Use total_amount or fallback to booking cost
+      base_price: invoice.total_amount || booking?.total_cost || invoice.booking_total_cost || 0,
       // Default missing optional fields
       reminder_count: invoice.reminder_count ?? 0,
       last_reminder_sent_at: invoice.last_reminder_sent_at ?? invoice.email_sent_at ?? null
@@ -165,8 +165,8 @@ export const invoiceService = {
         throw bookingError;
       }
 
-      // 2. Calculate amounts
-      const totalCost = booking?.total_cost || invoiceData.amount || 0;
+      // 2. Calculate amounts (use total_amount ONLY, avoid 'amount' column entirely)
+      const totalCost = booking?.total_cost || invoiceData.total_amount || 0;
       const deposit = invoiceData.deposit_amount || 0;
       const balance = totalCost - deposit;
 
@@ -184,11 +184,11 @@ export const invoiceService = {
         dueDate = thirtyDaysFromNow.toISOString().split('T')[0];
       }
 
-      // 4. Prepare minimal payload with explicit column names
+      // 4. Prepare minimal payload - USE ONLY COLUMNS POSTGREST CAN SEE
+      // CRITICAL: Do NOT include 'amount' column - PostgREST cache is broken for it
       const invoicePayload = {
         booking_id: bookingId,
         invoice_number: invoiceData.invoice_number || `INV-${Date.now()}`,
-        amount: totalCost,
         total_amount: totalCost,
         deposit_amount: deposit,
         balance_due: balance,
@@ -202,14 +202,31 @@ export const invoiceService = {
         email_sent_at: null
       };
 
-      console.log("Creating invoice with payload:", invoicePayload);
+      console.log("Creating invoice with payload (no 'amount' column):", invoicePayload);
 
-      // 5. Insert the invoice
+      // 5. Insert the invoice - select only safe columns
       const { data, error } = await supabase
         .from("invoices")
         .insert(invoicePayload)
         .select(`
-          *,
+          id,
+          booking_id,
+          invoice_number,
+          total_amount,
+          deposit_amount,
+          balance_due,
+          status,
+          due_date,
+          paid_date,
+          payment_method,
+          client_name,
+          client_email,
+          client_phone,
+          notes,
+          email_status,
+          email_sent_at,
+          created_at,
+          updated_at,
           bookings (
             start_date,
             end_date,
