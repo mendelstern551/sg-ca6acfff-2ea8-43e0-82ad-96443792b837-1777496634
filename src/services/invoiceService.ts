@@ -1,5 +1,33 @@
 import { supabase } from "@/integrations/supabase/client";
 
+// Schema validation - verify PostgREST can see critical columns
+async function validateInvoiceSchema() {
+  try {
+    const { data, error } = await supabase
+      .from("invoices")
+      .select("id, amount, total_amount, balance_due")
+      .limit(1);
+    
+    if (error) {
+      console.error("❌ Invoice schema validation failed:", error);
+      console.error("This usually means PostgREST schema cache is stale.");
+      console.error("Try: 1) Hard refresh, 2) Check Supabase dashboard for issues");
+      return false;
+    }
+    
+    console.log("✅ Invoice schema validated successfully");
+    return true;
+  } catch (e) {
+    console.error("❌ Exception during schema validation:", e);
+    return false;
+  }
+}
+
+// Run validation on module load (only in browser)
+if (typeof window !== "undefined") {
+  validateInvoiceSchema();
+}
+
 // Define the shape that the UI expects (flattened invoice + booking details)
 export interface InvoiceWithDetails {
   id: string;
