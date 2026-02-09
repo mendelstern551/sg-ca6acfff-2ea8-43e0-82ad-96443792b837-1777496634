@@ -1,18 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { createClient } from "@supabase/supabase-js";
 
-// Create admin client that bypasses RLS and PostgREST cache
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!,
-  {
-    auth: {
-      autoRefreshToken: false,
-      persistSession: false
-    }
-  }
-);
-
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
@@ -22,54 +10,84 @@ export default async function handler(
   }
 
   try {
-    const {
-      booking_id,
-      invoice_number,
-      total_amount,
-      deposit_amount,
-      balance_due,
-      status,
-      due_date,
-      client_name,
-      client_email,
-      client_phone
-    } = req.body;
+    // Get environment variables
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-    // Validate required fields
-    if (!booking_id || !invoice_number || total_amount === undefined) {
-      return res.status(400).json({ 
-        error: "Missing required fields: booking_id, invoice_number, total_amount" 
+    // Validate environment variables
+    if (!supabaseUrl || !serviceRoleKey) {
+      console.error("Missing environment variables:", {
+        hasUrl: !!supabaseUrl,
+        hasKey: !!serviceRoleKey,
+        url: supabaseUrl,
+        keyLength: serviceRoleKey?.length
+      });
+      return res.status(500).json({ 
+        error: "Server configuration error: Missing Supabase credentials" 
       });
     }
 
-    // Direct insert bypassing PostgREST entirely
-    const { data, error } = await supabaseAdmin
+    // Create admin client with service role key
+    const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey, {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false
+      }
+    });
+
+    const {
+      bookingId,
+      clientName,
+      clientEmail,
+      clientPhone,
+      totalAmount,
+      depositAmount,
+      balanceDue,
+      dueDate,
+      invoiceNumber,
+      status = "pending"
+    } = req.body;
+
+    // Validate required fields
+    if (!bookingId || !totalAmount) {
+      return res.status(400).json({ 
+        error: "Missing required fields: bookingId and totalAmount are required" 
+      });
+    }
+
+    // Insert invoice directly using admin client
+    const { data: invoice, error } = await supabaseAdmin
       .from("invoices")
       .insert({
-        booking_id,
-        invoice_number,
-        total_amount: Number(total_amount),
-        deposit_amount: Number(deposit_amount || 0),
-        balance_due: Number(balance_due || total_amount),
-        status: status || "unpaid",
-        due_date: due_date || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
-        client_name: client_name || null,
-        client_email: client_email || null,
-        client_phone: client_phone || null
+        booking_id: bookingId,
+        client_name: clientName,
+        client_email: clientEmail,
+        client_phone: clientPhone,
+        total_amount: totalAmount,
+        deposit_amount: depositAmount || 0,
+        balance_due: balanceDue || totalAmount,
+        due_date: dueDate,
+        invoice_number: invoiceNumber,
+        status: status
       })
       .select()
       .single();
 
     if (error) {
-      console.error("Invoice creation error:", error);
-      return res.status(500).json({ error: error.message });
+      console.error("Database error creating invoice:", error);
+      return res.status(500).json({ 
+        error: error.message,
+        details: error
+      });
     }
 
-    return res.status(200).json(data);
+    return res.status(200).json({ invoice });
+
   } catch (error) {
-    console.error("Unexpected error:", error);
+    console.error("Unexpected error in create-invoice API:", error);
     return res.status(500).json({ 
-      error: error instanceof Error ? error.message : "Unknown error" 
+      error: error instanceof Error ? error.message : "Unknown error",
+      type: error instanceof Error ? error.constructor.name : typeof error
     });
   }
 }
