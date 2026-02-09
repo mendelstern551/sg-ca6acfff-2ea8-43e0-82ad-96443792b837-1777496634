@@ -1,6 +1,21 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { createClient } from "@supabase/supabase-js";
 
+// Force fresh environment variable reads by accessing process.env directly each time
+const getSupabaseConfig = () => {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  
+  console.log("🔍 Environment check:", {
+    hasUrl: !!supabaseUrl,
+    hasKey: !!serviceRoleKey,
+    urlPrefix: supabaseUrl?.substring(0, 30),
+    keyPrefix: serviceRoleKey?.substring(0, 20)
+  });
+  
+  return { supabaseUrl, serviceRoleKey };
+};
+
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
@@ -10,13 +25,16 @@ export default async function handler(
   }
 
   try {
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    const { supabaseUrl, serviceRoleKey } = getSupabaseConfig();
 
     if (!supabaseUrl || !serviceRoleKey) {
-      console.error("Missing Supabase credentials");
+      console.error("❌ Missing Supabase credentials");
       return res.status(500).json({ 
-        error: "Server configuration error: Missing Supabase credentials"
+        error: "Server configuration error: Missing Supabase credentials",
+        debug: {
+          hasUrl: !!supabaseUrl,
+          hasKey: !!serviceRoleKey
+        }
       });
     }
 
@@ -46,6 +64,8 @@ export default async function handler(
       });
     }
 
+    console.log("📝 Creating invoice for booking:", bookingId);
+
     const { data: invoice, error } = await supabaseAdmin
       .from("invoices")
       .insert({
@@ -64,17 +84,18 @@ export default async function handler(
       .single();
 
     if (error) {
-      console.error("Database error creating invoice:", error);
+      console.error("❌ Database error creating invoice:", error);
       return res.status(500).json({ 
         error: error.message,
         details: error
       });
     }
 
+    console.log("✅ Invoice created successfully:", invoice?.id);
     return res.status(200).json({ invoice });
 
   } catch (error) {
-    console.error("Unexpected error in create-invoice API:", error);
+    console.error("❌ Unexpected error in create-invoice API:", error);
     return res.status(500).json({ 
       error: error instanceof Error ? error.message : "Unknown error"
     });
