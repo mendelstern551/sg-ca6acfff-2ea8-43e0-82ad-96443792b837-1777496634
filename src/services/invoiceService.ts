@@ -4,8 +4,15 @@ import { Database } from "@/integrations/supabase/types";
 export type Invoice = Database['public']['Tables']['invoices']['Row'];
 
 export interface InvoiceWithDetails extends Invoice {
-  // Add any joined fields here if needed in the future
   payment_reminders?: any[];
+  // Extended properties used by the app
+  event_date_start?: string;
+  event_date_end?: string;
+  number_of_guests?: number;
+  number_of_rooms?: number;
+  base_price?: number;
+  reminder_count?: number;
+  last_reminder_sent_at?: string;
 }
 
 export const invoiceService = {
@@ -25,11 +32,14 @@ export const invoiceService = {
       throw error;
     }
 
-    return data || [];
+    return data as InvoiceWithDetails[] || [];
   },
 
   async createInvoice(bookingId: string, bookingData: {
-    client_name: string;
+    clientName?: string;
+    client_name?: string;
+    clientEmail?: string;
+    clientPhone?: string;
     check_in: string;
     check_out: string;
     total_cost: number;
@@ -38,6 +48,7 @@ export const invoiceService = {
     try {
       console.log("🔧 Creating invoice via RPC bypass...");
       
+      const clientName = bookingData.clientName || bookingData.client_name || "Unknown Client";
       const totalAmount = bookingData.total_cost;
       const depositAmount = bookingData.deposit_paid || 0;
       const balanceDue = totalAmount - depositAmount;
@@ -46,11 +57,10 @@ export const invoiceService = {
       dueDate.setDate(dueDate.getDate() - 7); // Due 7 days before check-in
 
       // Call the RPC function we just created
-      // @ts-ignore - types might not be regenerated yet in the IDE context
       const { data, error } = await supabase.rpc('create_invoice_bypass', {
         p_booking_id: bookingId,
         p_invoice_number: invoiceNumber,
-        p_client_name: bookingData.client_name,
+        p_client_name: clientName,
         p_total_amount: totalAmount,
         p_deposit_amount: depositAmount,
         p_balance_due: balanceDue,
@@ -64,7 +74,7 @@ export const invoiceService = {
       }
 
       console.log("✅ Invoice created successfully via RPC!", data);
-      return data; // Return the created invoice object
+      return data as unknown as Invoice; // Return the created invoice object cast correctly
 
     } catch (error: any) {
       console.error("❌ Invoice creation failed:", error);
@@ -84,7 +94,7 @@ export const invoiceService = {
       throw error;
     }
 
-    return data;
+    return data as InvoiceWithDetails | null;
   },
 
   async getInvoiceById(invoiceId: string) {
@@ -99,7 +109,7 @@ export const invoiceService = {
       throw error;
     }
 
-    return data;
+    return data as InvoiceWithDetails;
   },
 
   async updateInvoiceStatus(invoiceId: string, status: string) {
@@ -130,10 +140,36 @@ export const invoiceService = {
     }
   },
 
-  async updateInvoiceCustomerInfo(invoiceId: string, info: { client_name?: string; client_email?: string; client_phone?: string }) {
+  async updateInvoiceCustomerInfo(invoiceId: string, info: { 
+    clientName?: string; 
+    client_name?: string; 
+    clientEmail?: string; 
+    client_email?: string;
+    clientPhone?: string; 
+    client_phone?: string;
+  }) {
+    
+    // Map camelCase to snake_case
+    const updateData: any = { ...info };
+    
+    if (info.clientName) {
+        updateData.client_name = info.clientName;
+        delete updateData.clientName;
+    }
+    
+    if (info.clientEmail) {
+        updateData.client_email = info.clientEmail;
+        delete updateData.clientEmail;
+    }
+
+    if (info.clientPhone) {
+        updateData.client_phone = info.clientPhone;
+        delete updateData.clientPhone;
+    }
+
     const { error } = await supabase
       .from("invoices")
-      .update(info)
+      .update(updateData)
       .eq("id", invoiceId);
 
     if (error) {
@@ -202,10 +238,6 @@ export const invoiceService = {
 
   // Payment Reminders
   async getPaymentReminders(invoiceId: string) {
-    // This assumes a payment_reminders table exists, or we might need to check schema
-    // For now, returning empty array to satisfy type checker if table missing
-    // or implement real fetch if table exists. 
-    // Checking schema first is safer but for quick fix:
     try {
         const { data, error } = await supabase
         .from("payment_reminders" as any) 
@@ -214,7 +246,6 @@ export const invoiceService = {
         .order("created_at", { ascending: false });
         
         if (error) { 
-            // If table doesn't exist, ignore error
             return []; 
         }
         return data || [];

@@ -42,21 +42,16 @@ export function InvoiceDialog({ open, onOpenChange, booking }: InvoiceDialogProp
         const amountPaid = validPayments.length > 0 
           ? validPayments.reduce((sum, p) => sum + p.amount, 0) 
           : 0;
-        const balanceDue = booking.total_cost - amountPaid;
         
+        // Use check_in/check_out instead of eventDateStart/End to match service
         existingInvoice = await invoiceService.createInvoice(booking.id, {
           clientName: booking.contact_name,
           clientEmail: booking.contact_email || undefined,
           clientPhone: booking.contact_phone || undefined,
-          eventDateStart: booking.start_date,
-          eventDateEnd: booking.end_date,
-          numberOfGuests: booking.number_of_guests,
-          numberOfRooms: booking.number_of_rooms || 1,
-          basePrice: booking.total_cost,
-          depositAmount: amountPaid,
-          balanceDue: balanceDue,
-          totalAmount: booking.total_cost,
-          notes: booking.notes || undefined
+          check_in: booking.start_date,
+          check_out: booking.end_date,
+          total_cost: booking.total_cost,
+          deposit_paid: amountPaid
         });
       }
 
@@ -267,10 +262,10 @@ export function InvoiceDialog({ open, onOpenChange, booking }: InvoiceDialogProp
             
             <div class="billing-box">
               <h3>Event Information</h3>
-              <strong>${invoice.number_of_guests} Guests</strong>
-              <p>${format(new Date(invoice.event_date_start), "EEEE, MMMM dd, yyyy")}</p>
+              <strong>${booking.number_of_guests} Guests</strong>
+              <p>${format(new Date(booking.start_date), "EEEE, MMMM dd, yyyy")}</p>
               <p>through</p>
-              <p>${format(new Date(invoice.event_date_end), "EEEE, MMMM dd, yyyy")}</p>
+              <p>${format(new Date(booking.end_date), "EEEE, MMMM dd, yyyy")}</p>
             </div>
           </div>
 
@@ -286,11 +281,11 @@ export function InvoiceDialog({ open, onOpenChange, booking }: InvoiceDialogProp
                 <td>
                   <strong>Event Venue Rental</strong><br>
                   <span style="font-size: 13px; color: #64748b;">
-                    ${invoice.number_of_guests} guests<br>
-                    ${format(new Date(invoice.event_date_start), "MMM dd")} - ${format(new Date(invoice.event_date_end), "MMM dd, yyyy")}
+                    ${booking.number_of_guests} guests<br>
+                    ${format(new Date(booking.start_date), "MMM dd")} - ${format(new Date(booking.end_date), "MMM dd, yyyy")}
                   </span>
                 </td>
-                <td class="amount">$${Number(invoice.base_price).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                <td class="amount">$${Number(booking.total_cost).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
               </tr>
             </tbody>
           </table>
@@ -298,7 +293,7 @@ export function InvoiceDialog({ open, onOpenChange, booking }: InvoiceDialogProp
           <div class="totals">
             <div class="total-row subtotal">
               <span>Subtotal</span>
-              <span>$${Number(invoice.base_price).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+              <span>$${Number(booking.total_cost).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
             </div>
             ${hasPayments ? `
             <div class="total-row payment">
@@ -579,11 +574,11 @@ export function InvoiceDialog({ open, onOpenChange, booking }: InvoiceDialogProp
             <div className="bg-blue-50 p-5 rounded-lg border-l-4 border-blue-600">
               <h3 className="text-xs uppercase tracking-wide text-blue-700 font-semibold mb-3">Event Information</h3>
               <p className="text-lg font-bold text-gray-800 mb-2">
-                {invoice.number_of_guests} Guests
+                {booking.number_of_guests} Guests
               </p>
-              <p className="text-sm text-gray-700">{format(new Date(invoice.event_date_start), "EEEE, MMMM dd, yyyy")}</p>
+              <p className="text-sm text-gray-700">{format(new Date(booking.start_date), "EEEE, MMMM dd, yyyy")}</p>
               <p className="text-xs text-gray-500">through</p>
-              <p className="text-sm text-gray-700">{format(new Date(invoice.event_date_end), "EEEE, MMMM dd, yyyy")}</p>
+              <p className="text-sm text-gray-700">{format(new Date(booking.end_date), "EEEE, MMMM dd, yyyy")}</p>
             </div>
           </div>
 
@@ -600,13 +595,13 @@ export function InvoiceDialog({ open, onOpenChange, booking }: InvoiceDialogProp
                   <td className="p-4">
                     <p className="font-semibold text-gray-800">Event Venue Rental</p>
                     <p className="text-sm text-gray-500 mt-1">
-                      {invoice.number_of_guests} guests
+                      {booking.number_of_guests} guests
                     </p>
                     <p className="text-xs text-gray-400">
-                      {format(new Date(invoice.event_date_start), "MMM dd")} - {format(new Date(invoice.event_date_end), "MMM dd, yyyy")}
+                      {format(new Date(booking.start_date), "MMM dd")} - {format(new Date(booking.end_date), "MMM dd, yyyy")}
                     </p>
                   </td>
-                  <td className="p-4 text-right font-semibold text-lg">${Number(invoice.base_price).toFixed(2)}</td>
+                  <td className="p-4 text-right font-semibold text-lg">${Number(booking.total_cost).toFixed(2)}</td>
                 </tr>
               </tbody>
             </table>
@@ -614,7 +609,7 @@ export function InvoiceDialog({ open, onOpenChange, booking }: InvoiceDialogProp
             <div className="mt-6 space-y-3 border-t-2 border-gray-200 pt-4">
               <div className="flex justify-between text-gray-600">
                 <span>Subtotal:</span>
-                <span className="font-medium">${Number(invoice.base_price).toFixed(2)}</span>
+                <span className="font-medium">${Number(booking.total_cost).toFixed(2)}</span>
               </div>
               {hasPayments && (
                 <>
