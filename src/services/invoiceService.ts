@@ -46,39 +46,57 @@ export const invoiceService = {
     deposit_paid: number;
   }) {
     try {
-      console.log("🔧 Creating invoice via RPC bypass...");
-      
-      const clientName = bookingData.clientName || bookingData.client_name || "Unknown Client";
-      const totalAmount = bookingData.total_cost;
-      const depositAmount = bookingData.deposit_paid || 0;
-      const balanceDue = totalAmount - depositAmount;
-      const invoiceNumber = `INV-${Date.now()}`;
-      const dueDate = new Date(bookingData.check_in);
-      dueDate.setDate(dueDate.getDate() - 7); // Due 7 days before check-in
+      // Check if invoice already exists
+      const { data: existingInvoice } = await supabase
+        .from("invoices")
+        .select("*")
+        .eq("booking_id", bookingId)
+        .maybeSingle();
 
-      // Call the RPC function we just created
-      const { data, error } = await supabase.rpc('create_invoice_bypass', {
-        p_booking_id: bookingId,
-        p_invoice_number: invoiceNumber,
-        p_client_name: clientName,
-        p_total_amount: totalAmount,
-        p_deposit_amount: depositAmount,
-        p_balance_due: balanceDue,
-        p_status: balanceDue > 0 ? 'pending' : 'paid',
-        p_due_date: dueDate.toISOString()
-      });
-
-      if (error) {
-        console.error("❌ RPC insert failed:", error);
-        throw error;
+      if (existingInvoice) {
+        console.log("Invoice already exists for booking:", bookingId);
+        return existingInvoice;
       }
 
-      console.log("✅ Invoice created successfully via RPC!", data);
-      return data as unknown as Invoice; // Return the created invoice object cast correctly
+      // Generate invoice number
+      const invoiceNumber = `INV-${Date.now()}`;
+      const balanceDue = bookingData.total_cost - bookingData.deposit_paid;
+      
+      // Calculate due date (30 days from now)
+      const dueDate = new Date();
+      dueDate.setDate(dueDate.getDate() + 30);
 
-    } catch (error: any) {
-      console.error("❌ Invoice creation failed:", error);
-      throw new Error(`Failed to create invoice: ${error.message}`);
+      // Use Next.js API route to bypass PostgREST cache
+      const response = await fetch("/api/create-invoice", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          booking_id: bookingId,
+          invoice_number: invoiceNumber,
+          total_amount: bookingData.total_cost,
+          deposit_amount: bookingData.deposit_paid,
+          balance_due: balanceDue,
+          status: balanceDue <= 0 ? "paid" : "unpaid",
+          due_date: dueDate.toISOString(),
+          client_name: bookingData.clientName || bookingData.client_name || null,
+          client_email: bookingData.clientEmail || null,
+          client_phone: bookingData.clientPhone || null
+        }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || "Failed to create invoice");
+      }
+
+      const data = await response.json();
+      console.log("Invoice created successfully via API:", data);
+      return data;
+    } catch (error) {
+      console.error("Error creating invoice:", error);
+      throw error;
     }
   },
 
