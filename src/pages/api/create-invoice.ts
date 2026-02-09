@@ -14,6 +14,15 @@ export default async function handler(
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
     const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
+    // DETAILED DIAGNOSTIC LOGGING
+    console.log("=== ENVIRONMENT VARIABLES DEBUG ===");
+    console.log("supabaseUrl:", supabaseUrl);
+    console.log("serviceRoleKey exists:", !!serviceRoleKey);
+    console.log("serviceRoleKey length:", serviceRoleKey?.length);
+    console.log("serviceRoleKey first 20 chars:", serviceRoleKey?.substring(0, 20));
+    console.log("All env vars starting with SUPABASE:", Object.keys(process.env).filter(k => k.includes("SUPABASE")));
+    console.log("===================================");
+
     // Validate environment variables
     if (!supabaseUrl || !serviceRoleKey) {
       console.error("Missing environment variables:", {
