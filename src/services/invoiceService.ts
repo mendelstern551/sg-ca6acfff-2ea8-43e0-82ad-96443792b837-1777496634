@@ -46,54 +46,41 @@ export const invoiceService = {
     deposit_paid: number;
   }) {
     try {
-      // Check if invoice already exists
-      const { data: existingInvoice } = await supabase
-        .from("invoices")
-        .select("*")
-        .eq("booking_id", bookingId)
-        .maybeSingle();
-
-      if (existingInvoice) {
-        console.log("Invoice already exists for booking:", bookingId);
-        return existingInvoice;
-      }
-
-      // Generate invoice number
-      const invoiceNumber = `INV-${Date.now()}`;
+      const clientName = bookingData.clientName || bookingData.client_name || "Unknown Client";
+      
+      // Calculate balance due
       const balanceDue = bookingData.total_cost - bookingData.deposit_paid;
       
-      // Calculate due date (30 days from now)
-      const dueDate = new Date();
+      // Format due date (30 days from check-in)
+      const dueDate = new Date(bookingData.check_in);
       dueDate.setDate(dueDate.getDate() + 30);
-
-      // Use Next.js API route to bypass PostgREST cache
+      
+      // Call Next.js API route to create invoice
       const response = await fetch("/api/create-invoice", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          booking_id: bookingId,
-          invoice_number: invoiceNumber,
-          total_amount: bookingData.total_cost,
-          deposit_amount: bookingData.deposit_paid,
-          balance_due: balanceDue,
-          status: balanceDue <= 0 ? "paid" : "unpaid",
-          due_date: dueDate.toISOString(),
-          client_name: bookingData.clientName || bookingData.client_name || null,
-          client_email: bookingData.clientEmail || null,
-          client_phone: bookingData.clientPhone || null
+          bookingId,
+          totalAmount: bookingData.total_cost,
+          depositAmount: bookingData.deposit_paid,
+          balanceDue,
+          dueDate: dueDate.toISOString().split('T')[0],
+          clientName,
+          clientEmail: bookingData.clientEmail,
+          clientPhone: bookingData.clientPhone,
+          status: balanceDue <= 0 ? "paid" : "pending"
         }),
       });
 
       if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || "Failed to create invoice");
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to create invoice");
       }
 
-      const data = await response.json();
-      console.log("Invoice created successfully via API:", data);
-      return data;
+      const result = await response.json();
+      return result.invoice;
     } catch (error) {
       console.error("Error creating invoice:", error);
       throw error;
