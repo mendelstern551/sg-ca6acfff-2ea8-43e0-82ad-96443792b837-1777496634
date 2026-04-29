@@ -100,7 +100,8 @@ export default function HomePage() {
   const [bookingSortOrder, setBookingSortOrder] = useState<SortOrder>("latest");
   const [bookingDateFilter, setBookingDateFilter] = useState<DateFilter>("all");
   const [bookingCustomRange, setBookingCustomRange] = useState<{ from?: Date; to?: Date }>({});
-  const [bookingStatusFilter, setBookingStatusFilter] = useState<StatusFilter>("upcoming");
+  // Default to "all" so the tab opens with every booking visible, latest-first.
+  const [bookingStatusFilter, setBookingStatusFilter] = useState<StatusFilter>("all");
 
   const [invoiceSearch, setInvoiceSearch] = useState("");
   const [invoiceSortOrder, setInvoiceSortOrder] = useState<SortOrder>("latest");
