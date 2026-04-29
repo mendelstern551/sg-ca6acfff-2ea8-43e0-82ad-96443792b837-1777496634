@@ -16,6 +16,7 @@ import { CalendarIcon } from "lucide-react";
 import { expenseService } from "@/services/expenseService";
 import { useToast } from "@/hooks/use-toast";
 import type { Database } from "@/integrations/supabase/types";
+import { supabase } from "@/integrations/supabase/client";
 
 type ExpenseInsert = Database["public"]["Tables"]["expenses"]["Insert"];
 
@@ -49,24 +50,62 @@ export function ManagerSalary({ bookings, onAddExpense, allExpenses, onExpensesU
   });
   const [isProcessing, setIsProcessing] = useState(false);
 
+  // Load admin settings (commission %, season dates, etc.) from localStorage,
+  // and the payment log from Supabase (so it syncs across devices).
   useEffect(() => {
     const saved = localStorage.getItem("trout-lake-manager-salary");
+    let baseData: ManagerSalaryData = {
+      maintenanceFeePerMonth: 1000,
+      commissionPercentage: 15,
+      minimumCommissionPerEvent: 1000,
+      seasonStart: "2025-10-01",
+      seasonEnd: "2026-07-01",
+      payments: [],
+    };
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
-        // Defensive normalization — older saved shapes may be missing `payments`
-        setSalaryData({
-          maintenanceFeePerMonth: parsed.maintenanceFeePerMonth ?? 1000,
-          commissionPercentage: parsed.commissionPercentage ?? 15,
-          minimumCommissionPerEvent: parsed.minimumCommissionPerEvent ?? 1000,
-          seasonStart: parsed.seasonStart ?? "2025-10-01",
-          seasonEnd: parsed.seasonEnd ?? "2026-07-01",
-          payments: Array.isArray(parsed.payments) ? parsed.payments : []
-        });
+        baseData = {
+          maintenanceFeePerMonth: parsed.maintenanceFeePerMonth ?? baseData.maintenanceFeePerMonth,
+          commissionPercentage: parsed.commissionPercentage ?? baseData.commissionPercentage,
+          minimumCommissionPerEvent: parsed.minimumCommissionPerEvent ?? baseData.minimumCommissionPerEvent,
+          seasonStart: parsed.seasonStart ?? baseData.seasonStart,
+          seasonEnd: parsed.seasonEnd ?? baseData.seasonEnd,
+          // Local payments — used as fallback if Supabase table doesn't exist yet.
+          payments: Array.isArray(parsed.payments) ? parsed.payments : [],
+        };
       } catch (error) {
         console.error("Error loading manager salary data:", error);
       }
     }
+    setSalaryData(baseData);
+
+    // Pull payments from Supabase. If the table doesn't exist yet, keep the
+    // localStorage fallback so the UI still works.
+    (async () => {
+      const { data, error } = await supabase
+        .from("manager_payment_log")
+        .select("*")
+        .order("date", { ascending: false });
+      if (error) {
+        // Silently fall back to localStorage payments — happens before the user
+        // has run the manager_payment_log migration.
+        console.warn("manager_payment_log not available — using local fallback:", error.message);
+        return;
+      }
+      const remote: ManagerPayment[] = (data || []).map((r: Record<string, unknown>) => ({
+        id: String(r.id),
+        date: String(r.date),
+        amount: Number(r.amount) || 0,
+        paymentMethod: r.payment_method as PaymentMethod,
+        referenceNumber: (r.reference_number as string) || "",
+        type: r.type as "maintenance" | "commission" | "other",
+        relatedBookingId: (r.related_booking_id as string) || undefined,
+        notes: (r.notes as string) || "",
+        createdAt: (r.created_at as string) || new Date().toISOString(),
+      }));
+      setSalaryData((c) => ({ ...c, payments: remote }));
+    })();
   }, []);
 
   useEffect(() => {
@@ -256,23 +295,57 @@ export function ManagerSalary({ bookings, onAddExpense, allExpenses, onExpensesU
     }
 
     try {
-      const newPayment: ManagerPayment = {
-        id: Date.now().toString(),
+      // Insert into Supabase (manager_payment_log) so it syncs across devices.
+      // Falls back to local-only if the table doesn't exist yet.
+      const insertRow = {
         date: paymentForm.date.toISOString(),
         amount: paymentForm.amount,
-        paymentMethod: paymentForm.paymentMethod,
-        referenceNumber: paymentForm.referenceNumber,
+        payment_method: paymentForm.paymentMethod,
+        reference_number: paymentForm.referenceNumber || null,
         type: paymentForm.type,
-        relatedBookingId: paymentForm.relatedBookingId || undefined,
-        notes: paymentForm.notes,
-        createdAt: new Date().toISOString()
+        related_booking_id: paymentForm.relatedBookingId || null,
+        notes: paymentForm.notes || null,
       };
+      const { data: inserted, error: insertErr } = await supabase
+        .from("manager_payment_log")
+        .insert(insertRow)
+        .select()
+        .single();
 
-      const updatedData = { 
-        ...salaryData, 
-        payments: [...(salaryData.payments || []), newPayment] 
+      const newPayment: ManagerPayment = inserted
+        ? {
+            id: String(inserted.id),
+            date: String(inserted.date),
+            amount: Number(inserted.amount) || 0,
+            paymentMethod: inserted.payment_method as PaymentMethod,
+            referenceNumber: (inserted.reference_number as string) || "",
+            type: inserted.type as "maintenance" | "commission" | "other",
+            relatedBookingId: (inserted.related_booking_id as string) || undefined,
+            notes: (inserted.notes as string) || "",
+            createdAt: (inserted.created_at as string) || new Date().toISOString(),
+          }
+        : {
+            id: Date.now().toString(),
+            date: paymentForm.date.toISOString(),
+            amount: paymentForm.amount,
+            paymentMethod: paymentForm.paymentMethod,
+            referenceNumber: paymentForm.referenceNumber,
+            type: paymentForm.type,
+            relatedBookingId: paymentForm.relatedBookingId || undefined,
+            notes: paymentForm.notes,
+            createdAt: new Date().toISOString(),
+          };
+
+      if (insertErr) {
+        console.warn("manager_payment_log insert failed — staying local:", insertErr.message);
+      }
+
+      const updatedData = {
+        ...salaryData,
+        payments: [...(salaryData.payments || []), newPayment]
       };
       setSalaryData(updatedData);
+      // Always keep a local mirror so the UI works offline / pre-migration.
       localStorage.setItem("trout-lake-manager-salary", JSON.stringify(updatedData));
 
       const expense: ExpenseInsert = {
