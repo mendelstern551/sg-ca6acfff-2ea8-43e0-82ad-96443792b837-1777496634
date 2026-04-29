@@ -83,7 +83,10 @@ export function ManagerSalary({ bookings, onAddExpense, allExpenses, onExpensesU
     // Pull payments from Supabase. If the table doesn't exist yet, keep the
     // localStorage fallback so the UI still works.
     (async () => {
-      const { data, error } = await supabase
+      // Cast through `any` because the generated Supabase types don't include the
+      // newly-added manager_payment_log table until the user runs the migration
+      // and regenerates types. The runtime call is correct.
+      const { data, error } = await (supabase as any)
         .from("manager_payment_log")
         .select("*")
         .order("date", { ascending: false });
@@ -306,7 +309,8 @@ export function ManagerSalary({ bookings, onAddExpense, allExpenses, onExpensesU
         related_booking_id: paymentForm.relatedBookingId || null,
         notes: paymentForm.notes || null,
       };
-      const { data: inserted, error: insertErr } = await supabase
+      // See note above re: any cast.
+      const { data: inserted, error: insertErr } = await (supabase as any)
         .from("manager_payment_log")
         .insert(insertRow)
         .select()
