@@ -212,12 +212,12 @@ export function CommandPalette() {
                     key={b.id}
                     value={haystack}
                     onSelect={() => {
-                      // Open the booking edit dialog directly (per latest UX).
-                      // Use `action=edit` so /index reads it and opens the dialog after navigating.
-                      router.push({
-                        pathname: "/",
-                        query: { tab: "bookings", focus: b.id, action: "edit" },
-                      });
+                      // Open read-only details dialog from the dashboard.
+                      // Closing the dialog leaves the user on the dashboard, not bookings.
+                      router.push({ pathname: "/", query: { tab: "dashboard" } });
+                      window.dispatchEvent(
+                        new CustomEvent("dialog:view-booking", { detail: { bookingId: b.id } })
+                      );
                       close();
                     }}
                   >

@@ -131,7 +131,9 @@ export default function HomePage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [router.isReady, router.query.focus, router.query.action, bookings.length]);
 
-  // Listen for "Add payment to <booking>" from the command palette.
+  // Listen for command-palette dialog events:
+  //   - dialog:add-payment   — opens PaymentDialog for the given booking
+  //   - dialog:view-booking  — opens read-only ClientDetailsDialog (does NOT switch tabs)
   useEffect(() => {
     const onAddPayment = (e: Event) => {
       const detail = (e as CustomEvent<{ bookingId: string }>).detail;
@@ -143,8 +145,21 @@ export default function HomePage() {
         setPaymentDialogOpen(true);
       }
     };
+    const onViewBooking = (e: Event) => {
+      const detail = (e as CustomEvent<{ bookingId: string }>).detail;
+      if (!detail?.bookingId) return;
+      const target = bookings.find((b) => b.id === detail.bookingId);
+      if (target) {
+        setViewBooking(target);
+        setViewBookingOpen(true);
+      }
+    };
     window.addEventListener("dialog:add-payment", onAddPayment);
-    return () => window.removeEventListener("dialog:add-payment", onAddPayment);
+    window.addEventListener("dialog:view-booking", onViewBooking);
+    return () => {
+      window.removeEventListener("dialog:add-payment", onAddPayment);
+      window.removeEventListener("dialog:view-booking", onViewBooking);
+    };
   }, [bookings]);
 
   useEffect(() => {
