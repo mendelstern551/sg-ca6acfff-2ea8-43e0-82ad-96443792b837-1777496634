@@ -74,13 +74,12 @@ export function ClientDetailsDialog({
   }, []);
 
   const clientExpenses = allExpenses.filter(e => e.booking_id === localBooking.id);
-  const dbExpenses = clientExpenses.reduce((sum, e) => sum + e.amount, 0);
+  const actualExpenses = clientExpenses.reduce((sum, e) => sum + e.amount, 0);
 
-  // Build a realistic per-event expense profile from the EventMargin config:
+  // EXPECTED expenses — projection from EventMargin config:
   //   manager commission (15% / $1k floor)
   //   per-event line items (tables, gas, mgmt fee, etc.)
   //   building cleaning fees, auto-allocated by guest count
-  //     (main fills first, then satellites until everyone has a bed)
   const guests = Number(localBooking.number_of_guests) || 0;
   const allocated = allocateBuildingsForGuests(guests, marginConfig.buildings);
   const buildingCleaning = allocated.reduce((s, b) => s + (Number(b.cleaningFee) || 0), 0);
@@ -92,9 +91,16 @@ export function ClientDetailsDialog({
     (Number(localBooking.total_cost) || 0) * (marginConfig.manager.commissionPercent / 100),
     marginConfig.manager.minimumCommissionPerEvent
   );
-  const computedExpenses = commission + buildingCleaning + perEventLines;
+  const expectedExpenses = commission + buildingCleaning + perEventLines;
 
-  const totalExpenses = computedExpenses + dbExpenses;
+  // Pick which one drives the headline number based on event timing:
+  //   - Before event ends → show projection (we don't have real numbers yet)
+  //   - After event ends + actuals logged → use actuals (those are real)
+  //   - After event ends but no actuals yet → still projection
+  const eventEnd = localBooking.end_date ? new Date(localBooking.end_date).getTime() : 0;
+  const eventEnded = eventEnd > 0 && eventEnd < Date.now();
+  const useActual = eventEnded && actualExpenses > 0;
+  const totalExpenses = useActual ? actualExpenses : expectedExpenses;
   const netProfit = localBooking.total_cost - totalExpenses;
   const profitMargin = localBooking.total_cost > 0 ? ((netProfit / localBooking.total_cost) * 100).toFixed(1) : "0";
 
@@ -322,7 +328,7 @@ export function ClientDetailsDialog({
                 <p className="text-sm text-slate-600 dark:text-slate-400 mb-1">Revenue</p>
                 <p className="text-2xl font-bold text-blue-600">{formatCurrency(localBooking.total_cost)}</p>
               </div>
-              <div 
+              <div
                 className="text-center p-4 bg-red-50 dark:bg-red-950 rounded-lg cursor-pointer hover:bg-red-100 dark:hover:bg-red-900 transition-colors"
                 onClick={() => {
                   if (onNavigateToExpenses) {
@@ -330,11 +336,33 @@ export function ClientDetailsDialog({
                     onOpenChange(false);
                   }
                 }}
-                title="Click to view expenses for this booking"
+                title={useActual ? "Actual expenses logged for this booking" : "Projected expenses based on Event Margin model"}
               >
-                <p className="text-sm text-slate-600 dark:text-slate-400 mb-1">Expenses</p>
+                <p className="text-sm text-slate-600 dark:text-slate-400 mb-1">
+                  {useActual ? "Actual Expenses" : "Expected Expenses"}
+                  {!useActual && eventEnded && (
+                    <span className="ml-1 text-[10px] uppercase tracking-wide text-amber-600 dark:text-amber-400">· no actuals yet</span>
+                  )}
+                </p>
                 <p className="text-2xl font-bold text-red-600">{formatCurrency(totalExpenses)}</p>
-                <p className="text-xs text-slate-500 mt-1">Click to view details</p>
+                {/* Show the OTHER number for context */}
+                {useActual ? (
+                  <p className="text-xs text-slate-500 mt-1">
+                    Expected was {formatCurrency(expectedExpenses)}
+                    {actualExpenses !== expectedExpenses && (
+                      <span className={" ml-1 " + (actualExpenses > expectedExpenses ? "text-rose-600" : "text-emerald-600")}>
+                        ({actualExpenses > expectedExpenses ? "+" : "−"}
+                        {formatCurrency(Math.abs(actualExpenses - expectedExpenses))})
+                      </span>
+                    )}
+                  </p>
+                ) : (
+                  <p className="text-xs text-slate-500 mt-1">
+                    {actualExpenses > 0
+                      ? `Actual logged so far: ${formatCurrency(actualExpenses)}`
+                      : "Click to log actuals after the event"}
+                  </p>
+                )}
               </div>
               <div className="text-center p-4 bg-green-50 dark:bg-green-950 rounded-lg">
                 <p className="text-sm text-slate-600 dark:text-slate-400 mb-1">Net profit</p>
@@ -390,33 +418,52 @@ export function ClientDetailsDialog({
                     <span className="text-slate-600 dark:text-slate-400">Total Revenue:</span>
                     <span className="font-bold text-green-600">{formatCurrency(localBooking.total_cost)}</span>
                   </div>
-                  {/* EventMargin breakdown */}
-                  <div className="flex justify-between text-xs">
-                    <span className="text-slate-500 dark:text-slate-500">Manager commission ({marginConfig.manager.commissionPercent}% / min {formatCurrency(marginConfig.manager.minimumCommissionPerEvent)})</span>
-                    <span className="text-slate-700 dark:text-slate-300">{formatCurrency(commission)}</span>
-                  </div>
-                  <div className="flex justify-between text-xs">
-                    <span className="text-slate-500 dark:text-slate-500">
-                      Building cleaning · {allocated.length}× ({allocated.map(b => b.name).join(", ") || "—"})
-                    </span>
-                    <span className="text-slate-700 dark:text-slate-300">{formatCurrency(buildingCleaning)}</span>
-                  </div>
-                  <div className="flex justify-between text-xs">
-                    <span className="text-slate-500 dark:text-slate-500">Per-event line items ({marginConfig.perEventExpenses.length})</span>
-                    <span className="text-slate-700 dark:text-slate-300">{formatCurrency(perEventLines)}</span>
-                  </div>
-                  {dbExpenses > 0 && (
+
+                  {/* Expected expense breakdown — always shown */}
+                  <div className="rounded-md bg-slate-50 dark:bg-slate-900/40 p-2 mt-2 space-y-1">
+                    <div className="flex justify-between text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wide">
+                      <span>Expected</span>
+                      <span>{formatCurrency(expectedExpenses)}</span>
+                    </div>
                     <div className="flex justify-between text-xs">
-                      <span className="text-slate-500 dark:text-slate-500">Logged expenses for this booking</span>
-                      <span className="text-slate-700 dark:text-slate-300">{formatCurrency(dbExpenses)}</span>
+                      <span className="text-slate-500 dark:text-slate-500">Manager commission ({marginConfig.manager.commissionPercent}% / min {formatCurrency(marginConfig.manager.minimumCommissionPerEvent)})</span>
+                      <span className="text-slate-700 dark:text-slate-300">{formatCurrency(commission)}</span>
+                    </div>
+                    <div className="flex justify-between text-xs">
+                      <span className="text-slate-500 dark:text-slate-500">
+                        Cleaning · {allocated.length}× ({allocated.map(b => b.name).join(", ") || "—"})
+                      </span>
+                      <span className="text-slate-700 dark:text-slate-300">{formatCurrency(buildingCleaning)}</span>
+                    </div>
+                    <div className="flex justify-between text-xs">
+                      <span className="text-slate-500 dark:text-slate-500">Per-event items ({marginConfig.perEventExpenses.length})</span>
+                      <span className="text-slate-700 dark:text-slate-300">{formatCurrency(perEventLines)}</span>
+                    </div>
+                  </div>
+
+                  {/* Actuals — shown once any expenses are logged */}
+                  {actualExpenses > 0 && (
+                    <div className="rounded-md bg-slate-50 dark:bg-slate-900/40 p-2 mt-1 space-y-1">
+                      <div className="flex justify-between text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wide">
+                        <span>Actual logged</span>
+                        <span>{formatCurrency(actualExpenses)}</span>
+                      </div>
+                      <div className="text-xs text-slate-500 dark:text-slate-500">
+                        From {clientExpenses.length} expense entr{clientExpenses.length === 1 ? "y" : "ies"} on this booking.
+                      </div>
+                      {actualExpenses !== expectedExpenses && (
+                        <div className={"text-xs font-medium " + (actualExpenses > expectedExpenses ? "text-rose-600" : "text-emerald-600")}>
+                          {actualExpenses > expectedExpenses ? "Over by " : "Under by "}
+                          {formatCurrency(Math.abs(actualExpenses - expectedExpenses))}
+                        </div>
+                      )}
                     </div>
                   )}
-                  <div className="flex justify-between border-t pt-1">
-                    <span className="text-slate-600 dark:text-slate-400">Total Expenses:</span>
-                    <span className="font-bold text-red-600">{formatCurrency(totalExpenses)}</span>
-                  </div>
+
                   <div className="flex justify-between pt-2 border-t">
-                    <span className="text-slate-600 dark:text-slate-400">Net Profit:</span>
+                    <span className="text-slate-600 dark:text-slate-400">
+                      Net Profit · <span className="text-xs text-muted-foreground">{useActual ? "based on actuals" : "based on expected"}</span>
+                    </span>
                     <span className={`font-bold text-lg ${netProfit >= 0 ? "text-green-600" : "text-red-600"}`}>
                       {formatCurrency(netProfit)}
                     </span>
