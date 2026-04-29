@@ -19,7 +19,8 @@ export interface BuildingCost {
   yearlyCost: number;       // overhead allocated to this building per year
   perEventCost: number;     // additional cost when this building is used for an event
   cleaningFee: number;      // cleaning charge each time this building is used
-  capacity?: number;        // max guests (informational only)
+  beds: number;             // sleeping capacity — drives auto-allocation by guest count
+  capacity?: number;        // legacy field, kept for compat
 }
 
 export interface ManagerCostConfig {
@@ -59,12 +60,15 @@ export const DEFAULT_EVENT_MARGIN_CONFIG: EventMarginConfig = {
   ],
   // 5 buildings — addresses from your hydro bills. Per-building yearly/per-event
   // costs left at 0 since hydro is captured in annualExpenses already.
+  // 5 buildings — beds total 128 (36 main + 4×23 satellites). Used for auto-allocation:
+  // guests fill main first, then overflow to satellites in order. Each occupied building
+  // adds its cleaningFee to the event total.
   buildings: [
-    { id: "661", name: "661 (main)", yearlyCost: 0, perEventCost: 0, cleaningFee: 1500, capacity: 30 },
-    { id: "669", name: "669",        yearlyCost: 0, perEventCost: 0, cleaningFee: 1000, capacity: 30 },
-    { id: "673", name: "673",        yearlyCost: 0, perEventCost: 0, cleaningFee: 1000, capacity: 30 },
-    { id: "675", name: "675",        yearlyCost: 0, perEventCost: 0, cleaningFee: 1000, capacity: 30 },
-    { id: "677", name: "677 (+ 677a)", yearlyCost: 0, perEventCost: 0, cleaningFee: 1000, capacity: 30 },
+    { id: "661", name: "661 (main)",  yearlyCost: 0, perEventCost: 0, cleaningFee: 1500, beds: 36, capacity: 36 },
+    { id: "669", name: "669",         yearlyCost: 0, perEventCost: 0, cleaningFee: 1000, beds: 23, capacity: 23 },
+    { id: "673", name: "673",         yearlyCost: 0, perEventCost: 0, cleaningFee: 1000, beds: 23, capacity: 23 },
+    { id: "675", name: "675",         yearlyCost: 0, perEventCost: 0, cleaningFee: 1000, beds: 23, capacity: 23 },
+    { id: "677", name: "677 (+ 677a)", yearlyCost: 0, perEventCost: 0, cleaningFee: 1000, beds: 23, capacity: 23 },
   ],
   perEventDefaults: {
     // Conditional cleaning is unused now — your per-event list below covers cleaning explicitly.
@@ -96,10 +100,31 @@ export const DEFAULT_EVENT_MARGIN_CONFIG: EventMarginConfig = {
 export interface EventMarginInputs {
   totalRevenue: number;
   numberOfGuests: number;
-  buildingIds: string[]; // one or more buildings used for the event
+  buildingIds: string[]; // one or more buildings — leave empty to auto-allocate by guest count
   // optional override of cleaning fee for this event (defaults to perEventDefaults)
   cleaningFeeOverride?: number;
   manualEventExpenses?: number; // ad-hoc add-ons (food, decorations, staff, etc.)
+}
+
+/**
+ * Auto-allocate buildings for an event based on guest count.
+ * Fills the FIRST building (main) up to its bed count, then overflows into
+ * additional buildings in the order they appear in the config until all
+ * guests are housed. Returns the buildings that would be in use.
+ */
+export function allocateBuildingsForGuests(
+  guests: number,
+  buildings: BuildingCost[]
+): BuildingCost[] {
+  if (guests <= 0 || !buildings.length) return [];
+  const result: BuildingCost[] = [];
+  let remaining = guests;
+  for (const b of buildings) {
+    result.push(b);
+    remaining -= Number(b.beds) || 0;
+    if (remaining <= 0) break;
+  }
+  return result;
 }
 
 export interface EventMarginBreakdown {
@@ -128,7 +153,12 @@ export function calculateEventMargin(
     config.manager.minimumCommissionPerEvent
   );
 
-  const selectedBuildings = config.buildings.filter((b) => buildingIds.includes(b.id));
+  // If buildings aren't explicitly picked, auto-allocate based on guest count.
+  // Main building fills first, then overflow into satellites until everyone has a bed.
+  const selectedBuildings =
+    buildingIds.length > 0
+      ? config.buildings.filter((b) => buildingIds.includes(b.id))
+      : allocateBuildingsForGuests(numberOfGuests, config.buildings);
   const buildingPerEventCost = selectedBuildings.reduce((s, b) => s + (b.perEventCost || 0), 0);
   // Cleaning is per-building (e.g. main $1,500, satellites $1,000 each).
   // Override (cleaningFeeOverride) wins if user typed a custom number.

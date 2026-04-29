@@ -176,7 +176,8 @@ export function EventMargin({ bookings }: EventMarginProps) {
           yearlyCost: 0,
           perEventCost: 0,
           cleaningFee: 1000,
-          capacity: 30,
+          beds: 23,
+          capacity: 23,
         },
       ],
     }));
@@ -317,11 +318,16 @@ export function EventMargin({ bookings }: EventMarginProps) {
                 <Plus className="h-4 w-4 mr-1" /> Add building
               </Button>
             </div>
-            <div className="hidden md:grid grid-cols-[1.5fr_120px_120px_120px_100px_40px] gap-2 px-1 pb-1 text-xs text-muted-foreground">
+            <p className="text-xs text-muted-foreground mb-2">
+              Total beds: <strong>{config.buildings.reduce((s, b) => s + (Number(b.beds) || 0), 0)}</strong>.
+              Guests fill the first building first, then overflow into the next in order.
+            </p>
+            <div className="hidden md:grid grid-cols-[1.4fr_100px_100px_110px_90px_90px_40px] gap-2 px-1 pb-1 text-xs text-muted-foreground">
               <span>Name</span>
               <span>Yearly $</span>
               <span>Per-event $</span>
               <span>Cleaning $</span>
+              <span>Beds</span>
               <span>Capacity</span>
               <span></span>
             </div>
@@ -329,7 +335,7 @@ export function EventMargin({ bookings }: EventMarginProps) {
               {config.buildings.map((b) => (
                 <div
                   key={b.id}
-                  className="grid grid-cols-1 md:grid-cols-[1.5fr_120px_120px_120px_100px_40px] gap-2 items-center"
+                  className="grid grid-cols-1 md:grid-cols-[1.4fr_100px_100px_110px_90px_90px_40px] gap-2 items-center"
                 >
                   <Input
                     value={b.name}
@@ -362,6 +368,13 @@ export function EventMargin({ bookings }: EventMarginProps) {
                       updateBuilding(b.id, { cleaningFee: parseFloat(ev.target.value) || 0 })
                     }
                     placeholder="Cleaning $"
+                  />
+                  <Input
+                    type="number"
+                    inputMode="numeric"
+                    value={b.beds === 0 ? "" : b.beds}
+                    onChange={(ev) => updateBuilding(b.id, { beds: parseInt(ev.target.value) || 0 })}
+                    placeholder="Beds"
                   />
                   <Input
                     type="number"

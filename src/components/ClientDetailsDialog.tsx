@@ -16,6 +16,12 @@ import { paymentService } from "@/services/paymentService";
 import { bookingService } from "@/services/bookingService";
 import { invoiceService } from "@/services/invoiceService";
 import { useToast } from "@/hooks/use-toast";
+import { useEffect } from "react";
+import {
+  DEFAULT_EVENT_MARGIN_CONFIG,
+  type EventMarginConfig,
+  allocateBuildingsForGuests,
+} from "@/types/eventMargin";
 
 interface ClientDetailsDialogProps {
   open: boolean;
@@ -51,8 +57,44 @@ export function ClientDetailsDialog({
   
   const { toast } = useToast();
 
+  // Live read of EventMargin config so per-booking finance reflects user's cost model.
+  const [marginConfig, setMarginConfig] = useState<EventMarginConfig>(DEFAULT_EVENT_MARGIN_CONFIG);
+  useEffect(() => {
+    const load = () => {
+      if (typeof window === "undefined") return;
+      try {
+        const raw = window.localStorage.getItem("trout-lake-event-margin");
+        setMarginConfig(raw ? { ...DEFAULT_EVENT_MARGIN_CONFIG, ...JSON.parse(raw) } : DEFAULT_EVENT_MARGIN_CONFIG);
+      } catch { /* keep defaults */ }
+    };
+    load();
+    const onStorage = (e: StorageEvent) => { if (e.key === "trout-lake-event-margin") load(); };
+    window.addEventListener("storage", onStorage);
+    return () => window.removeEventListener("storage", onStorage);
+  }, []);
+
   const clientExpenses = allExpenses.filter(e => e.booking_id === localBooking.id);
-  const totalExpenses = clientExpenses.reduce((sum, e) => sum + e.amount, 0);
+  const dbExpenses = clientExpenses.reduce((sum, e) => sum + e.amount, 0);
+
+  // Build a realistic per-event expense profile from the EventMargin config:
+  //   manager commission (15% / $1k floor)
+  //   per-event line items (tables, gas, mgmt fee, etc.)
+  //   building cleaning fees, auto-allocated by guest count
+  //     (main fills first, then satellites until everyone has a bed)
+  const guests = Number(localBooking.number_of_guests) || 0;
+  const allocated = allocateBuildingsForGuests(guests, marginConfig.buildings);
+  const buildingCleaning = allocated.reduce((s, b) => s + (Number(b.cleaningFee) || 0), 0);
+  const perEventLines = (marginConfig.perEventExpenses || []).reduce(
+    (s, e) => s + (Number(e.amount) || 0),
+    0
+  );
+  const commission = Math.max(
+    (Number(localBooking.total_cost) || 0) * (marginConfig.manager.commissionPercent / 100),
+    marginConfig.manager.minimumCommissionPerEvent
+  );
+  const computedExpenses = commission + buildingCleaning + perEventLines;
+
+  const totalExpenses = computedExpenses + dbExpenses;
   const netProfit = localBooking.total_cost - totalExpenses;
   const profitMargin = localBooking.total_cost > 0 ? ((netProfit / localBooking.total_cost) * 100).toFixed(1) : "0";
 
@@ -348,7 +390,28 @@ export function ClientDetailsDialog({
                     <span className="text-slate-600 dark:text-slate-400">Total Revenue:</span>
                     <span className="font-bold text-green-600">{formatCurrency(localBooking.total_cost)}</span>
                   </div>
-                  <div className="flex justify-between">
+                  {/* EventMargin breakdown */}
+                  <div className="flex justify-between text-xs">
+                    <span className="text-slate-500 dark:text-slate-500">Manager commission ({marginConfig.manager.commissionPercent}% / min {formatCurrency(marginConfig.manager.minimumCommissionPerEvent)})</span>
+                    <span className="text-slate-700 dark:text-slate-300">{formatCurrency(commission)}</span>
+                  </div>
+                  <div className="flex justify-between text-xs">
+                    <span className="text-slate-500 dark:text-slate-500">
+                      Building cleaning · {allocated.length}× ({allocated.map(b => b.name).join(", ") || "—"})
+                    </span>
+                    <span className="text-slate-700 dark:text-slate-300">{formatCurrency(buildingCleaning)}</span>
+                  </div>
+                  <div className="flex justify-between text-xs">
+                    <span className="text-slate-500 dark:text-slate-500">Per-event line items ({marginConfig.perEventExpenses.length})</span>
+                    <span className="text-slate-700 dark:text-slate-300">{formatCurrency(perEventLines)}</span>
+                  </div>
+                  {dbExpenses > 0 && (
+                    <div className="flex justify-between text-xs">
+                      <span className="text-slate-500 dark:text-slate-500">Logged expenses for this booking</span>
+                      <span className="text-slate-700 dark:text-slate-300">{formatCurrency(dbExpenses)}</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between border-t pt-1">
                     <span className="text-slate-600 dark:text-slate-400">Total Expenses:</span>
                     <span className="font-bold text-red-600">{formatCurrency(totalExpenses)}</span>
                   </div>
@@ -364,6 +427,11 @@ export function ClientDetailsDialog({
                       {profitMargin}%
                     </span>
                   </div>
+                  {guests > marginConfig.buildings.reduce((s, b) => s + (Number(b.beds) || 0), 0) && (
+                    <div className="text-xs text-amber-600 dark:text-amber-400 mt-2">
+                      ⚠ {guests} guests exceed total bed capacity ({marginConfig.buildings.reduce((s, b) => s + (Number(b.beds) || 0), 0)}).
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             </div>
