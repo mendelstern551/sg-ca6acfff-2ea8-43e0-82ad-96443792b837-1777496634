@@ -1,7 +1,7 @@
-import { startOfDay, endOfDay, startOfWeek, endOfWeek, startOfMonth, endOfMonth, isWithinInterval, parseISO } from "date-fns";
+import { startOfDay, endOfDay, startOfWeek, endOfWeek, startOfMonth, endOfMonth, isWithinInterval, parseISO, addDays, nextFriday, nextSunday, isFriday, isSaturday, isSunday } from "date-fns";
 
 export type SortOrder = "latest" | "oldest";
-export type DateFilter = "all" | "today" | "week" | "month" | "custom";
+export type DateFilter = "all" | "today" | "week" | "month" | "custom" | "next7" | "next30" | "thisWeekend";
 
 export function getDateRange(filter: DateFilter, customRange?: { from?: Date; to?: Date }) {
   const now = new Date();
@@ -22,6 +22,24 @@ export function getDateRange(filter: DateFilter, customRange?: { from?: Date; to
         from: startOfMonth(now),
         to: endOfMonth(now),
       };
+    case "next7":
+      return {
+        from: startOfDay(now),
+        to: endOfDay(addDays(now, 7)),
+      };
+    case "next30":
+      return {
+        from: startOfDay(now),
+        to: endOfDay(addDays(now, 30)),
+      };
+    case "thisWeekend": {
+      // "Weekend" = Friday → Sunday inclusive. If today already is Fri/Sat/Sun, anchor to today.
+      const friday = isFriday(now) || isSaturday(now) || isSunday(now)
+        ? (isFriday(now) ? now : addDays(now, isSaturday(now) ? -1 : -2))
+        : nextFriday(now);
+      const sunday = isSunday(now) ? now : nextSunday(friday);
+      return { from: startOfDay(friday), to: endOfDay(sunday) };
+    }
     case "custom":
       return customRange || { from: undefined, to: undefined };
     default:

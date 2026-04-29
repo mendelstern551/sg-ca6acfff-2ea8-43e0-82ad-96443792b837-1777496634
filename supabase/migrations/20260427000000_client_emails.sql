@@ -1,37 +1,34 @@
--- Create client_emails table for tracking all client communications
-CREATE TABLE IF NOT EXISTS public.client_emails (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  booking_id UUID NOT NULL REFERENCES public.bookings(id) ON DELETE CASCADE,
-  client_name TEXT NOT NULL,
-  client_email TEXT NOT NULL,
-  subject TEXT NOT NULL,
-  body TEXT NOT NULL,
-  email_type TEXT NOT NULL,
-  status TEXT NOT NULL,
-  scheduled_date TIMESTAMPTZ,
-  sent_date TIMESTAMPTZ,
-  attachment_name TEXT,
-  attachment_url TEXT,
-  created_at TIMESTAMPTZ DEFAULT NOW()
+-- Run in Supabase SQL Editor (Dashboard → SQL → New query → paste → Run)
+-- Creates the client_emails table that powers Client Communications + the scheduled-email runner.
+
+create table if not exists public.client_emails (
+  id            uuid primary key default gen_random_uuid(),
+  booking_id    uuid references public.bookings(id) on delete cascade,
+  client_name   text not null,
+  client_email  text not null,
+  email_type    text not null check (email_type in ('parking_regulations','website_info','rental_agreement','custom')),
+  subject       text not null,
+  body          text not null,
+  attachment_url  text,
+  attachment_name text,
+  status        text not null check (status in ('scheduled','sent','failed')) default 'sent',
+  scheduled_date timestamptz,
+  sent_date     timestamptz,
+  created_at    timestamptz not null default now()
 );
 
--- Create index for faster lookups by booking_id
-CREATE INDEX IF NOT EXISTS idx_client_emails_booking_id ON public.client_emails(booking_id);
+create index if not exists client_emails_booking_id_idx on public.client_emails (booking_id);
+create index if not exists client_emails_status_scheduled_idx on public.client_emails (status, scheduled_date);
 
--- Create index for filtering by status
-CREATE INDEX IF NOT EXISTS idx_client_emails_status ON public.client_emails(status);
+alter table public.client_emails enable row level security;
 
--- Create index for filtering by email_type
-CREATE INDEX IF NOT EXISTS idx_client_emails_email_type ON public.client_emails(email_type);
+-- Permissive policies (matches the rest of the schema). Tighten later if you add auth.
+drop policy if exists "client_emails_select" on public.client_emails;
+drop policy if exists "client_emails_insert" on public.client_emails;
+drop policy if exists "client_emails_update" on public.client_emails;
+drop policy if exists "client_emails_delete" on public.client_emails;
 
--- Enable RLS
-ALTER TABLE public.client_emails ENABLE ROW LEVEL SECURITY;
-
--- Create RLS policies (public read, authenticated users can insert/update)
-CREATE POLICY "public_read" ON public.client_emails FOR SELECT USING (true);
-CREATE POLICY "auth_insert" ON public.client_emails FOR INSERT WITH CHECK (auth.uid() IS NOT NULL);
-CREATE POLICY "auth_update" ON public.client_emails FOR UPDATE USING (auth.uid() IS NOT NULL);
-CREATE POLICY "auth_delete" ON public.client_emails FOR DELETE USING (auth.uid() IS NOT NULL);
-
--- Add comment for documentation
-COMMENT ON TABLE public.client_emails IS 'Stores all client email communications including scheduled and sent emails with attachments';
+create policy "client_emails_select" on public.client_emails for select using (true);
+create policy "client_emails_insert" on public.client_emails for insert with check (true);
+create policy "client_emails_update" on public.client_emails for update using (true);
+create policy "client_emails_delete" on public.client_emails for delete using (true);

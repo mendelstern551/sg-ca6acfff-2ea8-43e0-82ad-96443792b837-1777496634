@@ -54,7 +54,15 @@ export function ManagerSalary({ bookings, onAddExpense, allExpenses, onExpensesU
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
-        setSalaryData(parsed);
+        // Defensive normalization — older saved shapes may be missing `payments`
+        setSalaryData({
+          maintenanceFeePerMonth: parsed.maintenanceFeePerMonth ?? 1000,
+          commissionPercentage: parsed.commissionPercentage ?? 15,
+          minimumCommissionPerEvent: parsed.minimumCommissionPerEvent ?? 1000,
+          seasonStart: parsed.seasonStart ?? "2025-10-01",
+          seasonEnd: parsed.seasonEnd ?? "2026-07-01",
+          payments: Array.isArray(parsed.payments) ? parsed.payments : []
+        });
       } catch (error) {
         console.error("Error loading manager salary data:", error);
       }
@@ -233,7 +241,8 @@ export function ManagerSalary({ bookings, onAddExpense, allExpenses, onExpensesU
   const totalMaintenanceFees = calculateMaintenanceFees();
   const totalCommissions = calculateCommissions();
   const totalOwed = totalMaintenanceFees + totalCommissions;
-  const totalPaid = salaryData.payments.reduce((sum, p) => sum + p.amount, 0);
+  const payments = Array.isArray(salaryData.payments) ? salaryData.payments : [];
+  const totalPaid = payments.reduce((sum, p) => sum + (p.amount || 0), 0);
   const balanceDue = totalOwed - totalPaid;
 
   const handleAddPayment = async () => {
@@ -354,7 +363,7 @@ export function ManagerSalary({ bookings, onAddExpense, allExpenses, onExpensesU
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-emerald-600">${totalPaid.toLocaleString()}</div>
-            <p className="text-xs text-slate-600 dark:text-slate-400">{salaryData.payments.length} payments made</p>
+            <p className="text-xs text-slate-600 dark:text-slate-400">{payments.length} payments made</p>
           </CardContent>
         </Card>
 
@@ -388,11 +397,15 @@ export function ManagerSalary({ bookings, onAddExpense, allExpenses, onExpensesU
                       booking.total_cost * (salaryData.commissionPercentage / 100),
                       salaryData.minimumCommissionPerEvent
                     );
+                    const startDate = booking.start_date ? new Date(booking.start_date) : null;
+                    const dateLabel = startDate && !isNaN(startDate.getTime())
+                      ? format(startDate, "MMM d, yyyy")
+                      : "—";
                     return (
                       <div key={booking.id} className="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-800 rounded-lg">
                         <div>
                           <p className="font-medium text-sm">{booking.name}</p>
-                          <p className="text-xs text-slate-600 dark:text-slate-400">{format(new Date(booking.start_date), "MMM d, yyyy")}</p>
+                          <p className="text-xs text-slate-600 dark:text-slate-400">{dateLabel}</p>
                         </div>
                         <div className="text-right">
                           <p className="font-semibold text-green-600">${commission.toLocaleString()}</p>
@@ -537,11 +550,11 @@ export function ManagerSalary({ bookings, onAddExpense, allExpenses, onExpensesU
             </div>
           </CardHeader>
           <CardContent>
-            {salaryData.payments.length === 0 ? (
+            {payments.length === 0 ? (
               <p className="text-sm text-slate-500 text-center py-8">No payments recorded yet</p>
             ) : (
               <div className="space-y-2">
-                {salaryData.payments
+                {[...payments]
                   .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
                   .map((payment) => (
                     <div key={payment.id} className="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-800 rounded-lg">

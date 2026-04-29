@@ -54,33 +54,7 @@ export const bookingService = {
       const { data: bookingsData, error: bookingsError } = await retryWithBackoff(async () => {
         const result = await supabase
           .from("bookings")
-          .select(`
-            id,
-            name,
-            booking_type,
-            contact_name,
-            contact_email,
-            contact_phone,
-            start_date,
-            end_date,
-            number_of_guests,
-            number_of_rooms,
-            base_rate,
-            per_person_rate,
-            cleaning_fee,
-            additional_cleaning_fee,
-            total_cost,
-            deposit_amount,
-            amount_paid,
-            balance_due,
-            payment_status,
-            confirmed,
-            custom_price,
-            discount_percent,
-            notes,
-            created_at,
-            updated_at
-          `)
+          .select("*")
           .order("start_date", { ascending: false });
         
         if (result.error) throw result.error;
@@ -129,33 +103,7 @@ export const bookingService = {
       const { data: bookingData, error: bookingError } = await retryWithBackoff(async () => {
         const result = await supabase
           .from("bookings")
-          .select(`
-            id,
-            name,
-            booking_type,
-            contact_name,
-            contact_email,
-            contact_phone,
-            start_date,
-            end_date,
-            number_of_guests,
-            number_of_rooms,
-            base_rate,
-            per_person_rate,
-            cleaning_fee,
-            additional_cleaning_fee,
-            total_cost,
-            deposit_amount,
-            amount_paid,
-            balance_due,
-            payment_status,
-            confirmed,
-            custom_price,
-            discount_percent,
-            notes,
-            created_at,
-            updated_at
-          `)
+          .select("*")
           .eq("id", id)
           .single();
         
@@ -202,33 +150,7 @@ export const bookingService = {
       const result = await supabase
         .from("bookings")
         .insert([booking])
-        .select(`
-          id,
-          name,
-          booking_type,
-          contact_name,
-          contact_email,
-          contact_phone,
-          start_date,
-          end_date,
-          number_of_guests,
-          number_of_rooms,
-          base_rate,
-          per_person_rate,
-          cleaning_fee,
-          additional_cleaning_fee,
-          total_cost,
-          deposit_amount,
-          amount_paid,
-          balance_due,
-          payment_status,
-          confirmed,
-          custom_price,
-          discount_percent,
-          notes,
-          created_at,
-          updated_at
-        `)
+        .select("*")
         .single();
       
       if (result.error) throw result.error;
@@ -246,33 +168,7 @@ export const bookingService = {
         .from("bookings")
         .update({ ...updates, updated_at: new Date().toISOString() })
         .eq("id", id)
-        .select(`
-          id,
-          name,
-          booking_type,
-          contact_name,
-          contact_email,
-          contact_phone,
-          start_date,
-          end_date,
-          number_of_guests,
-          number_of_rooms,
-          base_rate,
-          per_person_rate,
-          cleaning_fee,
-          additional_cleaning_fee,
-          total_cost,
-          deposit_amount,
-          amount_paid,
-          balance_due,
-          payment_status,
-          confirmed,
-          custom_price,
-          discount_percent,
-          notes,
-          created_at,
-          updated_at
-        `)
+        .select("*")
         .single();
       
       if (result.error) throw result.error;
@@ -323,33 +219,7 @@ export const bookingService = {
       const { data: bookingsData, error: bookingsError } = await retryWithBackoff(async () => {
         const result = await supabase
           .from("bookings")
-          .select(`
-            id,
-            name,
-            booking_type,
-            contact_name,
-            contact_email,
-            contact_phone,
-            start_date,
-            end_date,
-            number_of_guests,
-            number_of_rooms,
-            base_rate,
-            per_person_rate,
-            cleaning_fee,
-            additional_cleaning_fee,
-            total_cost,
-            deposit_amount,
-            amount_paid,
-            balance_due,
-            payment_status,
-            confirmed,
-            custom_price,
-            discount_percent,
-            notes,
-            created_at,
-            updated_at
-          `)
+          .select("*")
           .gte("start_date", startDate)
           .lte("end_date", endDate)
           .order("start_date", { ascending: true });
@@ -395,33 +265,7 @@ export const bookingService = {
       const { data: bookingsData, error: bookingsError } = await retryWithBackoff(async () => {
         const result = await supabase
           .from("bookings")
-          .select(`
-            id,
-            name,
-            booking_type,
-            contact_name,
-            contact_email,
-            contact_phone,
-            start_date,
-            end_date,
-            number_of_guests,
-            number_of_rooms,
-            base_rate,
-            per_person_rate,
-            cleaning_fee,
-            additional_cleaning_fee,
-            total_cost,
-            deposit_amount,
-            amount_paid,
-            balance_due,
-            payment_status,
-            confirmed,
-            custom_price,
-            discount_percent,
-            notes,
-            created_at,
-            updated_at
-          `)
+          .select("*")
           .eq("confirmed", true)
           .order("start_date", { ascending: true });
         
@@ -466,33 +310,7 @@ export const bookingService = {
       const { data: bookingsData, error: bookingsError } = await retryWithBackoff(async () => {
         const result = await supabase
           .from("bookings")
-          .select(`
-            id,
-            name,
-            booking_type,
-            contact_name,
-            contact_email,
-            contact_phone,
-            start_date,
-            end_date,
-            number_of_guests,
-            number_of_rooms,
-            base_rate,
-            per_person_rate,
-            cleaning_fee,
-            additional_cleaning_fee,
-            total_cost,
-            deposit_amount,
-            amount_paid,
-            balance_due,
-            payment_status,
-            confirmed,
-            custom_price,
-            discount_percent,
-            notes,
-            created_at,
-            updated_at
-          `)
+          .select("*")
           .eq("confirmed", false)
           .order("start_date", { ascending: true });
         

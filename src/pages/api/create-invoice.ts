@@ -49,33 +49,56 @@ export default async function handler(
       totalAmount,
       depositAmount,
       balanceDue,
-      dueDate,
+      eventDateStart,
+      eventDateEnd,
+      numberOfGuests,
+      numberOfRooms,
+      basePrice,
+      notes,
       invoiceNumber,
       status = "pending"
     } = req.body;
 
     if (!bookingId || !totalAmount) {
-      return res.status(400).json({ 
-        error: "Missing required fields: bookingId and totalAmount are required" 
+      return res.status(400).json({
+        error: "Missing required fields: bookingId and totalAmount are required"
       });
     }
 
     console.log("📝 Creating invoice for booking:", bookingId);
 
+    let finalInvoiceNumber = invoiceNumber;
+    if (!finalInvoiceNumber) {
+      const year = new Date().getFullYear();
+      const { count } = await supabaseAdmin
+        .from("invoices")
+        .select("id", { count: "exact", head: true })
+        .like("invoice_number", `INV-${year}-%`);
+      const next = String((count ?? 0) + 1).padStart(4, "0");
+      finalInvoiceNumber = `INV-${year}-${next}`;
+    }
+
+    const insertRow: Record<string, unknown> = {
+      booking_id: bookingId,
+      client_name: clientName,
+      client_email: clientEmail,
+      client_phone: clientPhone,
+      total_amount: totalAmount,
+      deposit_amount: depositAmount || 0,
+      balance_due: balanceDue || totalAmount,
+      invoice_number: finalInvoiceNumber,
+      status: status,
+    };
+    if (eventDateStart) insertRow.event_date_start = eventDateStart;
+    if (eventDateEnd) insertRow.event_date_end = eventDateEnd;
+    if (numberOfGuests != null) insertRow.number_of_guests = numberOfGuests;
+    if (numberOfRooms != null) insertRow.number_of_rooms = numberOfRooms;
+    if (basePrice != null) insertRow.base_price = basePrice;
+    if (notes) insertRow.notes = notes;
+
     const { data: invoice, error } = await supabaseAdmin
       .from("invoices")
-      .insert({
-        booking_id: bookingId,
-        client_name: clientName,
-        client_email: clientEmail,
-        client_phone: clientPhone,
-        total_amount: totalAmount,
-        deposit_amount: depositAmount || 0,
-        balance_due: balanceDue || totalAmount,
-        due_date: dueDate,
-        invoice_number: invoiceNumber,
-        status: status
-      })
+      .insert(insertRow)
       .select()
       .single();
 

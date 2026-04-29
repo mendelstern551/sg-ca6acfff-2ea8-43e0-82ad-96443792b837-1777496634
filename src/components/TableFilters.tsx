@@ -18,7 +18,7 @@ import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { format } from "date-fns";
 
 export type SortOrder = "latest" | "oldest";
-export type DateFilter = "all" | "today" | "week" | "month" | "custom";
+export type DateFilter = "all" | "today" | "thisWeekend" | "next7" | "week" | "next30" | "month" | "custom";
 export type StatusFilter = "all" | "upcoming" | "past" | "ongoing" | "cancelled";
 
 interface TableFiltersProps {
@@ -94,7 +94,10 @@ export function TableFilters({
           <SelectContent>
             <SelectItem value="all">All Dates</SelectItem>
             <SelectItem value="today">Today</SelectItem>
+            <SelectItem value="thisWeekend">This Weekend</SelectItem>
+            <SelectItem value="next7">Next 7 Days</SelectItem>
             <SelectItem value="week">This Week</SelectItem>
+            <SelectItem value="next30">Next 30 Days</SelectItem>
             <SelectItem value="month">This Month</SelectItem>
             <SelectItem value="custom">Custom Range</SelectItem>
           </SelectContent>

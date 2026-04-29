@@ -44,17 +44,17 @@ export const invoiceService = {
     check_out: string;
     total_cost: number;
     deposit_paid: number;
+    number_of_guests?: number;
+    number_of_rooms?: number;
+    base_price?: number;
+    notes?: string;
   }) {
     try {
       const clientName = bookingData.clientName || bookingData.client_name || "Unknown Client";
-      
+
       // Calculate balance due
       const balanceDue = bookingData.total_cost - bookingData.deposit_paid;
-      
-      // Format due date (30 days from check-in)
-      const dueDate = new Date(bookingData.check_in);
-      dueDate.setDate(dueDate.getDate() + 30);
-      
+
       // Call Next.js API route to create invoice
       const response = await fetch("/api/create-invoice", {
         method: "POST",
@@ -66,7 +66,12 @@ export const invoiceService = {
           totalAmount: bookingData.total_cost,
           depositAmount: bookingData.deposit_paid,
           balanceDue,
-          dueDate: dueDate.toISOString().split('T')[0],
+          eventDateStart: bookingData.check_in,
+          eventDateEnd: bookingData.check_out,
+          numberOfGuests: bookingData.number_of_guests ?? 0,
+          numberOfRooms: bookingData.number_of_rooms ?? 0,
+          basePrice: bookingData.base_price,
+          notes: bookingData.notes,
           clientName,
           clientEmail: bookingData.clientEmail,
           clientPhone: bookingData.clientPhone,

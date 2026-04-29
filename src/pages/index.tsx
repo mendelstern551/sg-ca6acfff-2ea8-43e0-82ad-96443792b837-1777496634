@@ -1,5 +1,7 @@
 import { useState, useEffect } from "react";
-import { Calendar, Users, DollarSign, FileText, Plus, Home, Receipt, Briefcase, Mail, MessageSquare, TrendingUp, BarChart3, Wrench, LayoutDashboard, Clock, AlertCircle, CheckCircle2 } from "lucide-react";
+import { useRouter } from "next/router";
+import { Calendar, Users, DollarSign, FileText, Plus, Home, Receipt, Briefcase, Mail, MessageSquare, TrendingUp, BarChart3, Wrench, LayoutDashboard, Clock, AlertCircle, CheckCircle2, Search, Settings, Menu } from "lucide-react";
+import { Sheet, SheetContent, SheetTrigger, SheetTitle, SheetHeader } from "@/components/ui/sheet";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ThemeSwitch } from "@/components/ThemeSwitch";
@@ -30,11 +32,18 @@ import { EmailHistory } from "@/components/EmailHistory";
 import { TaskSidebar } from "@/components/TaskSidebar";
 import { ReminderDialog } from "@/components/ReminderDialog";
 import { reminderService } from "@/services/reminderService";
+import { clientCommunicationService } from "@/services/clientCommunicationService";
 import { ReminderModal } from "@/components/ReminderModal";
 import { CornerNotifications } from "@/components/CornerNotifications";
 import { FeedbackDashboard } from "@/components/FeedbackDashboard";
 import { TableFilters, SortOrder, DateFilter, StatusFilter } from "@/components/TableFilters";
 import { ClientCommunications } from "@/components/ClientCommunications";
+import { EventMargin } from "@/components/EventMargin";
+import { EmptyState } from "@/components/EmptyState";
+import { ClientDetailsDialog } from "@/components/ClientDetailsDialog";
+import { PricingSettings } from "@/components/PricingSettings";
+import { ThemeToggle } from "@/components/ThemeToggle";
+import { DEFAULT_EVENT_MARGIN_CONFIG, type EventMarginConfig } from "@/types/eventMargin";
 import { getDateRange, isDateInRange, sortByDate, searchInFields } from "@/lib/filterUtils";
 import { startOfDay } from "date-fns";
 
@@ -44,7 +53,21 @@ type BookingUpdate = Database["public"]["Tables"]["bookings"]["Update"];
 type Reminder = Database["public"]["Tables"]["reminders"]["Row"];
 
 export default function HomePage() {
+  const router = useRouter();
   const [activeTab, setActiveTab] = useState("dashboard");
+  const [viewBooking, setViewBooking] = useState<Booking | null>(null);
+  const [viewBookingOpen, setViewBookingOpen] = useState(false);
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
+
+  // Sync tab with URL ?tab= so the command palette and shareable links work.
+  useEffect(() => {
+    if (!router.isReady) return;
+    const t = typeof router.query.tab === "string" ? router.query.tab : null;
+    if (t && t !== activeTab) setActiveTab(t);
+    // We intentionally don't include activeTab in deps — we only react to URL changes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [router.isReady, router.query.tab]);
+
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [managerCompensations, setManagerCompensations] = useState<ManagerCompensation[]>([]);
@@ -77,7 +100,7 @@ export default function HomePage() {
   const [bookingSortOrder, setBookingSortOrder] = useState<SortOrder>("latest");
   const [bookingDateFilter, setBookingDateFilter] = useState<DateFilter>("all");
   const [bookingCustomRange, setBookingCustomRange] = useState<{ from?: Date; to?: Date }>({});
-  const [bookingStatusFilter, setBookingStatusFilter] = useState<StatusFilter>("all");
+  const [bookingStatusFilter, setBookingStatusFilter] = useState<StatusFilter>("upcoming");
 
   const [invoiceSearch, setInvoiceSearch] = useState("");
   const [invoiceSortOrder, setInvoiceSortOrder] = useState<SortOrder>("latest");
@@ -88,6 +111,41 @@ export default function HomePage() {
   const [expenseSortOrder, setExpenseSortOrder] = useState<SortOrder>("latest");
   const [expenseDateFilter, setExpenseDateFilter] = useState<DateFilter>("all");
   const [expenseCustomRange, setExpenseCustomRange] = useState<{ from?: Date; to?: Date }>({});
+
+  // Open booking edit when ?focus=<id>&action=edit arrives (e.g., from command palette).
+  useEffect(() => {
+    if (!router.isReady) return;
+    const focus = typeof router.query.focus === "string" ? router.query.focus : null;
+    const action = typeof router.query.action === "string" ? router.query.action : null;
+    if (focus && action === "edit" && bookings.length > 0) {
+      const target = bookings.find((b) => b.id === focus);
+      if (target) {
+        setEditingBooking(target);
+        setBookingDialogOpen(true);
+        // Strip the URL flags so reopening doesn't keep firing.
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        const { focus: _f, action: _a, ...rest } = router.query;
+        router.replace({ pathname: "/", query: rest }, undefined, { shallow: true });
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [router.isReady, router.query.focus, router.query.action, bookings.length]);
+
+  // Listen for "Add payment to <booking>" from the command palette.
+  useEffect(() => {
+    const onAddPayment = (e: Event) => {
+      const detail = (e as CustomEvent<{ bookingId: string }>).detail;
+      if (!detail?.bookingId) return;
+      const target = bookings.find((b) => b.id === detail.bookingId);
+      if (target) {
+        setPaymentBooking(target);
+        setEditingPayment(undefined);
+        setPaymentDialogOpen(true);
+      }
+    };
+    window.addEventListener("dialog:add-payment", onAddPayment);
+    return () => window.removeEventListener("dialog:add-payment", onAddPayment);
+  }, [bookings]);
 
   useEffect(() => {
     loadAllData();
@@ -469,6 +527,27 @@ export default function HomePage() {
           title: "Booking Created",
           description: "New booking has been created successfully.",
         });
+
+        // Auto-schedule the standard pre-event email sequence (website info + parking).
+        // Fire-and-forget — never blocks booking creation.
+        clientCommunicationService
+          .scheduleAutoEmailsForBooking({
+            id: newBooking.id,
+            name: newBooking.name,
+            start_date: newBooking.start_date,
+            contact_email: newBooking.contact_email,
+            contact_name: newBooking.contact_name,
+          })
+          .then((result) => {
+            if (result.scheduled > 0) {
+              toast({
+                title: "Emails scheduled",
+                description: `${result.scheduled} pre-event email${result.scheduled > 1 ? "s" : ""} queued (website info + parking).`,
+              });
+            } else if (result.reason && result.reason !== "already scheduled") {
+              console.warn("Auto-schedule skipped:", result.reason);
+            }
+          });
       }
 
       try {
@@ -510,7 +589,11 @@ export default function HomePage() {
                 check_in: bookingData.start_date,
                 check_out: bookingData.end_date,
                 total_cost: bookingData.total_cost,
-                deposit_paid: existingPaymentsTotal
+                deposit_paid: existingPaymentsTotal,
+                number_of_guests: bookingData.number_of_guests ?? 0,
+                number_of_rooms: bookingData.number_of_rooms ?? 0,
+                base_price: bookingData.base_rate ?? undefined,
+                notes: bookingData.notes ?? undefined
               }),
               15000,
               "Create invoice"
@@ -672,7 +755,41 @@ export default function HomePage() {
 
   const totalGuests = bookings.reduce((sum, b) => sum + b.number_of_guests, 0);
   const totalRevenue = bookings.reduce((sum, b) => sum + b.total_cost, 0);
-  const totalExpenses = allExpenses.reduce((sum, e) => sum + Number(e.amount), 0);
+
+  // Pull the live EventMargin config from localStorage for accurate cost modeling.
+  const marginConfig: EventMarginConfig = (() => {
+    if (typeof window === "undefined") return DEFAULT_EVENT_MARGIN_CONFIG;
+    try {
+      const raw = window.localStorage.getItem("trout-lake-event-margin");
+      if (!raw) return DEFAULT_EVENT_MARGIN_CONFIG;
+      const parsed = JSON.parse(raw);
+      return { ...DEFAULT_EVENT_MARGIN_CONFIG, ...parsed };
+    } catch {
+      return DEFAULT_EVENT_MARGIN_CONFIG;
+    }
+  })();
+
+  // Per-event variable cost for each booking, using the user's margin model:
+  //   manager commission (15% min $1k) + per-event line items + booking-tracked expenses
+  const perEventLineSum = (marginConfig.perEventExpenses || []).reduce(
+    (s, e) => s + (Number(e.amount) || 0),
+    0
+  );
+  const computedBookingExpenses = bookings.reduce((sum, b) => {
+    const commission = Math.max(
+      (Number(b.total_cost) || 0) * (marginConfig.manager.commissionPercent / 100),
+      marginConfig.manager.minimumCommissionPerEvent
+    );
+    return sum + commission + perEventLineSum;
+  }, 0);
+  // Fixed annual costs (hydro, snow, marketing, building yearly)
+  const fixedAnnualCosts =
+    (marginConfig.annualExpenses || []).reduce((s, e) => s + (Number(e.yearlyAmount) || 0), 0) +
+    (marginConfig.buildings || []).reduce((s, b) => s + (Number(b.yearlyCost) || 0), 0);
+  // Plus any expenses already logged in the DB (food, ad-hoc, manager payments etc.)
+  const dbExpensesSum = allExpenses.reduce((sum, e) => sum + Number(e.amount), 0);
+
+  const totalExpenses = computedBookingExpenses + fixedAnnualCosts + dbExpensesSum;
   const netProfit = totalRevenue - totalExpenses;
 
   const confirmedCount = bookings.filter(b => b.confirmed).length;
@@ -691,7 +808,7 @@ export default function HomePage() {
   
   if (bookingSearch) {
     filteredBookings = filteredBookings.filter(b =>
-      searchInFields(b, bookingSearch, ["name", "contact_name", "contact_email", "notes"])
+      searchInFields(b, bookingSearch, ["name", "contact_name", "contact_email", "contact_phone", "notes"])
     );
   }
   
@@ -707,7 +824,7 @@ export default function HomePage() {
       const start = new Date(b.start_date);
       const end = new Date(b.end_date);
       
-      if (bookingStatusFilter === "upcoming") return isAfter(start, now) && b.confirmed;
+      if (bookingStatusFilter === "upcoming") return !isBefore(end, now); // present + future, regardless of confirm status
       if (bookingStatusFilter === "past") return isBefore(end, now);
       if (bookingStatusFilter === "ongoing") return isBefore(start, now) && isAfter(end, now);
       if (bookingStatusFilter === "cancelled") return !b.confirmed;
@@ -764,10 +881,12 @@ export default function HomePage() {
     { id: "expenses", label: "Expenses", icon: DollarSign },
     { id: "receipts", label: "Receipts", icon: Receipt },
     { id: "manager", label: "Manager", icon: Briefcase },
+    { id: "margin", label: "Event Margin", icon: TrendingUp },
     { id: "communications", label: "Communications", icon: Mail },
     { id: "emails", label: "Email History", icon: MessageSquare },
     { id: "feedback", label: "Feedback", icon: MessageSquare },
     { id: "insights", label: "Insights", icon: TrendingUp },
+    { id: "settings", label: "Settings", icon: Settings },
   ];
 
   if (loading) {
@@ -781,49 +900,92 @@ export default function HomePage() {
     );
   }
 
+  // Shared nav body — used both in the desktop sidebar and the mobile/tablet drawer.
+  const navBody = (
+    <nav className="p-4 space-y-1">
+      {navigationItems.map((item) => {
+        const Icon = item.icon;
+        const isActive = activeTab === item.id;
+        return (
+          <button
+            key={item.id}
+            onClick={() => {
+              setActiveTab(item.id);
+              if (item.id !== "expenses") setFilteredBookingId(undefined);
+              setMobileNavOpen(false);
+            }}
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 ${
+              isActive
+                ? "bg-blue-600 text-white shadow-md"
+                : "text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
+            }`}
+          >
+            <Icon className="h-5 w-5 shrink-0" />
+            <span className="font-medium text-sm">{item.label}</span>
+          </button>
+        );
+      })}
+    </nav>
+  );
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 dark:from-slate-950 dark:via-slate-900 dark:to-indigo-950 flex">
-      {/* SIDEBAR NAVIGATION */}
-      <aside className="w-64 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 fixed h-screen overflow-y-auto">
-        <div className="p-6 border-b border-slate-200 dark:border-slate-800">
-          <h1 className="text-xl font-bold text-slate-900 dark:text-slate-100">Trout Lake Resort</h1>
-          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">Management System</p>
-        </div>
-        
-        <nav className="p-4 space-y-1">
-          {navigationItems.map((item) => {
-            const Icon = item.icon;
-            const isActive = activeTab === item.id;
-            return (
-              <button
-                key={item.id}
-                onClick={() => {
-                  setActiveTab(item.id);
-                  if (item.id !== "expenses") setFilteredBookingId(undefined);
-                }}
-                className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 ${
-                  isActive
-                    ? "bg-blue-600 text-white shadow-md"
-                    : "text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
-                }`}
-              >
-                <Icon className="h-5 w-5" />
-                <span className="font-medium text-sm">{item.label}</span>
-              </button>
-            );
-          })}
-        </nav>
-        
-        <div className="p-4 border-t border-slate-200 dark:border-slate-800 mt-auto">
-          <div className="flex items-center justify-between">
-            <span className="text-sm text-slate-600 dark:text-slate-400">Theme</span>
-            <ThemeSwitch />
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 dark:from-slate-950 dark:via-slate-900 dark:to-indigo-950">
+      {/* MOBILE / TABLET TOP BAR — visible below lg (≤1023px) */}
+      <header className="lg:hidden sticky top-0 z-40 bg-white/95 dark:bg-slate-900/95 backdrop-blur border-b border-slate-200 dark:border-slate-800">
+        <div className="flex items-center justify-between p-3">
+          <div className="flex items-center gap-2 min-w-0">
+            <Sheet open={mobileNavOpen} onOpenChange={setMobileNavOpen}>
+              <SheetTrigger asChild>
+                <Button variant="ghost" size="icon" aria-label="Open menu">
+                  <Menu className="h-5 w-5" />
+                </Button>
+              </SheetTrigger>
+              <SheetContent side="left" className="w-72 p-0">
+                <SheetHeader className="p-4 border-b border-slate-200 dark:border-slate-800">
+                  <SheetTitle className="text-left">Trout Lake Resort</SheetTitle>
+                </SheetHeader>
+                {navBody}
+              </SheetContent>
+            </Sheet>
+            <h1 className="text-base font-bold text-slate-900 dark:text-slate-100 truncate">
+              Trout Lake Resort
+            </h1>
+          </div>
+          <div className="flex items-center gap-1">
+            <Button
+              variant="ghost"
+              size="icon"
+              aria-label="Search"
+              onClick={() => window.dispatchEvent(new CustomEvent("palette:open"))}
+            >
+              <Search className="h-4 w-4" />
+            </Button>
+            <ThemeToggle />
           </div>
         </div>
-      </aside>
+      </header>
+
+      <div className="flex">
+        {/* DESKTOP SIDEBAR — hidden below lg */}
+        <aside className="hidden lg:block w-64 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 fixed h-screen overflow-y-auto">
+          <div className="p-6 border-b border-slate-200 dark:border-slate-800 flex items-start justify-between gap-2">
+            <div>
+              <h1 className="text-xl font-bold text-slate-900 dark:text-slate-100">Trout Lake Resort</h1>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">Management System</p>
+            </div>
+            <ThemeToggle />
+          </div>
+          {navBody}
+          <div className="p-4 border-t border-slate-200 dark:border-slate-800 mt-auto">
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-slate-600 dark:text-slate-400">Theme</span>
+              <ThemeSwitch />
+            </div>
+          </div>
+        </aside>
 
       {/* MAIN CONTENT */}
-      <main className="flex-1 ml-64">
+      <main className="flex-1 lg:ml-64">
         {/* DASHBOARD HEADER - Only show on dashboard tab */}
         {activeTab === "dashboard" && (
           <header className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 sticky top-0 z-40 backdrop-blur-sm">
@@ -945,11 +1107,24 @@ export default function HomePage() {
                     <CardDescription>Common tasks and shortcuts</CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-3">
-                    <Button 
-                      className="w-full bg-blue-600 hover:bg-blue-700 text-white justify-start" 
-                      onClick={() => { 
-                        setEditingBooking(undefined); 
-                        setBookingDialogOpen(true); 
+                    <Button
+                      variant="outline"
+                      className="w-full justify-between"
+                      onClick={() => window.dispatchEvent(new CustomEvent("palette:open"))}
+                    >
+                      <span className="flex items-center">
+                        <Search className="h-4 w-4 mr-2" />
+                        Search bookings, invoices, contacts…
+                      </span>
+                      <kbd className="hidden sm:inline-flex items-center gap-1 rounded border bg-muted px-1.5 py-0.5 text-xs text-muted-foreground">
+                        <span className="text-[10px]">Ctrl</span>K
+                      </kbd>
+                    </Button>
+                    <Button
+                      className="w-full bg-blue-600 hover:bg-blue-700 text-white justify-start"
+                      onClick={() => {
+                        setEditingBooking(undefined);
+                        setBookingDialogOpen(true);
                       }}
                     >
                       <Plus className="h-4 w-4 mr-2" />
@@ -999,10 +1174,13 @@ export default function HomePage() {
                     ) : (
                       <div className="space-y-3">
                         {upcomingBookings.slice(0, 5).map((booking) => (
-                          <div 
-                            key={booking.id} 
+                          <div
+                            key={booking.id}
+                            role="button"
+                            tabIndex={0}
                             className="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-800 rounded-lg hover:border-blue-300 dark:hover:border-blue-600 transition-colors cursor-pointer"
-                            onClick={() => handleEditBooking(booking)}
+                            onClick={() => { setViewBooking(booking); setViewBookingOpen(true); }}
+                            onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { setViewBooking(booking); setViewBookingOpen(true); } }}
                           >
                             <div>
                               <p className="font-medium text-sm text-slate-900 dark:text-slate-100">{booking.name}</p>
@@ -1104,7 +1282,7 @@ export default function HomePage() {
                 <TableFilters
                   searchValue={bookingSearch}
                   onSearchChange={setBookingSearch}
-                  searchPlaceholder="Search bookings, clients, emails..."
+                  searchPlaceholder="Search by name, email, phone, or notes…"
                   sortOrder={bookingSortOrder}
                   onSortOrderChange={setBookingSortOrder}
                   dateFilter={bookingDateFilter}
@@ -1118,11 +1296,39 @@ export default function HomePage() {
                 />
                 
                 {filteredBookings.length === 0 ? (
-                  <div className="text-center py-12 text-slate-500 dark:text-slate-400">
-                    <Calendar className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                    <p className="text-lg font-medium mb-2">No bookings found</p>
-                    <p className="text-sm text-slate-600 dark:text-slate-400">Try adjusting your search or filters</p>
-                  </div>
+                  <EmptyState
+                    icon={Calendar}
+                    title={bookings.length === 0 ? "No bookings yet" : "No bookings match"}
+                    description={
+                      bookings.length === 0
+                        ? "Create your first booking to start tracking events, payments, and invoices."
+                        : "Try removing filters, switching the date range, or clearing the search."
+                    }
+                    action={
+                      bookings.length === 0
+                        ? {
+                            label: "New booking",
+                            icon: Plus,
+                            onClick: () => {
+                              setEditingBooking(undefined);
+                              setBookingDialogOpen(true);
+                            },
+                          }
+                        : undefined
+                    }
+                    secondaryAction={
+                      bookings.length > 0
+                        ? {
+                            label: "Clear filters",
+                            onClick: () => {
+                              setBookingSearch("");
+                              setBookingDateFilter("all");
+                              setBookingStatusFilter("all");
+                            },
+                          }
+                        : undefined
+                    }
+                  />
                 ) : (
                   <BookingList 
                     key={refreshKey} 
@@ -1170,11 +1376,20 @@ export default function HomePage() {
                 />
                 
                 {filteredInvoices.length === 0 ? (
-                  <div className="text-center py-12">
-                    <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                    <p className="text-lg font-medium mb-2">No invoices found</p>
-                    <p className="text-sm text-slate-600 dark:text-slate-400">Try adjusting your search or filters</p>
-                  </div>
+                  <EmptyState
+                    icon={FileText}
+                    title={invoices.length === 0 ? "No invoices yet" : "No invoices match"}
+                    description={
+                      invoices.length === 0
+                        ? "Invoices auto-generate when you confirm a booking. They'll show up here."
+                        : "Try removing filters or clearing the search."
+                    }
+                    secondaryAction={
+                      invoices.length > 0
+                        ? { label: "Clear search", onClick: () => setInvoiceSearch("") }
+                        : undefined
+                    }
+                  />
                 ) : (
                   <div className="space-y-3">
                     {filteredInvoices.map((invoice) => {
@@ -1244,11 +1459,38 @@ export default function HomePage() {
                 />
                 
                 {filteredExpenses.length === 0 ? (
-                  <div className="text-center py-12">
-                    <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                    <p className="text-lg font-medium mb-2">No expenses found</p>
-                    <p className="text-sm text-slate-600 dark:text-slate-400">Try adjusting your search or filters</p>
-                  </div>
+                  <EmptyState
+                    icon={DollarSign}
+                    title={expenses.length === 0 ? "No expenses recorded" : "No expenses match"}
+                    description={
+                      expenses.length === 0
+                        ? "Track every cost — food, supplies, staff, building costs — and link them to specific bookings."
+                        : "Try removing filters or clearing the search."
+                    }
+                    action={
+                      expenses.length === 0
+                        ? {
+                            label: "Add expense",
+                            icon: Plus,
+                            onClick: () => {
+                              setEditingExpense(undefined);
+                              setExpenseDialogOpen(true);
+                            },
+                          }
+                        : undefined
+                    }
+                    secondaryAction={
+                      expenses.length > 0
+                        ? {
+                            label: "Clear filters",
+                            onClick: () => {
+                              setExpenseSearch("");
+                              setExpenseDateFilter("all");
+                            },
+                          }
+                        : undefined
+                    }
+                  />
                 ) : (
                   <ExpenseList 
                     expenses={filteredExpenses} 
@@ -1270,6 +1512,10 @@ export default function HomePage() {
               <CardContent><ManagerSalary bookings={bookings} onAddExpense={handleAddExpense} allExpenses={expenses} onExpensesUpdate={loadAllData} /></CardContent>
             </Card>
           )}
+
+          {activeTab === "margin" && <EventMargin bookings={bookings} />}
+
+          {activeTab === "settings" && <PricingSettings />}
 
           {activeTab === "communications" && (
             <Card className="bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800">
@@ -1433,11 +1679,21 @@ export default function HomePage() {
         bookings={bookings.map(b => ({ id: b.id, name: b.name, contact_name: b.contact_name }))}
       />
 
+      {viewBooking && (
+        <ClientDetailsDialog
+          open={viewBookingOpen}
+          onOpenChange={(o) => { setViewBookingOpen(o); if (!o) setViewBooking(null); }}
+          booking={viewBooking}
+          allExpenses={expenses}
+          onNavigateToExpenses={handleNavigateToExpenses}
+        />
+      )}
+
       <BookingDialog open={bookingDialogOpen} onOpenChange={setBookingDialogOpen} onSave={handleSaveBooking} booking={editingBooking} bookings={bookings} />
       <ExpenseDialog open={expenseDialogOpen} onOpenChange={setExpenseDialogOpen} onSave={handleSaveExpense} expense={editingExpense} bookings={bookings} />
       {selectedInvoiceBooking && <InvoiceDialog open={invoiceDialogOpen} onOpenChange={setInvoiceDialogOpen} booking={selectedInvoiceBooking} />}
-      <PaymentDialog 
-        open={paymentDialogOpen} 
+      <PaymentDialog
+        open={paymentDialogOpen}
         onOpenChange={(open) => {
           setPaymentDialogOpen(open);
           if (!open) {
@@ -1449,6 +1705,7 @@ export default function HomePage() {
         onPaymentAdded={loadAllData}
         editingPayment={editingPayment}
       />
+      </div>
     </div>
   );
 }

@@ -7,9 +7,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { EnhancedCalendar } from "@/components/ui/enhanced-calendar";
 import { format } from "date-fns";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { PieChart } from "lucide-react";
+import { DEFAULT_EVENT_MARGIN_CONFIG, type EventMarginConfig } from "@/types/eventMargin";
 
 interface BudgetDashboardProps {
   bookings: Booking[];
@@ -21,6 +22,25 @@ export function BudgetDashboard({ bookings, expenses }: BudgetDashboardProps) {
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [startDate, setStartDate] = useState<Date | undefined>();
   const [endDate, setEndDate] = useState<Date | undefined>();
+
+  // Live read of EventMargin config so the Budget tab matches the Event Margin tab.
+  // Re-reads on the `pricing-config:changed` & storage events; defaults if missing.
+  const [marginConfig, setMarginConfig] = useState<EventMarginConfig>(DEFAULT_EVENT_MARGIN_CONFIG);
+  useEffect(() => {
+    const load = () => {
+      if (typeof window === "undefined") return;
+      try {
+        const raw = window.localStorage.getItem("trout-lake-event-margin");
+        setMarginConfig(raw ? { ...DEFAULT_EVENT_MARGIN_CONFIG, ...JSON.parse(raw) } : DEFAULT_EVENT_MARGIN_CONFIG);
+      } catch {
+        setMarginConfig(DEFAULT_EVENT_MARGIN_CONFIG);
+      }
+    };
+    load();
+    const onStorage = (e: StorageEvent) => { if (e.key === "trout-lake-event-margin") load(); };
+    window.addEventListener("storage", onStorage);
+    return () => window.removeEventListener("storage", onStorage);
+  }, []);
 
   const filteredBookings = bookings.filter(booking => {
     const bookingMatch = selectedBooking === "all" || booking.id === selectedBooking;
@@ -40,7 +60,24 @@ export function BudgetDashboard({ bookings, expenses }: BudgetDashboardProps) {
   });
 
   const totalRevenue = filteredBookings.reduce((sum, booking) => sum + booking.total_cost, 0);
-  const totalExpenses = filteredExpenses.reduce((sum, expense) => sum + expense.amount, 0);
+
+  // Per-event variable costs from the EventMargin tab — same model used there:
+  //   manager commission (max(%, $floor)) + per-event line items, computed per booking.
+  const perEventLineSum = (marginConfig.perEventExpenses || []).reduce(
+    (s, e) => s + (Number(e.amount) || 0),
+    0
+  );
+  const computedBookingExpenses = filteredBookings.reduce((sum, b) => {
+    const commission = Math.max(
+      (Number(b.total_cost) || 0) * (marginConfig.manager.commissionPercent / 100),
+      marginConfig.manager.minimumCommissionPerEvent
+    );
+    return sum + commission + perEventLineSum;
+  }, 0);
+  // DB-tracked expenses (food, ad-hoc, manager payments etc.)
+  const dbExpenses = filteredExpenses.reduce((sum, expense) => sum + expense.amount, 0);
+
+  const totalExpenses = computedBookingExpenses + dbExpenses;
   const netProfit = totalRevenue - totalExpenses;
 
   const totalPaid = filteredBookings.reduce((sum, booking) => sum + (booking.amount_paid || 0), 0);

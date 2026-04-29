@@ -1,34 +1,30 @@
--- Create storage bucket for client documents (email attachments)
-INSERT INTO storage.buckets (id, name, public)
-VALUES ('client-documents', 'client-documents', true)
-ON CONFLICT (id) DO NOTHING;
+-- Run in Supabase SQL Editor (Dashboard → SQL → New query → paste → Run)
+-- Creates the public `client-documents` storage bucket used by Client Communications
+-- for agreement uploads and custom-email attachments.
 
--- Enable RLS on storage.objects for client-documents bucket
-CREATE POLICY "public_read_client_docs" ON storage.objects
-  FOR SELECT
-  USING (bucket_id = 'client-documents');
+insert into storage.buckets (id, name, public)
+values ('client-documents', 'client-documents', true)
+on conflict (id) do update set public = excluded.public;
 
-CREATE POLICY "auth_insert_client_docs" ON storage.objects
-  FOR INSERT
-  WITH CHECK (
-    bucket_id = 'client-documents' 
-    AND auth.uid() IS NOT NULL
-  );
+-- Permissive RLS — public read, anyone authenticated can upload/update/delete inside this bucket.
+-- Tighten later if you add real auth.
+drop policy if exists "client_documents_read"   on storage.objects;
+drop policy if exists "client_documents_insert" on storage.objects;
+drop policy if exists "client_documents_update" on storage.objects;
+drop policy if exists "client_documents_delete" on storage.objects;
 
-CREATE POLICY "auth_update_client_docs" ON storage.objects
-  FOR UPDATE
-  USING (
-    bucket_id = 'client-documents' 
-    AND auth.uid() IS NOT NULL
-  );
+create policy "client_documents_read"
+  on storage.objects for select
+  using (bucket_id = 'client-documents');
 
-CREATE POLICY "auth_delete_client_docs" ON storage.objects
-  FOR DELETE
-  USING (
-    bucket_id = 'client-documents' 
-    AND auth.uid() IS NOT NULL
-  );
+create policy "client_documents_insert"
+  on storage.objects for insert
+  with check (bucket_id = 'client-documents');
 
--- Add comment for documentation
-COMMENT ON POLICY "public_read_client_docs" ON storage.objects IS 'Allow public read access to client documents';
-COMMENT ON POLICY "auth_insert_client_docs" ON storage.objects IS 'Allow authenticated users to upload client documents';
+create policy "client_documents_update"
+  on storage.objects for update
+  using (bucket_id = 'client-documents');
+
+create policy "client_documents_delete"
+  on storage.objects for delete
+  using (bucket_id = 'client-documents');

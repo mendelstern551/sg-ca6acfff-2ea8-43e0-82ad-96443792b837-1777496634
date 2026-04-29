@@ -7,7 +7,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
-import { Mail, Send, Calendar, Upload, FileText, Clock, CheckCircle, XCircle, AlertCircle } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { Mail, Send, Calendar, Upload, FileText, Clock, CheckCircle, XCircle, AlertCircle, Check, ChevronsUpDown, Loader2 } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { clientCommunicationService, EMAIL_TEMPLATES } from "@/services/clientCommunicationService";
 import type { EmailTemplate, ClientEmail, EmailTemplateType } from "@/types/communication";
@@ -33,6 +36,9 @@ export function ClientCommunications({ bookings, onRefresh }: ClientCommunicatio
   const [loading, setLoading] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
   const [isCustomEmail, setIsCustomEmail] = useState(false);
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [runningScheduled, setRunningScheduled] = useState(false);
+  const [showScheduler, setShowScheduler] = useState(false);
 
   useEffect(() => {
     loadEmailHistory();
@@ -95,10 +101,22 @@ export function ClientCommunications({ bookings, onRefresh }: ClientCommunicatio
     const file = e.target.files?.[0];
     if (!file) return;
 
-    if (file.type !== "application/pdf") {
+    // Rental-agreement template still requires a PDF; everything else (custom emails) can attach any common type.
+    const isAgreementTemplate = selectedTemplate?.requiresAttachment;
+    if (isAgreementTemplate && file.type !== "application/pdf") {
       toast({
         title: "Invalid File Type",
-        description: "Please upload a PDF file.",
+        description: "The Rental Agreement template requires a PDF file.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // 10 MB cap for custom email attachments — Gmail's hard limit is 25 MB but messages exceeding ~10 MB often get rejected.
+    if (file.size > 10 * 1024 * 1024) {
+      toast({
+        title: "File Too Large",
+        description: "Attachments must be under 10 MB.",
         variant: "destructive",
       });
       return;
@@ -106,8 +124,8 @@ export function ClientCommunications({ bookings, onRefresh }: ClientCommunicatio
 
     if (!selectedBooking) {
       toast({
-        title: "Select Booking First",
-        description: "Please select a booking before uploading a file.",
+        title: "Select Client First",
+        description: "Please choose a booking before uploading a file.",
         variant: "destructive",
       });
       return;
@@ -116,11 +134,9 @@ export function ClientCommunications({ bookings, onRefresh }: ClientCommunicatio
     setLoading(true);
     try {
       const eventDate = format(new Date(selectedBooking.start_date), "yyyy-MM-dd");
-      const { url, name } = await clientCommunicationService.uploadAgreement(
-        file,
-        selectedBooking.name,
-        eventDate
-      );
+      const { url, name } = isAgreementTemplate
+        ? await clientCommunicationService.uploadAgreement(file, selectedBooking.name, eventDate)
+        : await clientCommunicationService.uploadAttachment(file, selectedBooking.name, eventDate);
 
       setAttachmentFile(file);
       setAttachmentUrl(url);
@@ -132,7 +148,7 @@ export function ClientCommunications({ bookings, onRefresh }: ClientCommunicatio
 
       toast({
         title: "File Uploaded",
-        description: `Agreement uploaded as: ${name}`,
+        description: `Attached: ${name}`,
       });
     } catch (error) {
       toast({
@@ -142,6 +158,28 @@ export function ClientCommunications({ bookings, onRefresh }: ClientCommunicatio
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleRunScheduledNow = async () => {
+    setRunningScheduled(true);
+    try {
+      const res = await fetch("/api/run-scheduled-emails", { method: "POST" });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to run scheduled emails");
+      toast({
+        title: "Scheduled Run Complete",
+        description: `Sent ${data.sent ?? 0}, failed ${data.failed ?? 0}, skipped ${data.skipped ?? 0}.`,
+      });
+      loadEmailHistory();
+    } catch (error) {
+      toast({
+        title: "Run Failed",
+        description: error instanceof Error ? error.message : String(error),
+        variant: "destructive",
+      });
+    } finally {
+      setRunningScheduled(false);
     }
   };
 
@@ -223,6 +261,7 @@ export function ClientCommunications({ bookings, onRefresh }: ClientCommunicatio
     setAttachmentUrl("");
     setAttachmentName("");
     setIsCustomEmail(false);
+    setShowScheduler(false);
   };
 
   const getStatusIcon = (status: string) => {
@@ -265,21 +304,80 @@ export function ClientCommunications({ bookings, onRefresh }: ClientCommunicatio
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
-          {/* Booking Selection */}
+          {/* Booking Selection — searchable */}
           <div className="space-y-2">
             <Label>Select Client</Label>
-            <Select value={selectedBooking?.id || ""} onValueChange={handleBookingSelect}>
-              <SelectTrigger>
-                <SelectValue placeholder="Choose a booking..." />
-              </SelectTrigger>
-              <SelectContent>
-                {bookings.map((booking) => (
-                  <SelectItem key={booking.id} value={booking.id}>
-                    {booking.name} - {format(new Date(booking.start_date), "MMM dd, yyyy")} ({booking.contact_email})
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <Popover open={pickerOpen} onOpenChange={setPickerOpen}>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  role="combobox"
+                  aria-expanded={pickerOpen}
+                  className="w-full justify-between font-normal"
+                >
+                  {selectedBooking
+                    ? `${selectedBooking.name} — ${format(new Date(selectedBooking.start_date), "MMM dd, yyyy")}${
+                        selectedBooking.contact_email ? ` (${selectedBooking.contact_email})` : ""
+                      }`
+                    : "Choose a booking..."}
+                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
+                <Command
+                  filter={(value, search) =>
+                    value.toLowerCase().includes(search.toLowerCase()) ? 1 : 0
+                  }
+                >
+                  <CommandInput placeholder="Search by name, email, or date..." />
+                  <CommandList>
+                    <CommandEmpty>No bookings match.</CommandEmpty>
+                    <CommandGroup>
+                      {bookings.map((booking) => {
+                        const dateLabel = booking.start_date
+                          ? format(new Date(booking.start_date), "MMM dd, yyyy")
+                          : "—";
+                        const haystack = [
+                          booking.name,
+                          booking.contact_name,
+                          booking.contact_email,
+                          dateLabel,
+                        ]
+                          .filter(Boolean)
+                          .join(" ");
+                        return (
+                          <CommandItem
+                            key={booking.id}
+                            value={haystack}
+                            onSelect={() => {
+                              handleBookingSelect(booking.id);
+                              setPickerOpen(false);
+                            }}
+                          >
+                            <Check
+                              className={cn(
+                                "mr-2 h-4 w-4",
+                                selectedBooking?.id === booking.id ? "opacity-100" : "opacity-0"
+                              )}
+                            />
+                            <div className="flex flex-col">
+                              <span className="font-medium">
+                                {booking.name} — {dateLabel}
+                              </span>
+                              {booking.contact_email && (
+                                <span className="text-xs text-muted-foreground">
+                                  {booking.contact_email}
+                                </span>
+                              )}
+                            </div>
+                          </CommandItem>
+                        );
+                      })}
+                    </CommandGroup>
+                  </CommandList>
+                </Command>
+              </PopoverContent>
+            </Popover>
           </div>
 
           {/* Template Selection */}
@@ -300,16 +398,24 @@ export function ClientCommunications({ bookings, onRefresh }: ClientCommunicatio
             </Select>
           </div>
 
-          {/* File Upload for Agreement */}
-          {selectedTemplate?.requiresAttachment && (
+          {/* File Upload — Agreement template (PDF only) OR custom email (any common file) */}
+          {(selectedTemplate?.requiresAttachment || isCustomEmail) && (
             <div className="space-y-2">
-              <Label>Upload Agreement (PDF)</Label>
+              <Label>
+                {selectedTemplate?.requiresAttachment
+                  ? "Upload Agreement (PDF)"
+                  : "Attachment (optional)"}
+              </Label>
               <div className="flex items-center gap-2">
                 <Input
                   type="file"
-                  accept="application/pdf"
+                  accept={
+                    selectedTemplate?.requiresAttachment
+                      ? "application/pdf"
+                      : "application/pdf,image/png,image/jpeg,image/gif,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain"
+                  }
                   onChange={handleFileUpload}
-                  disabled={loading}
+                  disabled={loading || !selectedBooking}
                   className="flex-1"
                 />
                 {attachmentName && (
@@ -319,6 +425,11 @@ export function ClientCommunications({ bookings, onRefresh }: ClientCommunicatio
                   </Badge>
                 )}
               </div>
+              {!selectedTemplate?.requiresAttachment && (
+                <p className="text-xs text-muted-foreground">
+                  PDF, image, Word doc, or .txt — up to 10 MB.
+                </p>
+              )}
             </div>
           )}
 
@@ -348,37 +459,76 @@ export function ClientCommunications({ bookings, onRefresh }: ClientCommunicatio
             </div>
           )}
 
-          {/* Schedule Date (Only for Templates) */}
-          {selectedTemplate && selectedTemplate.allowScheduling && (
-            <div className="space-y-2">
-              <Label>Schedule for Later (Optional)</Label>
+          {/* Schedule date picker — hidden by default; revealed via "Schedule for later" toggle */}
+          {showScheduler && (selectedTemplate?.allowScheduling || isCustomEmail) && (
+            <div className="space-y-2 rounded-md border border-dashed p-3">
+              <div className="flex items-center justify-between">
+                <Label>Schedule for Later</Label>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setShowScheduler(false);
+                    setScheduledDate("");
+                  }}
+                >
+                  Cancel
+                </Button>
+              </div>
               <Input
                 type="datetime-local"
                 value={scheduledDate}
                 onChange={(e) => setScheduledDate(e.target.value)}
+                min={new Date().toISOString().slice(0, 16)}
               />
+              <p className="text-xs text-muted-foreground">
+                Scheduled emails fire when the &quot;Send pending scheduled&quot; runner is invoked
+                (manually from Email History, or via a cron job).
+              </p>
             </div>
           )}
 
           {/* Action Buttons */}
           <div className="flex gap-2">
-            <Button
-              onClick={() => handleSendEmail(false)}
-              disabled={loading || !selectedBooking}
-              className="flex-1"
-            >
-              <Send className="h-4 w-4 mr-2" />
-              Send Now
-            </Button>
-            {selectedTemplate && selectedTemplate.allowScheduling && !isCustomEmail && (
+            {!showScheduler ? (
+              <>
+                <Button
+                  onClick={() => handleSendEmail(false)}
+                  disabled={loading || !selectedBooking}
+                  className="flex-1"
+                >
+                  {loading ? (
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  ) : (
+                    <Send className="h-4 w-4 mr-2" />
+                  )}
+                  {loading ? "Sending…" : "Send Now"}
+                </Button>
+                {(selectedTemplate?.allowScheduling || isCustomEmail) && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setShowScheduler(true)}
+                    disabled={loading || !selectedBooking}
+                  >
+                    <Calendar className="h-4 w-4 mr-2" />
+                    Schedule for later
+                  </Button>
+                )}
+              </>
+            ) : (
               <Button
                 onClick={() => handleSendEmail(true)}
                 disabled={loading || !selectedBooking || !scheduledDate}
-                variant="secondary"
                 className="flex-1"
               >
-                <Calendar className="h-4 w-4 mr-2" />
-                Schedule
+                {loading ? (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <Calendar className="h-4 w-4 mr-2" />
+                )}
+                {loading ? "Scheduling…" : "Schedule Email"}
               </Button>
             )}
           </div>
@@ -389,8 +539,25 @@ export function ClientCommunications({ bookings, onRefresh }: ClientCommunicatio
       <Dialog open={showHistory} onOpenChange={setShowHistory}>
         <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Email History</DialogTitle>
-            <DialogDescription>View all sent and scheduled client emails</DialogDescription>
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <DialogTitle>Email History</DialogTitle>
+                <DialogDescription>View all sent and scheduled client emails</DialogDescription>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleRunScheduledNow}
+                disabled={runningScheduled}
+              >
+                {runningScheduled ? (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <Send className="h-4 w-4 mr-2" />
+                )}
+                Send pending scheduled
+              </Button>
+            </div>
           </DialogHeader>
           <div className="space-y-3">
             {emailHistory.length === 0 ? (

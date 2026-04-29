@@ -66,11 +66,8 @@ export function ExpenseList({ expenses, bookings, onEdit, onDelete, filterBookin
     return booking ? booking.name : "Unknown Booking";
   };
 
-  const sortedExpenses = [...expenses].sort((a, b) => 
-    new Date(b.expense_date).getTime() - new Date(a.expense_date).getTime()
-  );
-
-  const filteredExpenses = sortedExpenses.filter(expense => {
+  // Parent already sorts via TableFilters; preserve incoming order.
+  const filteredExpenses = expenses.filter(expense => {
     const matchesSearch = searchQuery === "" || 
       expense.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
       (expense.vendor || "").toLowerCase().includes(searchQuery.toLowerCase()) ||

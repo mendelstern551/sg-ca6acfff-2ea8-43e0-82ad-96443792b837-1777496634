@@ -11,6 +11,9 @@ import { format } from "date-fns";
 import { Expense, Booking, PaymentStatus } from "@/types/booking";
 import { formatCurrency } from "@/lib/bookingCalculations";
 import { ClientDetailsDialog } from "./ClientDetailsDialog";
+import { useToast } from "@/hooks/use-toast";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Loader2 } from "lucide-react";
 
 interface BookingListProps {
   bookings: Booking[];
@@ -24,9 +27,11 @@ interface BookingListProps {
 }
 
 export function BookingList({ bookings, onEdit, onDelete, onUpdateBooking, expenses, onNavigateToExpenses, onEditPayment, onDeletePayment }: BookingListProps) {
+  const { toast } = useToast();
   const [expandedBookingId, setExpandedBookingId] = useState<string | null>(null);
   const [clientDetailsOpen, setClientDetailsOpen] = useState(false);
   const [selectedBookingForDetails, setSelectedBookingForDetails] = useState<Booking | null>(null);
+  const [sendingFeedbackFor, setSendingFeedbackFor] = useState<string | null>(null);
 
   const toggleExpand = (bookingId: string) => {
     setExpandedBookingId(expandedBookingId === bookingId ? null : bookingId);
@@ -52,6 +57,16 @@ export function BookingList({ bookings, onEdit, onDelete, onUpdateBooking, expen
   };
 
   const handleSendFeedback = async (booking: Booking) => {
+    if (!booking.contact_email) {
+      toast({
+        title: "No email on file",
+        description: "Add a contact email to this booking before sending a feedback request.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setSendingFeedbackFor(booking.id);
     try {
       const response = await fetch("/api/send-feedback-request", {
         method: "POST",
@@ -61,20 +76,33 @@ export function BookingList({ bookings, onEdit, onDelete, onUpdateBooking, expen
           contactName: booking.contact_name,
           contactEmail: booking.contact_email,
           eventName: booking.name,
-          checkOutDate: booking.end_date
+          checkOutDate: booking.end_date,
         }),
       });
 
-      const result = await response.json();
-      
+      const result = await response.json().catch(() => ({}));
+
       if (response.ok) {
-        alert(`✅ Feedback request email sent successfully to ${booking.contact_email}`);
+        toast({
+          title: "Feedback request sent",
+          description: `Email delivered to ${booking.contact_email}.`,
+        });
       } else {
-        alert(`❌ Failed to send email: ${result.error}`);
+        toast({
+          title: "Send failed",
+          description: result?.error || `Server returned ${response.status}.`,
+          variant: "destructive",
+        });
       }
     } catch (error) {
       console.error("Error sending feedback request:", error);
-      alert("❌ Failed to send feedback request email");
+      toast({
+        title: "Send failed",
+        description: error instanceof Error ? error.message : "Could not reach the email service.",
+        variant: "destructive",
+      });
+    } finally {
+      setSendingFeedbackFor(null);
     }
   };
 
@@ -95,11 +123,9 @@ export function BookingList({ bookings, onEdit, onDelete, onUpdateBooking, expen
             </TableRow>
           </TableHeader>
           <TableBody>
-            {bookings
-              .sort((a, b) => new Date(b.start_date).getTime() - new Date(a.start_date).getTime())
-              .map((booking) => (
+            {bookings.map((booking) => (
                 <>
-                  <TableRow key={booking.id} className="hover:bg-stone-50 dark:hover:bg-stone-800/50">
+                  <TableRow key={booking.id} className="group hover:bg-stone-50 dark:hover:bg-stone-800/50">
                     <TableCell>
                       <Button variant="ghost" size="icon" onClick={() => toggleExpand(booking.id)}>
                         {expandedBookingId === booking.id ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
@@ -128,40 +154,81 @@ export function BookingList({ bookings, onEdit, onDelete, onUpdateBooking, expen
                       </div>
                     </TableCell>
                     <TableCell className="text-right">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" className="h-8 w-8 p-0">
-                            <span className="sr-only">Open menu</span>
-                            <MoreHorizontal className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={() => handleOpenClientDetails(booking)}>
-                            <Eye className="mr-2 h-4 w-4" />
-                            View Details
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => onEdit(booking)}>
-                            <Edit className="mr-2 h-4 w-4" />
-                            Edit
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => handleToggleConfirm(booking)}>
-                            <Calendar className="mr-2 h-4 w-4" />
-                            {booking.confirmed ? "Mark as Tentative" : "Confirm Booking"}
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => onNavigateToExpenses(booking.id)}>
-                            <FileText className="mr-2 h-4 w-4" />
-                            View Expenses
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => handleSendFeedback(booking)}>
-                            <Mail className="mr-2 h-4 w-4" />
-                            Send Feedback Request
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => onDelete(booking.id)} className="text-red-600 dark:text-red-500 focus:text-red-600 focus:bg-red-50 dark:focus:bg-red-900/50">
-                            <Trash2 className="mr-2 h-4 w-4" />
-                            Delete
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
+                      <TooltipProvider delayDuration={150}>
+                        <div className="flex items-center justify-end gap-0.5 opacity-60 group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8"
+                                onClick={() => handleOpenClientDetails(booking)}
+                                aria-label="View details"
+                              >
+                                <Eye className="h-4 w-4" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>View details</TooltipContent>
+                          </Tooltip>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8"
+                                onClick={() => onEdit(booking)}
+                                aria-label="Edit booking"
+                              >
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>Edit</TooltipContent>
+                          </Tooltip>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8"
+                                onClick={() => handleSendFeedback(booking)}
+                                disabled={sendingFeedbackFor === booking.id}
+                                aria-label="Send feedback request"
+                              >
+                                {sendingFeedbackFor === booking.id ? (
+                                  <Loader2 className="h-4 w-4 animate-spin" />
+                                ) : (
+                                  <Mail className="h-4 w-4" />
+                                )}
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>Send feedback request</TooltipContent>
+                          </Tooltip>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="icon" className="h-8 w-8" aria-label="More actions">
+                                <MoreHorizontal className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem onClick={() => handleToggleConfirm(booking)}>
+                                <Calendar className="mr-2 h-4 w-4" />
+                                {booking.confirmed ? "Mark as Tentative" : "Confirm Booking"}
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => onNavigateToExpenses(booking.id)}>
+                                <FileText className="mr-2 h-4 w-4" />
+                                View Expenses
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={() => onDelete(booking.id)}
+                                className="text-red-600 dark:text-red-500 focus:text-red-600 focus:bg-red-50 dark:focus:bg-red-900/50"
+                              >
+                                <Trash2 className="mr-2 h-4 w-4" />
+                                Delete
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </div>
+                      </TooltipProvider>
                     </TableCell>
                   </TableRow>
                   {expandedBookingId === booking.id && (
@@ -189,24 +256,42 @@ export function BookingList({ bookings, onEdit, onDelete, onUpdateBooking, expen
                                         </Badge>
                                       )}
                                     </div>
-                                    <div className="flex gap-1">
-                                      <Button
-                                        variant="ghost"
-                                        size="sm"
-                                        onClick={() => onEditPayment?.(booking, payment)}
-                                        className="h-7 px-2"
-                                      >
-                                        <Edit2 className="h-3 w-3" />
-                                      </Button>
-                                      <Button
-                                        variant="ghost"
-                                        size="sm"
-                                        onClick={() => onDeletePayment?.(payment.id, booking.id)}
-                                        className="h-7 px-2 text-destructive hover:text-destructive"
-                                      >
-                                        <Trash2 className="h-3 w-3" />
-                                      </Button>
-                                    </div>
+                                    <TooltipProvider delayDuration={150}>
+                                      <div className="flex gap-1">
+                                        <Tooltip>
+                                          <TooltipTrigger asChild>
+                                            <Button
+                                              variant="ghost"
+                                              size="sm"
+                                              onClick={() => onEditPayment?.(booking, payment)}
+                                              className="h-7 px-2"
+                                              aria-label="Edit payment"
+                                            >
+                                              <Edit2 className="h-3 w-3" />
+                                            </Button>
+                                          </TooltipTrigger>
+                                          <TooltipContent>Edit payment</TooltipContent>
+                                        </Tooltip>
+                                        <Tooltip>
+                                          <TooltipTrigger asChild>
+                                            <Button
+                                              variant="ghost"
+                                              size="sm"
+                                              onClick={() => {
+                                                if (window.confirm(`Delete this ${formatCurrency(payment.amount)} payment?`)) {
+                                                  onDeletePayment?.(payment.id, booking.id);
+                                                }
+                                              }}
+                                              className="h-7 px-2 text-destructive hover:text-destructive"
+                                              aria-label="Delete payment"
+                                            >
+                                              <Trash2 className="h-3 w-3" />
+                                            </Button>
+                                          </TooltipTrigger>
+                                          <TooltipContent>Delete payment</TooltipContent>
+                                        </Tooltip>
+                                      </div>
+                                    </TooltipProvider>
                                   </div>
                                 ))}
                               </div>

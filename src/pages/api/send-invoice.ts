@@ -2,7 +2,7 @@ import type { NextApiRequest, NextApiResponse } from "next";
 import nodemailer from "nodemailer";
 import React from "react";
 import { renderToBuffer } from "@react-pdf/renderer";
-import { Document, Page, Text, View, StyleSheet, Image } from "@react-pdf/renderer";
+import { Document, Page, Text, View, StyleSheet } from "@react-pdf/renderer";
 import { createClient } from "@supabase/supabase-js";
 
 const styles = StyleSheet.create({
@@ -18,9 +18,12 @@ const styles = StyleSheet.create({
     paddingBottom: 20,
     borderBottom: "3 solid #0f766e"
   },
-  logo: {
-    width: 200,
-    marginBottom: 10
+  brandName: {
+    fontSize: 26,
+    color: "#0f766e",
+    fontFamily: "Helvetica-Bold",
+    marginBottom: 6,
+    letterSpacing: 1
   },
   logoText: {
     fontSize: 10,
@@ -275,74 +278,57 @@ export default async function handler(
     const hasPayments = depositAmount > 0;
     const actualBalanceDue = totalAmount - depositAmount;
 
-    const emailHtml = `
-<!DOCTYPE html>
+    // Compact one-page email — the PDF carries the full formal invoice as an attachment.
+    const fmtUSD = (n: number) =>
+      Number(n).toLocaleString("en-US", { style: "currency", currency: "USD" });
+    const fmtDate = (d: string | Date) =>
+      new Date(d).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+
+    const emailHtml = `<!DOCTYPE html>
 <html>
 <head>
-  <style>
-    body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
-    .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-    .header { text-align: center; margin-bottom: 30px; }
-    .invoice-box { border: 2px solid #0ea5e9; border-radius: 8px; padding: 20px; margin: 20px 0; }
-    .invoice-number { font-size: 24px; font-weight: bold; color: #0ea5e9; margin-bottom: 10px; }
-    .detail-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #eee; }
-    .detail-label { font-weight: bold; }
-    .total-row { font-size: 18px; font-weight: bold; color: #0ea5e9; margin-top: 15px; padding-top: 15px; border-top: 2px solid #0ea5e9; }
-    .payment-instructions { background: #f8fafc; padding: 15px; border-radius: 5px; margin: 20px 0; }
-    .footer { text-align: center; margin-top: 30px; color: #666; font-size: 14px; }
-  </style>
+  <meta charset="utf-8" />
+  <title>Invoice ${invoiceNumber}</title>
 </head>
-<body>
-  <div class="container">
-    <div class="header">
-      <h1 style="color: #0f766e;">Trout Lake Resort</h1>
-      <p>Sainte-Agathe-des-Monts • Canada</p>
-    </div>
-    <div class="invoice-box">
-      <div class="invoice-number">Invoice ${invoiceNumber}</div>
-      <p>Dear ${clientName},</p>
-      <p>Thank you for choosing Trout Lake Resort! Please find your invoice attached as a PDF.</p>
-      <div class="detail-row">
-        <span class="detail-label">Event Dates:</span>
-        <span>${new Date(eventDateStart).toLocaleDateString()} - ${new Date(eventDateEnd).toLocaleDateString()}</span>
-      </div>
-      <div class="detail-row">
-        <span class="detail-label">Number of Guests:</span>
-        <span>${numberOfGuests}</span>
-      </div>
-      <div class="detail-row">
-        <span class="detail-label">Subtotal:</span>
-        <span>$${Number(totalAmount).toFixed(2)}</span>
-      </div>
-      ${hasPayments ? `
-      <div class="detail-row">
-        <span class="detail-label">Amount Paid:</span>
-        <span style="color: #16a34a;">-$${Number(depositAmount).toFixed(2)}</span>
-      </div>
-      ` : ''}
-      <div class="detail-row total-row">
-        <span>Balance Due:</span>
-        <span>$${Number(actualBalanceDue).toFixed(2)}</span>
-      </div>
-      <div class="detail-row total-row" style="border: none;">
-        <span>Total Amount:</span>
-        <span>$${Number(totalAmount).toFixed(2)}</span>
-      </div>
-    </div>
-    <div class="payment-instructions">
-      <h3 style="margin-top: 0;">Payment Instructions</h3>
-      <p style="margin: 5px 0;">Checks should be made payable to <strong>Cong Zera Kodesh</strong></p>
-      <p style="margin: 5px 0;">Or by e-transfer to <strong>billing@troutlakeresort.ca</strong></p>
-    </div>
-    ${notes ? `<p><strong>Notes:</strong> ${notes}</p>` : ''}
-    <div class="footer">
-      <p>If you have any questions, please contact us at billing@troutlakeresort.ca</p>
-      <p style="margin-top: 20px; font-size: 12px;">This is an automated email. Please do not reply directly to this message.</p>
-    </div>
-  </div>
+<body style="margin:0;padding:0;background:#f1f5f9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;color:#1e293b;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="padding:24px 12px;">
+    <tr><td align="center">
+      <table role="presentation" width="560" cellpadding="0" cellspacing="0" style="background:#fff;border-radius:10px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.08);">
+        <tr><td style="background:#0f766e;padding:20px 28px;text-align:center;">
+          <div style="color:#fff;font-size:20px;font-weight:700;letter-spacing:1px;">TROUT LAKE RESORT</div>
+          <div style="color:#a7f3d0;font-size:12px;margin-top:2px;">Sainte-Agathe-des-Monts • Canada</div>
+        </td></tr>
+        <tr><td style="padding:24px 28px;">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px;">
+            <div>
+              <div style="font-size:11px;text-transform:uppercase;color:#64748b;letter-spacing:0.5px;">Invoice</div>
+              <div style="font-size:18px;font-weight:700;color:#0f766e;">${invoiceNumber}</div>
+            </div>
+            <div style="text-align:right;font-size:12px;color:#64748b;">${new Date().toLocaleDateString("en-US",{year:"numeric",month:"short",day:"numeric"})}</div>
+          </div>
+          <p style="margin:0 0 12px;font-size:14px;">Dear ${clientName},</p>
+          <p style="margin:0 0 16px;font-size:14px;color:#475569;">Your invoice is attached as a PDF. Summary below for quick reference.</p>
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="font-size:13px;border:1px solid #e2e8f0;border-radius:8px;overflow:hidden;">
+            <tr style="background:#f8fafc;"><td style="padding:8px 12px;color:#64748b;">Event dates</td><td style="padding:8px 12px;text-align:right;">${fmtDate(eventDateStart)} – ${fmtDate(eventDateEnd)}</td></tr>
+            <tr><td style="padding:8px 12px;color:#64748b;">Guests</td><td style="padding:8px 12px;text-align:right;">${numberOfGuests}</td></tr>
+            <tr style="background:#f8fafc;"><td style="padding:8px 12px;color:#64748b;">Subtotal</td><td style="padding:8px 12px;text-align:right;">${fmtUSD(totalAmount)}</td></tr>
+            ${hasPayments ? `<tr><td style="padding:8px 12px;color:#16a34a;">Amount paid</td><td style="padding:8px 12px;text-align:right;color:#16a34a;">−${fmtUSD(depositAmount)}</td></tr>` : ""}
+            <tr style="background:#ecfdf5;border-top:2px solid #0f766e;"><td style="padding:10px 12px;font-weight:700;color:#0f766e;">Balance due</td><td style="padding:10px 12px;text-align:right;font-weight:700;color:#0f766e;font-size:15px;">${fmtUSD(actualBalanceDue)}</td></tr>
+          </table>
+          <div style="margin-top:18px;padding:12px 14px;background:#f8fafc;border-left:3px solid #0f766e;border-radius:4px;font-size:12px;line-height:1.5;">
+            <strong style="color:#0f766e;">Payment</strong><br/>
+            Cheque to <strong>Cong Zera Kodesh</strong> · or e-transfer to <strong>billing@troutlakeresort.ca</strong>
+          </div>
+          ${notes ? `<p style="margin:14px 0 0;font-size:12px;color:#64748b;"><strong>Notes:</strong> ${notes}</p>` : ""}
+        </td></tr>
+        <tr><td style="padding:14px 28px;background:#f8fafc;border-top:1px solid #e2e8f0;text-align:center;font-size:11px;color:#64748b;">
+          Questions? Reply to this email or contact billing@troutlakeresort.ca
+        </td></tr>
+      </table>
+    </td></tr>
+  </table>
 </body>
-</html>
-    `;
+</html>`;
 
     console.log("Generating PDF invoice...");
     
@@ -356,10 +342,7 @@ export default async function handler(
         React.createElement(
           View,
           { style: styles.logoContainer },
-          React.createElement(Image, {
-            src: "https://3000-ca6acfff-2ea8-43e0-82ad-96443792b837.softgen.dev/ChatGPT_Image_Nov_5_2025_03_58_44_PM.png",
-            style: styles.logo
-          }),
+          React.createElement(Text, { style: styles.brandName }, "TROUT LAKE RESORT"),
           React.createElement(Text, { style: styles.logoText }, "Sainte-Agathe-des-Monts • Canada")
         ),
         React.createElement(

@@ -495,12 +495,124 @@ class ClientCommunicationService {
     };
   }
 
+  // Generic upload for any attachment (PDF, image, doc) on custom emails
+  async uploadAttachment(file: File, clientName: string, eventDate: string): Promise<{ url: string; name: string }> {
+    const safeClient = (clientName || "client").replace(/[^a-z0-9_-]/gi, "_");
+    const ext = (file.name.split(".").pop() || "bin").toLowerCase();
+    const stamp = Date.now();
+    const fileName = `${safeClient}_${eventDate}_${stamp}.${ext}`;
+    const filePath = `attachments/${fileName}`;
+
+    const { error } = await supabase.storage
+      .from("client-documents")
+      .upload(filePath, file, { upsert: true });
+
+    if (error) throw error;
+
+    const { data: urlData } = supabase.storage
+      .from("client-documents")
+      .getPublicUrl(filePath);
+
+    return { url: urlData.publicUrl, name: file.name };
+  }
+
   processTemplate(template: string, variables: Record<string, string>): string {
     let processed = template;
     Object.entries(variables).forEach(([key, value]) => {
       processed = processed.replace(new RegExp(`{{${key}}}`, "g"), value);
     });
     return processed;
+  }
+
+  /**
+   * Auto-schedule the standard pre-event email sequence for a newly created booking:
+   *   - Website Info → 1 hour after booking is created
+   *   - Parking Regulations → 3 days before the event start
+   *
+   * If the event is less than 3 days out, the emails are queued 1 hour apart so they
+   * don't fire on top of each other. Already-scheduled emails for the same booking
+   * (matched by email_type) are NOT duplicated.
+   *
+   * Fails silently — never throws — so a missing client_emails table or storage error
+   * cannot prevent booking creation from completing.
+   */
+  async scheduleAutoEmailsForBooking(booking: {
+    id: string;
+    name: string;
+    start_date?: string | null;
+    contact_email?: string | null;
+    contact_name?: string | null;
+  }): Promise<{ scheduled: number; reason?: string }> {
+    try {
+      if (!booking.contact_email) return { scheduled: 0, reason: "no contact email" };
+      if (!booking.start_date) return { scheduled: 0, reason: "no start date" };
+
+      const now = new Date();
+      const start = new Date(booking.start_date);
+      if (isNaN(start.getTime())) return { scheduled: 0, reason: "invalid start date" };
+      if (start.getTime() < now.getTime()) return { scheduled: 0, reason: "event already past" };
+
+      const HOUR_MS = 60 * 60 * 1000;
+      const websiteAt = new Date(now.getTime() + HOUR_MS);
+      const parkingIdeal = new Date(start.getTime() - 3 * 24 * HOUR_MS);
+      // If the event is within 3 days, parking would land before website — push to website + 1h.
+      const parkingAt =
+        parkingIdeal.getTime() < websiteAt.getTime() + HOUR_MS
+          ? new Date(websiteAt.getTime() + HOUR_MS)
+          : parkingIdeal;
+
+      const variables = {
+        client_name: booking.name || booking.contact_name || "",
+        event_date: this.formatEventDate(start),
+        file_name: "rental_agreement.pdf",
+      };
+
+      const websiteTpl = EMAIL_TEMPLATES.find((t) => t.id === "website_info");
+      const parkingTpl = EMAIL_TEMPLATES.find((t) => t.id === "parking_regulations");
+      if (!websiteTpl || !parkingTpl) {
+        return { scheduled: 0, reason: "templates missing" };
+      }
+
+      // Skip types we've already scheduled or sent for this booking
+      const { data: existing } = await supabase
+        .from("client_emails")
+        .select("email_type")
+        .eq("booking_id", booking.id);
+      const skip = new Set((existing || []).map((r: { email_type: string }) => r.email_type));
+
+      const candidates = [
+        { tpl: websiteTpl, when: websiteAt },
+        { tpl: parkingTpl, when: parkingAt },
+      ].filter(({ tpl }) => !skip.has(tpl.type));
+
+      if (candidates.length === 0) return { scheduled: 0, reason: "already scheduled" };
+
+      const rows = candidates.map(({ tpl, when }) => ({
+        booking_id: booking.id,
+        client_name: booking.name || booking.contact_name || "",
+        client_email: booking.contact_email,
+        email_type: tpl.type,
+        subject: this.processTemplate(tpl.subject, variables),
+        body: this.processTemplate(tpl.body, variables),
+        status: "scheduled",
+        scheduled_date: when.toISOString(),
+      }));
+
+      const { error } = await supabase.from("client_emails").insert(rows);
+      if (error) {
+        console.warn("Auto-schedule insert failed:", error.message);
+        return { scheduled: 0, reason: error.message };
+      }
+      return { scheduled: rows.length };
+    } catch (err) {
+      console.warn("Auto-schedule threw:", err);
+      return { scheduled: 0, reason: err instanceof Error ? err.message : String(err) };
+    }
+  }
+
+  private formatEventDate(d: Date): string {
+    // Lightweight YYYY-MM-DD-ish display so we don't pull date-fns into the service layer.
+    return d.toLocaleDateString("en-US", { year: "numeric", month: "short", day: "2-digit" });
   }
 }
 

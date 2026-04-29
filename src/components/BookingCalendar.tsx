@@ -2,6 +2,8 @@ import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Booking } from "@/types/booking";
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths, startOfWeek, endOfWeek } from "date-fns";
@@ -140,6 +142,21 @@ export function BookingCalendar({ bookings, onDateClick, onBookingClick, onAddBo
   const handlePreviousMonth = () => setCurrentMonth(subMonths(currentMonth, 1));
   const handleNextMonth = () => setCurrentMonth(addMonths(currentMonth, 1));
 
+  const handleJumpToDate = (value: string) => {
+    if (!value) return;
+    const target = new Date(value);
+    if (isNaN(target.getTime())) return;
+    setCurrentMonth(target);
+    setSelectedDate(target);
+    setDateDialogOpen(true);
+  };
+
+  const handleJumpToToday = () => {
+    const today = new Date();
+    setCurrentMonth(today);
+    setSelectedDate(today);
+  };
+
   const handleDateClick = (date: Date) => {
     setSelectedDate(date);
     setDateDialogOpen(true);
@@ -181,6 +198,23 @@ export function BookingCalendar({ bookings, onDateClick, onBookingClick, onAddBo
             <div className="text-sm font-medium">{format(currentMonth, "MMMM yyyy")}</div>
             <div className="text-xs text-slate-600 dark:text-slate-400 font-hebrew">{getHebrewMonthYear(currentMonth)}</div>
           </div>
+          <div className="mt-3 flex flex-wrap items-end justify-center gap-2">
+            <div className="flex flex-col gap-1">
+              <Label htmlFor="cal-jump" className="text-xs text-slate-600 dark:text-slate-400">
+                Jump to date — check availability
+              </Label>
+              <Input
+                id="cal-jump"
+                type="date"
+                className="h-9 w-44"
+                value={format(currentMonth, "yyyy-MM-dd")}
+                onChange={(e) => handleJumpToDate(e.target.value)}
+              />
+            </div>
+            <Button variant="outline" size="sm" className="h-9" onClick={handleJumpToToday}>
+              Today
+            </Button>
+          </div>
           <div className="flex items-center gap-4 mt-4 text-xs flex-wrap">
             <div className="flex items-center gap-2"><Star className="h-3 w-3 text-yellow-500 fill-yellow-500" /><span className="text-slate-600 dark:text-slate-400">Holiday</span></div>
             <div className="flex items-center gap-2"><div className="w-3 h-3 rounded bg-blue-500 border border-blue-600" /><span className="text-slate-600 dark:text-slate-400">Yom Tov (Confirmed)</span></div>
@@ -200,17 +234,17 @@ export function BookingCalendar({ bookings, onDateClick, onBookingClick, onAddBo
               <ChevronLeft className="h-7 w-7" />
             </Button>
 
-            <div className="flex-1 px-16">
-              <div className="grid grid-cols-7 gap-2 mb-2">
+            <div className="flex-1 px-3 sm:px-8 md:px-12 lg:px-16">
+              <div className="grid grid-cols-7 gap-1 sm:gap-2 mb-2">
                 {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((day, i) => (
                   <div key={day} className="text-center py-2">
-                    <div className="text-sm font-medium text-slate-600 dark:text-slate-400">{day}</div>
-                    <div className="text-xs text-slate-500 dark:text-slate-500 font-hebrew">{["ראשון","שני","שלישי","רביעי","חמישי","שישי","שבת"][i]}</div>
+                    <div className="text-[11px] sm:text-sm font-medium text-slate-600 dark:text-slate-400 uppercase tracking-wide">{day}</div>
+                    <div className="text-[10px] sm:text-xs text-slate-500 dark:text-slate-500 font-hebrew">{["ראשון","שני","שלישי","רביעי","חמישי","שישי","שבת"][i]}</div>
                   </div>
                 ))}
               </div>
 
-              <div className="grid grid-cols-7 gap-2">
+              <div className="grid grid-cols-7 gap-1 sm:gap-2">
                 {days.map((day) => {
                   const dayKey = format(day, "yyyy-MM-dd");
                   const dayBookings = bookingsByDate[dayKey] || [];
@@ -252,7 +286,7 @@ export function BookingCalendar({ bookings, onDateClick, onBookingClick, onAddBo
                       key={day.toString()}
                       onClick={() => handleDateClick(day)}
                       style={isCurrentMonth && hasBookings ? inlineStyle : undefined}
-                      className={`relative min-h-[120px] p-2 rounded-lg border-2 transition-all flex flex-col
+                      className={`relative min-h-[72px] sm:min-h-[100px] md:min-h-[120px] p-1.5 sm:p-2 rounded-lg border-2 transition-all flex flex-col text-left hover:shadow-md hover:-translate-y-0.5
                         ${!isCurrentMonth ? "bg-slate-50 dark:bg-slate-800/50 opacity-40" : ""}
                         ${isCurrentMonth && !hasBookings && !hasHoliday && !isToday ? "bg-white dark:bg-slate-900" : ""}
                         ${isCurrentMonth && !hasBookings && hasHoliday ? "bg-yellow-50 dark:bg-yellow-950/20" : ""}
@@ -260,20 +294,25 @@ export function BookingCalendar({ bookings, onDateClick, onBookingClick, onAddBo
                         ${isCurrentMonth && hasBookings ? dateBackgroundColor : ""}
                         ${isSelected ? "ring-2 ring-blue-500 border-blue-500" : ""}
                         ${!isSelected && hasBookings ? borderColor : ""}
-                        ${!isSelected && !hasBookings && isToday ? "border-blue-400" : ""}
+                        ${!isSelected && !hasBookings && isToday ? "border-blue-400 dark:border-blue-500" : ""}
                         ${!isSelected && !hasBookings && hasHoliday ? "border-yellow-300 dark:border-yellow-700" : ""}
                         ${!isSelected && !hasBookings && !hasHoliday && !isToday ? "border-slate-200 dark:border-slate-700" : ""}
                         hover:border-slate-300 dark:hover:border-slate-600 cursor-pointer`}
                     >
-                      <div className="flex justify-between items-start mb-1">
+                      <div className="flex justify-between items-start mb-1 gap-1">
                         <div className="text-left">
-                          <div className={`text-base font-semibold ${hasBookings ? textColor : ""}`}>{format(day, "d")}</div>
-                          <div className="text-[10px] text-slate-600 dark:text-slate-400 leading-tight">{hebrewDate}</div>
+                          <div
+                            className={`text-sm sm:text-base font-semibold leading-none ${
+                              isToday && !hasBookings
+                                ? "inline-flex items-center justify-center bg-blue-600 text-white rounded-full h-6 w-6 sm:h-7 sm:w-7"
+                                : ""
+                            } ${hasBookings ? textColor : ""}`}
+                          >
+                            {format(day, "d")}
+                          </div>
+                          <div className="text-[9px] sm:text-[10px] text-slate-600 dark:text-slate-400 leading-tight mt-1 font-hebrew">{hebrewDate}</div>
                         </div>
-                        <div className="flex items-center gap-1">
-                          {hasHoliday && (<Star className="w-3 h-3 text-yellow-500 fill-yellow-500" />)}
-                          {isToday && (<div className="w-2 h-2 rounded-full bg-blue-500" />)}
-                        </div>
+                        {hasHoliday && (<Star className="w-3 h-3 text-yellow-500 fill-yellow-500 shrink-0" />)}
                       </div>
 
                       {isShabbat && parshaName && (<div className="mb-2 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-md px-2 py-1.5 text-[11px] font-bold text-center shadow-sm border border-blue-600 font-hebrew">{parshaName}</div>)}

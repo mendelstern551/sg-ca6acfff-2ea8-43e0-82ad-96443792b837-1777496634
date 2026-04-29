@@ -51,7 +51,11 @@ export function InvoiceDialog({ open, onOpenChange, booking }: InvoiceDialogProp
           check_in: booking.start_date,
           check_out: booking.end_date,
           total_cost: booking.total_cost,
-          deposit_paid: amountPaid
+          deposit_paid: amountPaid,
+          number_of_guests: booking.number_of_guests ?? 0,
+          number_of_rooms: booking.number_of_rooms ?? 0,
+          base_price: booking.base_rate ?? undefined,
+          notes: booking.notes ?? undefined
         });
       }
 

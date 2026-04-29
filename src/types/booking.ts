@@ -50,14 +50,16 @@ export interface PricingConfig {
 }
 
 export const DEFAULT_PRICING: PricingConfig = {
-  baseRate: 6000,
-  perPersonRate: 125,
-  perPersonRateOver75: 105,
-  cleaningFee: 2000,
+  // New model: flat $150/person, no separate cleaning fee.
+  // Editable from Settings → Pricing tab; loadPricingConfig() reads localStorage overrides.
+  baseRate: 0,
+  perPersonRate: 150,
+  perPersonRateOver75: 150,
+  cleaningFee: 0,
   additionalCleaningFeeThreshold: 50,
-  additionalCleaningFee: 500,
+  additionalCleaningFee: 0,
   nightEventRate: 1500,
-  nightEventCleaningFee: 500,
+  nightEventCleaningFee: 0,
   depositPercentageFirst: 25,
   depositPercentageSecond: 25,
   balancePercentage: 50,

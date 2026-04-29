@@ -12,6 +12,7 @@ import { CalendarIcon, Calculator, Mail, AlertTriangle } from "lucide-react";
 import { format, differenceInDays } from "date-fns";
 import { Booking, BookingType, Payment, DEFAULT_PRICING, PricingConfig } from "@/types/booking";
 import { formatCurrency, calculateBookingCost } from "@/lib/bookingCalculations";
+import { usePricingConfig } from "@/lib/pricingStore";
 import { Card, CardContent } from "@/components/ui/card";
 import { DateRange } from "react-day-picker";
 import { emailService } from "@/services/emailService";
@@ -54,7 +55,8 @@ export function BookingDialog({ open, onOpenChange, onSave, booking: editingBook
   const [dateConflict, setDateConflict] = useState<{ hasConflict: boolean; message?: string }>({ hasConflict: false });
   const [capacityWarning, setCapacityWarning] = useState<{ hasWarning: boolean; message?: string }>({ hasWarning: false });
 
-  const [pricingConfig] = useState<PricingConfig>(DEFAULT_PRICING);
+  // Live pricing from Settings → Pricing tab. Updates without a refresh when admin saves.
+  const pricingConfig = usePricingConfig();
   const { toast } = useToast();
 
   useEffect(() => {
