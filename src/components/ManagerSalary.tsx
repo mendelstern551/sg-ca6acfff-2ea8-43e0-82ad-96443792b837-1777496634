@@ -439,6 +439,78 @@ export function ManagerSalary({ bookings, onAddExpense, allExpenses, onExpensesU
                     <DialogDescription>This will automatically create an expense entry</DialogDescription>
                   </DialogHeader>
                   <div className="space-y-4 py-4">
+                    {/* Type first — picking "Commission" + a booking auto-fills the amount. */}
+                    <div className="space-y-2">
+                      <Label htmlFor="type">Payment Type</Label>
+                      <Select
+                        value={paymentForm.type}
+                        onValueChange={(value: "maintenance" | "commission" | "other") => {
+                          let nextAmount = paymentForm.amount;
+                          if (value === "maintenance") {
+                            // Auto-fill monthly maintenance fee.
+                            nextAmount = salaryData.maintenanceFeePerMonth;
+                          } else if (value === "commission" && paymentForm.relatedBookingId) {
+                            const b = bookings.find((x) => x.id === paymentForm.relatedBookingId);
+                            if (b) {
+                              nextAmount = Math.max(
+                                (Number(b.total_cost) || 0) * (salaryData.commissionPercentage / 100),
+                                salaryData.minimumCommissionPerEvent
+                              );
+                            }
+                          }
+                          setPaymentForm({ ...paymentForm, type: value, amount: nextAmount });
+                        }}
+                      >
+                        <SelectTrigger><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="maintenance">Maintenance Fee</SelectItem>
+                          <SelectItem value="commission">Commission</SelectItem>
+                          <SelectItem value="other">Other</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {paymentForm.type === "commission" && (
+                      <div className="space-y-2">
+                        <Label htmlFor="booking">Related Booking</Label>
+                        <Select
+                          value={paymentForm.relatedBookingId || undefined}
+                          onValueChange={(value) => {
+                            const id = value === "none" ? "" : value;
+                            let nextAmount = paymentForm.amount;
+                            if (id) {
+                              const b = bookings.find((x) => x.id === id);
+                              if (b) {
+                                nextAmount = Math.max(
+                                  (Number(b.total_cost) || 0) * (salaryData.commissionPercentage / 100),
+                                  salaryData.minimumCommissionPerEvent
+                                );
+                              }
+                            }
+                            setPaymentForm({ ...paymentForm, relatedBookingId: id, amount: nextAmount });
+                          }}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Pick a booking — commission auto-fills" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="none">None (manual)</SelectItem>
+                            {bookings.map((booking) => (
+                              <SelectItem key={booking.id} value={booking.id}>
+                                {booking.name} — {format(new Date(booking.start_date), "MMM d, yyyy")} · ${Number(booking.total_cost || 0).toLocaleString()}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        {paymentForm.relatedBookingId && (
+                          <p className="text-xs text-muted-foreground">
+                            {salaryData.commissionPercentage}% of revenue, minimum $
+                            {salaryData.minimumCommissionPerEvent.toLocaleString()}.
+                          </p>
+                        )}
+                      </div>
+                    )}
+
                     <div className="space-y-2">
                       <Label>Date</Label>
                       <Popover modal={false}>
@@ -465,44 +537,15 @@ export function ManagerSalary({ bookings, onAddExpense, allExpenses, onExpensesU
 
                     <div className="space-y-2">
                       <Label htmlFor="amount">Amount ($)</Label>
-                      <Input 
-                        id="amount" 
-                        type="number" 
-                        step="0.01" 
-                        value={paymentForm.amount || ""} 
-                        onChange={(e) => setPaymentForm({ ...paymentForm, amount: parseFloat(e.target.value) || 0 })} 
-                        placeholder="0.00" 
+                      <Input
+                        id="amount"
+                        type="number"
+                        step="0.01"
+                        value={paymentForm.amount || ""}
+                        onChange={(e) => setPaymentForm({ ...paymentForm, amount: parseFloat(e.target.value) || 0 })}
+                        placeholder="0.00"
                       />
                     </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="type">Payment Type</Label>
-                      <Select value={paymentForm.type} onValueChange={(value: "maintenance" | "commission" | "other") => setPaymentForm({ ...paymentForm, type: value })}>
-                        <SelectTrigger><SelectValue /></SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="maintenance">Maintenance Fee</SelectItem>
-                          <SelectItem value="commission">Commission</SelectItem>
-                          <SelectItem value="other">Other</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    {paymentForm.type === "commission" && (
-                      <div className="space-y-2">
-                        <Label htmlFor="booking">Related Booking (Optional)</Label>
-                        <Select value={paymentForm.relatedBookingId || undefined} onValueChange={(value) => setPaymentForm({ ...paymentForm, relatedBookingId: value === "none" ? "" : value })}>
-                          <SelectTrigger><SelectValue placeholder="Select booking (optional)" /></SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="none">None</SelectItem>
-                            {bookings.map((booking) => (
-                              <SelectItem key={booking.id} value={booking.id}>
-                                {booking.name} - {format(new Date(booking.start_date), "MMM d, yyyy")}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    )}
 
                     <div className="space-y-2">
                       <Label htmlFor="paymentMethod">Payment Method</Label>
