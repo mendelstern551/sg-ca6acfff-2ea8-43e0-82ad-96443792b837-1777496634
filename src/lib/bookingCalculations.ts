@@ -32,16 +32,13 @@ export function calculateBookingCost(
   }
 
   const baseRate = pricing.baseRate;
-  
-  // Special pricing tier: 48+ guests = $100 per person
-  let perPersonRate: number;
-  if (numberOfGuests >= 48) {
-    perPersonRate = 100;
-  } else if (numberOfGuests > 75) {
-    perPersonRate = pricing.perPersonRateOver75;
-  } else {
-    perPersonRate = pricing.perPersonRate;
-  }
+
+  // Per-person rate from Settings → Pricing. Standard rate by default; falls back
+  // to the "over 75 guests" rate for large groups if you've set a different one.
+  // (Removed a legacy hardcoded "$100 / person for 48+ guests" override that was
+  //  ignoring the configured per-person rate.)
+  const perPersonRate =
+    numberOfGuests > 75 ? pricing.perPersonRateOver75 : pricing.perPersonRate;
   
   const perPersonTotal = numberOfGuests * perPersonRate;
   

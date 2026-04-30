@@ -996,7 +996,7 @@ export default function HomePage() {
       <main className="flex-1 lg:ml-64">
         {/* DASHBOARD HEADER - Only show on dashboard tab */}
         {activeTab === "dashboard" && (
-          <header className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 sticky top-0 z-40 backdrop-blur-sm">
+          <header className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800">
             <div className="px-8 py-6">
               <div className="grid gap-6 md:grid-cols-3">
                 <Card className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950 dark:to-indigo-950 border-blue-200 dark:border-blue-800">

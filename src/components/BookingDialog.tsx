@@ -409,34 +409,47 @@ export function BookingDialog({ open, onOpenChange, onSave, booking: editingBook
 
           <Card className="bg-slate-50 dark:bg-slate-900/50">
             <CardContent className="pt-6">
-              <div className="flex items-center gap-2 mb-4"><Calculator className="h-5 w-5 text-blue-600" /><h3 className="font-semibold">Pricing Breakdown</h3></div>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div><p className="text-sm text-slate-600 dark:text-slate-400">Base Rate</p><p className="text-lg font-semibold">{formatCurrency(baseRate)}</p></div>
+              <div className="flex items-center gap-2 mb-4">
+                <Calculator className="h-5 w-5 text-blue-600" />
+                <h3 className="font-semibold">Pricing Breakdown</h3>
+              </div>
+              <div className="space-y-3">
                 {bookingType !== "night_event" && (
-                  <div><p className="text-sm text-slate-600 dark:text-slate-400">Per Person ({Number(numberOfGuests) || 0} guests)</p><p className="text-lg font-semibold">{formatCurrency(perPersonRate * (Number(numberOfGuests) || 0))}</p></div>
-                )}
-                <div><p className="text-sm text-slate-600 dark:text-slate-400">Cleaning Fee</p><p className="text-lg font-semibold">{formatCurrency(cleaningFee)}</p></div>
-                {additionalCleaningFee > 0 && (
-                  <div><p className="text-sm text-slate-600 dark:text-slate-400">Additional Cleaning</p><p className="text-lg font-semibold">{formatCurrency(additionalCleaningFee)}</p></div>
+                  <div className="flex justify-between items-baseline">
+                    <span className="text-sm text-slate-600 dark:text-slate-400">
+                      Per person · {Number(numberOfGuests) || 0} guest{Number(numberOfGuests) === 1 ? "" : "s"} × {formatCurrency(perPersonRate)}
+                    </span>
+                    <span className="font-semibold">
+                      {formatCurrency(perPersonRate * (Number(numberOfGuests) || 0))}
+                    </span>
+                  </div>
                 )}
                 {discountPercent !== null && discountPercent > 0 && (
-                  <div className="col-span-full bg-orange-50 dark:bg-orange-950/30 p-3 rounded-lg">
-                    <p className="text-sm text-orange-700 dark:text-orange-300">Discount: {discountPercent}%</p>
+                  <div className="flex justify-between items-baseline text-orange-700 dark:text-orange-300">
+                    <span className="text-sm">Discount applied</span>
+                    <span className="font-medium">−{discountPercent}%</span>
                   </div>
                 )}
                 {customPrice !== null && (
-                  <div className="col-span-full bg-green-50 dark:bg-green-950/30 p-3 rounded-lg">
-                    <p className="text-sm text-green-700 dark:text-green-300 font-semibold">Custom Price Applied</p>
+                  <div className="flex justify-between items-baseline text-emerald-700 dark:text-emerald-300">
+                    <span className="text-sm">Custom price override</span>
+                    <span className="font-medium">{formatCurrency(customPrice)}</span>
                   </div>
                 )}
-                <div className="col-span-full pt-4 border-t mt-4">
-                  <div className="flex justify-between items-center">
-                    <p className="text-sm text-slate-600 dark:text-slate-400">Total Cost</p>
-                    <p className="text-2xl font-bold text-blue-600">{formatCurrency(totalCost)}</p>
+                <div className="flex justify-between items-baseline pt-3 border-t">
+                  <span className="text-sm text-slate-600 dark:text-slate-400">Total Cost</span>
+                  <span className="text-2xl font-bold text-blue-600">{formatCurrency(totalCost)}</span>
+                </div>
+                <div className="grid grid-cols-2 gap-4 pt-2">
+                  <div>
+                    <p className="text-xs text-slate-500">1st Deposit ({pricingConfig.depositPercentageFirst}%)</p>
+                    <p className="font-semibold">{formatCurrency(depositAmount)}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-slate-500">Balance Due</p>
+                    <p className="font-semibold">{formatCurrency(totalCost - depositAmount)}</p>
                   </div>
                 </div>
-                <div className="col-span-2"><p className="text-sm text-slate-600 dark:text-slate-400">1st Deposit (25%)</p><p className="font-semibold">{formatCurrency(depositAmount)}</p></div>
-                <div className="col-span-2"><p className="text-sm text-slate-600 dark:text-slate-400">Balance Due</p><p className="font-semibold">{formatCurrency(totalCost - depositAmount)}</p></div>
               </div>
             </CardContent>
           </Card>
