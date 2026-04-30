@@ -1697,7 +1697,11 @@ export default function HomePage() {
         onExpand={handleExpandMinimized}
       />
 
+      {/* Key flips on every open so the dialog remounts with a clean form —
+          prevents stale title / due-date / linked-booking state from a previous
+          (cancelled) reminder from leaking into the next one. */}
       <ReminderDialog
+        key={`reminder-${reminderDialogOpen ? "open" : "closed"}-${reminderRefreshKey}`}
         open={reminderDialogOpen}
         onOpenChange={setReminderDialogOpen}
         onSuccess={() => setReminderRefreshKey(prev => prev + 1)}

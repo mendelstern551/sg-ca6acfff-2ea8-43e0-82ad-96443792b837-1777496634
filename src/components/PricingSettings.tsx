@@ -79,14 +79,22 @@ export function PricingSettings() {
   const update = (key: keyof PricingConfig, value: number) =>
     setConfig((c) => ({ ...c, [key]: value }));
 
-  const handleSave = () => {
-    savePricingConfig(config);
+  const handleSave = async () => {
+    const result = await savePricingConfig(config);
     setSavedSnapshot(JSON.stringify(config));
-    toast({ title: "Pricing saved", description: "New defaults will apply to new bookings." });
+    if (result.staleConflict) {
+      toast({
+        title: "Saved locally — another device updated first",
+        description: "Reload to pull in the latest, then re-apply your changes.",
+        variant: "destructive",
+      });
+    } else {
+      toast({ title: "Pricing saved", description: "New defaults will apply to new bookings." });
+    }
   };
 
-  const handleReset = () => {
-    resetPricingConfig();
+  const handleReset = async () => {
+    await resetPricingConfig();
     setConfig(DEFAULT_PRICING);
     setSavedSnapshot(JSON.stringify(DEFAULT_PRICING));
     toast({ title: "Reverted to defaults", description: "Saved." });

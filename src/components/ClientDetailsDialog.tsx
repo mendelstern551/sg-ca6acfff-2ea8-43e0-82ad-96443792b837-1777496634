@@ -94,8 +94,20 @@ export function ClientDetailsDialog({
   //   - Before event ends → show projection (we don't have real numbers yet)
   //   - After event ends + actuals logged → use actuals (those are real)
   //   - After event ends but no actuals yet → still projection
-  const eventEnd = localBooking.end_date ? new Date(localBooking.end_date).getTime() : 0;
-  const eventEnded = eventEnd > 0 && eventEnd < Date.now();
+  // Compare on local-day boundaries (not raw ms) so an event ending today
+  // doesn't flip mid-day depending on the server's vs user's timezone.
+  const eventEndedLocalDay = (() => {
+    if (!localBooking.end_date) return false;
+    const end = new Date(localBooking.end_date);
+    if (isNaN(end.getTime())) return false;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const endDay = new Date(end);
+    endDay.setHours(0, 0, 0, 0);
+    // "Ended" once we're past the event's end-day in the user's local time.
+    return endDay.getTime() < today.getTime();
+  })();
+  const eventEnded = eventEndedLocalDay;
   const useActual = eventEnded && actualExpenses > 0;
   const totalExpenses = useActual ? actualExpenses : expectedExpenses;
   const netProfit = localBooking.total_cost - totalExpenses;

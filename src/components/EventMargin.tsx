@@ -109,12 +109,20 @@ export function EventMargin({ bookings }: EventMarginProps) {
   const handleSave = async () => {
     const result = await saveAppSetting(SETTINGS_KEY, config);
     setSavedSnapshot(JSON.stringify(config));
-    toast({
-      title: "Settings saved",
-      description: result.remote
-        ? "Cost configuration synced to all devices."
-        : "Saved locally — Supabase app_settings table not available yet.",
-    });
+    if (result.staleConflict) {
+      toast({
+        title: "Saved locally — but another device updated this first",
+        description: "Reload the page to pull in the latest, then re-apply your changes.",
+        variant: "destructive",
+      });
+    } else {
+      toast({
+        title: "Settings saved",
+        description: result.remote
+          ? "Cost configuration synced to all devices."
+          : "Saved locally — Supabase app_settings table not available yet.",
+      });
+    }
   };
 
   const handleReset = () => {

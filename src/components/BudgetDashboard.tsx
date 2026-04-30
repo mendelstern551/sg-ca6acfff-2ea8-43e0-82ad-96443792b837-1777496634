@@ -35,11 +35,21 @@ export function BudgetDashboard({ bookings, expenses }: BudgetDashboardProps) {
     return bookingMatch && dateMatch;
   });
 
+  // Sentinel for expenses missing a category — paired with the
+  // "(Uncategorized)" select option below so users can actually find them.
+  const UNCATEGORIZED = "__uncategorized__";
+  const normalizeCat = (c: unknown): string => {
+    if (typeof c !== "string") return UNCATEGORIZED;
+    const t = c.trim();
+    return t === "" ? UNCATEGORIZED : t;
+  };
+
   const filteredExpenses = expenses.filter(expense => {
     const bookingMatch = selectedBooking === "all" || expense.booking_id === selectedBooking;
-    const categoryMatch = selectedCategory === "all" || expense.category === selectedCategory;
+    const categoryMatch =
+      selectedCategory === "all" || normalizeCat(expense.category) === selectedCategory;
     const expenseDate = new Date(expense.expense_date);
-    const dateMatch = (!startDate || expenseDate >= startDate) && 
+    const dateMatch = (!startDate || expenseDate >= startDate) &&
                      (!endDate || expenseDate <= endDate);
     return bookingMatch && categoryMatch && dateMatch;
   });
@@ -64,7 +74,8 @@ export function BudgetDashboard({ bookings, expenses }: BudgetDashboardProps) {
   // commission generator and are already counted in computedBookingExpenses above.
   // Including them here would double-bill manager fees.
   const dbExpenses = filteredExpenses.reduce(
-    (sum, expense) => (expense.category === "Manager Salary" ? sum : sum + expense.amount),
+    (sum, expense) =>
+      normalizeCat(expense.category) === "Manager Salary" ? sum : sum + expense.amount,
     0
   );
 
@@ -75,7 +86,8 @@ export function BudgetDashboard({ bookings, expenses }: BudgetDashboardProps) {
   const totalBalance = filteredBookings.reduce((sum, booking) => sum + booking.balance_due, 0);
 
   const categoryExpenses = filteredExpenses.reduce((acc, expense) => {
-    acc[expense.category] = (acc[expense.category] || 0) + expense.amount;
+    const cat = normalizeCat(expense.category);
+    acc[cat] = (acc[cat] || 0) + expense.amount;
     return acc;
   }, {} as Record<string, number>);
 
@@ -83,9 +95,25 @@ export function BudgetDashboard({ bookings, expenses }: BudgetDashboardProps) {
     .sort(([, a], [, b]) => b - a)
     .slice(0, 5);
 
-  const categories = ["all", "food", "cleaning", "supplies", "utilities", "staff", "equipment", "Manager Salary", "other"];
+  // Merge the known list with whatever categories actually appear in the data
+  // so legacy or ad-hoc categories (and uncategorized rows) can be filtered.
+  const knownCategories = [
+    "food",
+    "cleaning",
+    "supplies",
+    "utilities",
+    "staff",
+    "equipment",
+    "Manager Salary",
+    "other",
+  ];
+  const dataCategories = Array.from(
+    new Set(expenses.map((e) => normalizeCat(e.category)))
+  );
+  const categories = Array.from(new Set([...knownCategories, ...dataCategories]));
 
   const getCategoryLabel = (category: string) => {
+    if (category === UNCATEGORIZED) return "(Uncategorized)";
     const labels: Record<string, string> = {
       food: "Food & Catering",
       cleaning: "Cleaning & Maintenance",

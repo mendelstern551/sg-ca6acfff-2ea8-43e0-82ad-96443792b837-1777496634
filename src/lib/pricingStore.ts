@@ -13,12 +13,14 @@ export function usePricingConfig(): PricingConfig {
   return useAppSetting<PricingConfig>(KEY, DEFAULT_PRICING);
 }
 
-export async function savePricingConfig(config: PricingConfig): Promise<void> {
-  await saveAppSetting(KEY, config);
+export async function savePricingConfig(
+  config: PricingConfig
+): Promise<{ remote: boolean; staleConflict?: boolean }> {
+  return saveAppSetting(KEY, config);
 }
 
-export async function resetPricingConfig(): Promise<void> {
-  await saveAppSetting(KEY, DEFAULT_PRICING);
+export async function resetPricingConfig(): Promise<{ remote: boolean; staleConflict?: boolean }> {
+  return saveAppSetting(KEY, DEFAULT_PRICING);
 }
 
 // Synchronous read for non-React callers — reads localStorage mirror only.
