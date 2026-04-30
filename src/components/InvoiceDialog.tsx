@@ -4,8 +4,9 @@ import { Button } from "@/components/ui/button";
 import { Booking } from "@/types/booking";
 import { invoiceService, type InvoiceWithDetails } from "@/services/invoiceService";
 import { emailService } from "@/services/emailService";
+import { paymentService, type Payment } from "@/services/paymentService";
 import { format } from "date-fns";
-import { Download, Loader2, FileText, Mail, Phone, Send, Clock, CheckCircle, XCircle, AlertCircle } from "lucide-react";
+import { Download, Loader2, FileText, Mail, Phone, Send, Clock, CheckCircle, XCircle, AlertCircle, Pencil, Trash2, Plus } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
 
@@ -384,10 +385,42 @@ export function InvoiceDialog({ open, onOpenChange, booking }: InvoiceDialogProp
 
   const validPayments = (booking.payments || []).filter(p => p && p.amount && p.amount > 0);
   const actualAmountPaid = validPayments.length > 0
-    ? validPayments.reduce((sum, p) => sum + p.amount, 0) 
+    ? validPayments.reduce((sum, p) => sum + p.amount, 0)
     : 0;
   const actualBalanceDue = invoice.total_amount - actualAmountPaid;
   const hasPayments = validPayments.length > 0 && actualAmountPaid > 0;
+
+  const handleAddPayment = () => {
+    window.dispatchEvent(
+      new CustomEvent("dialog:add-payment", { detail: { bookingId: booking.id } })
+    );
+  };
+
+  const handleEditPayment = (payment: Payment) => {
+    window.dispatchEvent(
+      new CustomEvent("dialog:edit-payment", { detail: { bookingId: booking.id, payment } })
+    );
+  };
+
+  const handleDeletePayment = async (payment: Payment) => {
+    const proceed = window.confirm(
+      `Delete this $${Number(payment.amount).toLocaleString()} payment?\n\nThis cannot be undone.`
+    );
+    if (!proceed) return;
+    try {
+      await paymentService.deletePayment(payment.id);
+      toast({ title: "Payment deleted", description: `Removed $${Number(payment.amount).toLocaleString()}.` });
+      // Reload to refresh totals + the payments array.
+      await loadOrCreateInvoice();
+    } catch (err) {
+      console.error("Delete payment failed:", err);
+      toast({
+        title: "Delete failed",
+        description: err instanceof Error ? err.message : "Try again.",
+        variant: "destructive",
+      });
+    }
+  };
 
   const getEmailStatusBadge = () => {
     if (!invoice.email_sent_at) {
@@ -440,6 +473,10 @@ export function InvoiceDialog({ open, onOpenChange, booking }: InvoiceDialogProp
                   </>
                 )}
               </Button>
+              <Button onClick={handleAddPayment} variant="outline" size="sm">
+                <Plus className="h-4 w-4 mr-2" />
+                Add Payment
+              </Button>
               <Button onClick={handleDownloadPDF} variant="outline" size="sm">
                 <Download className="h-4 w-4 mr-2" />
                 Download PDF
@@ -447,6 +484,73 @@ export function InvoiceDialog({ open, onOpenChange, booking }: InvoiceDialogProp
             </div>
           </DialogTitle>
         </DialogHeader>
+
+        {/* Payment History — view, edit, delete payments tied to this invoice's booking. */}
+        <div className="rounded-lg border bg-slate-50 dark:bg-slate-900/40 p-4 mb-4">
+          <div className="flex items-center justify-between mb-2">
+            <h4 className="font-semibold text-sm">Payment History</h4>
+            <span className="text-xs text-muted-foreground">
+              {validPayments.length} payment{validPayments.length === 1 ? "" : "s"} ·{" "}
+              ${actualAmountPaid.toLocaleString()} paid · ${actualBalanceDue.toLocaleString()} {actualBalanceDue > 0 ? "outstanding" : "settled"}
+            </span>
+          </div>
+          {validPayments.length === 0 ? (
+            <p className="text-sm text-muted-foreground py-2">
+              No payments recorded yet. Click <strong>+ Add Payment</strong> above.
+            </p>
+          ) : (
+            <ul className="space-y-1.5">
+              {[...validPayments]
+                .sort((a, b) => new Date(b.payment_date).getTime() - new Date(a.payment_date).getTime())
+                .map((p) => (
+                  <li
+                    key={p.id}
+                    className="group flex items-center justify-between p-2 rounded-md bg-white dark:bg-slate-900 border"
+                  >
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="font-semibold text-sm">
+                          ${Number(p.amount).toLocaleString()}
+                        </span>
+                        {p.payment_method && (
+                          <Badge variant="outline" className="text-xs">
+                            {String(p.payment_method).replace(/_/g, " ")}
+                          </Badge>
+                        )}
+                      </div>
+                      <div className="text-xs text-muted-foreground mt-0.5">
+                        {p.payment_date ? format(new Date(p.payment_date), "MMM d, yyyy") : "—"}
+                        {p.transaction_id && ` · ${p.transaction_id}`}
+                        {p.notes && ` · ${p.notes}`}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-1 opacity-60 group-hover:opacity-100 transition-opacity">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7"
+                        onClick={() => handleEditPayment(p)}
+                        aria-label="Edit payment"
+                        title="Edit payment"
+                      >
+                        <Pencil className="h-3.5 w-3.5" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7 text-destructive hover:text-destructive"
+                        onClick={() => handleDeletePayment(p)}
+                        aria-label="Delete payment"
+                        title="Delete payment"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
+                  </li>
+                ))}
+            </ul>
+          )}
+        </div>
 
         {actualBalanceDue > 0 && (
           <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-4">

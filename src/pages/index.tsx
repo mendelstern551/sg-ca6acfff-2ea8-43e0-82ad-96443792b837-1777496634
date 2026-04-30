@@ -156,11 +156,23 @@ export default function HomePage() {
         setViewBookingOpen(true);
       }
     };
+    const onEditPayment = (e: Event) => {
+      const detail = (e as CustomEvent<{ bookingId: string; payment: Payment }>).detail;
+      if (!detail?.bookingId || !detail?.payment) return;
+      const target = bookings.find((b) => b.id === detail.bookingId);
+      if (target) {
+        setPaymentBooking(target);
+        setEditingPayment(detail.payment);
+        setPaymentDialogOpen(true);
+      }
+    };
     window.addEventListener("dialog:add-payment", onAddPayment);
     window.addEventListener("dialog:view-booking", onViewBooking);
+    window.addEventListener("dialog:edit-payment", onEditPayment);
     return () => {
       window.removeEventListener("dialog:add-payment", onAddPayment);
       window.removeEventListener("dialog:view-booking", onViewBooking);
+      window.removeEventListener("dialog:edit-payment", onEditPayment);
     };
   }, [bookings]);
 
