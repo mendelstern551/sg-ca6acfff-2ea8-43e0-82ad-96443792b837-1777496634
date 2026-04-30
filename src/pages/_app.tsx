@@ -1,5 +1,6 @@
 import { Toaster } from "@/components/ui/toaster";
 import { CommandPalette } from "@/components/CommandPalette";
+import { AppErrorBoundary } from "@/components/AppErrorBoundary";
 import { ThemeProvider } from "next-themes";
 import "@/styles/globals.css";
 import type { AppProps } from "next/app";
@@ -12,8 +13,10 @@ export default function App({ Component, pageProps }: AppProps) {
       enableSystem
       disableTransitionOnChange={false}
     >
-      <Component {...pageProps} />
-      <CommandPalette />
+      <AppErrorBoundary>
+        <Component {...pageProps} />
+        <CommandPalette />
+      </AppErrorBoundary>
       <Toaster />
     </ThemeProvider>
   );

@@ -172,10 +172,12 @@ export function InvoiceDialog({ open, onOpenChange, booking }: InvoiceDialogProp
     if (!invoice) return;
 
     const validPayments = (booking.payments || []).filter(p => p && p.amount && p.amount > 0);
-    const actualAmountPaid = validPayments.length > 0
-      ? validPayments.reduce((sum, p) => sum + p.amount, 0) 
+    const actualAmountPaidRaw = validPayments.length > 0
+      ? validPayments.reduce((sum, p) => sum + p.amount, 0)
       : 0;
-    const actualBalanceDue = invoice.total_amount - actualAmountPaid;
+    const actualAmountPaid = Math.round(actualAmountPaidRaw * 100) / 100;
+    const balanceRaw = invoice.total_amount - actualAmountPaid;
+    const actualBalanceDue = Math.abs(balanceRaw) < 0.01 ? 0 : Math.round(balanceRaw * 100) / 100;
     const hasPayments = validPayments.length > 0 && actualAmountPaid > 0;
 
     const printWindow = window.open("", "_blank");
@@ -384,10 +386,14 @@ export function InvoiceDialog({ open, onOpenChange, booking }: InvoiceDialogProp
   if (!invoice) return null;
 
   const validPayments = (booking.payments || []).filter(p => p && p.amount && p.amount > 0);
-  const actualAmountPaid = validPayments.length > 0
+  const actualAmountPaidRaw = validPayments.length > 0
     ? validPayments.reduce((sum, p) => sum + p.amount, 0)
     : 0;
-  const actualBalanceDue = invoice.total_amount - actualAmountPaid;
+  // Round to cents to absorb float noise — `0.6 - 0.5 = 0.0999...` would otherwise
+  // leave a ghost balance and flip a fully-paid booking to "outstanding".
+  const actualAmountPaid = Math.round(actualAmountPaidRaw * 100) / 100;
+  const actualBalanceDueRaw = invoice.total_amount - actualAmountPaid;
+  const actualBalanceDue = Math.abs(actualBalanceDueRaw) < 0.01 ? 0 : Math.round(actualBalanceDueRaw * 100) / 100;
   const hasPayments = validPayments.length > 0 && actualAmountPaid > 0;
 
   const handleAddPayment = () => {

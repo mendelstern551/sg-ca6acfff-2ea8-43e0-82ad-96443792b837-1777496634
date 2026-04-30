@@ -1716,10 +1716,38 @@ export default function HomePage() {
         />
       )}
 
-      <BookingDialog open={bookingDialogOpen} onOpenChange={setBookingDialogOpen} onSave={handleSaveBooking} booking={editingBooking} bookings={bookings} />
-      <ExpenseDialog open={expenseDialogOpen} onOpenChange={setExpenseDialogOpen} onSave={handleSaveExpense} expense={editingExpense} bookings={bookings} />
-      {selectedInvoiceBooking && <InvoiceDialog open={invoiceDialogOpen} onOpenChange={setInvoiceDialogOpen} booking={selectedInvoiceBooking} />}
+      {/* `key` on each dialog forces a fresh mount when the underlying entity
+          changes — prevents stale internal state (form fields, captured props)
+          from leaking between consecutive opens for different bookings. */}
+      <BookingDialog
+        key={`booking-${editingBooking?.id ?? "new"}-${editingBooking?.updated_at ?? ""}`}
+        open={bookingDialogOpen}
+        onOpenChange={setBookingDialogOpen}
+        onSave={handleSaveBooking}
+        booking={editingBooking}
+        bookings={bookings}
+      />
+      <ExpenseDialog
+        key={`expense-${editingExpense?.id ?? "new"}`}
+        open={expenseDialogOpen}
+        onOpenChange={setExpenseDialogOpen}
+        onSave={handleSaveExpense}
+        expense={editingExpense}
+        bookings={bookings}
+      />
+      {selectedInvoiceBooking && (
+        <InvoiceDialog
+          key={`invoice-${selectedInvoiceBooking.id}`}
+          open={invoiceDialogOpen}
+          onOpenChange={(o) => {
+            setInvoiceDialogOpen(o);
+            if (!o) setSelectedInvoiceBooking(undefined);
+          }}
+          booking={selectedInvoiceBooking}
+        />
+      )}
       <PaymentDialog
+        key={`payment-${editingPayment?.id ?? "new"}-${paymentBooking?.id ?? ""}`}
         open={paymentDialogOpen}
         onOpenChange={(open) => {
           setPaymentDialogOpen(open);

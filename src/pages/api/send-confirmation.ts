@@ -15,8 +15,6 @@ export default async function handler(
     clientName,
     bookingName,
     bookingType,
-    startDate,
-    endDate,
     numberOfGuests,
     totalCost,
     depositAmount,
@@ -24,10 +22,19 @@ export default async function handler(
     notes,
     bookingId,
   } = req.body;
+  let { startDate, endDate } = req.body;
 
   if (!to || !clientName || !bookingName) {
     return res.status(400).json({ error: "Missing required fields" });
   }
+  // Sanitize dates so toLocaleDateString below never throws RangeError.
+  const safeDate = (d: unknown, fallback = ""): string => {
+    if (!d) return fallback;
+    const t = new Date(d as string).getTime();
+    return isNaN(t) ? fallback : new Date(t).toISOString();
+  };
+  startDate = safeDate(startDate);
+  endDate = safeDate(endDate, startDate);
 
   const SMTP_HOST = process.env.SMTP_HOST;
   const SMTP_PORT = process.env.SMTP_PORT;

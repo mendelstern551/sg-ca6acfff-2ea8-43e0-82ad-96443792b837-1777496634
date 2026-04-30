@@ -223,8 +223,6 @@ export default async function handler(
     to,
     clientName,
     invoiceNumber,
-    eventDateStart,
-    eventDateEnd,
     numberOfGuests,
     totalAmount,
     balanceDue,
@@ -232,9 +230,26 @@ export default async function handler(
     notes,
     bookingId,
   } = req.body;
+  // Allow date fields to be reassigned with sanitized values below.
+  let { eventDateStart, eventDateEnd } = req.body;
 
   if (!to || !clientName || !invoiceNumber) {
     return res.status(400).json({ error: "Missing required fields" });
+  }
+  // Sanitize dates so downstream toLocaleDateString never throws RangeError
+  // on bad/missing client input.
+  const safeDate = (d: unknown, fallback = ""): string => {
+    if (!d) return fallback;
+    const t = new Date(d as string).getTime();
+    return isNaN(t) ? fallback : new Date(t).toISOString();
+  };
+  eventDateStart = safeDate(eventDateStart);
+  eventDateEnd = safeDate(eventDateEnd, eventDateStart);
+  if (!eventDateStart) {
+    return res.status(400).json({ error: "Invalid eventDateStart" });
+  }
+  if (!isFinite(Number(totalAmount))) {
+    return res.status(400).json({ error: "Invalid totalAmount" });
   }
 
   const SMTP_HOST = process.env.SMTP_HOST;

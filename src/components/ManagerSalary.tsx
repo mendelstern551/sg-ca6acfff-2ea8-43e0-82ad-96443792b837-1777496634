@@ -149,9 +149,15 @@ export function ManagerSalary({ bookings, onAddExpense, allExpenses, onExpensesU
     }
   }, [salaryData.seasonStart, salaryData.seasonEnd, salaryData.maintenanceFeePerMonth, bookings.length]);
 
+  // Stronger reentrancy guard than `isProcessing` state, which only prevents
+  // SEQUENTIAL re-entry. A ref blocks CONCURRENT re-entry that happens when
+  // the effect refires before React has processed the previous setState.
+  // This is what was causing duplicate "Manager Commission" expense rows.
+  const isCreatingExpensesRef = useRef(false);
+
   const createAllManagerExpenses = async () => {
-    if (isProcessing) return;
-    
+    if (isCreatingExpensesRef.current || isProcessing) return;
+    isCreatingExpensesRef.current = true;
     setIsProcessing(true);
     try {
       await createMonthlyMaintenanceExpenses();
@@ -164,6 +170,7 @@ export function ManagerSalary({ bookings, onAddExpense, allExpenses, onExpensesU
         variant: "destructive"
       });
     } finally {
+      isCreatingExpensesRef.current = false;
       setIsProcessing(false);
     }
   };

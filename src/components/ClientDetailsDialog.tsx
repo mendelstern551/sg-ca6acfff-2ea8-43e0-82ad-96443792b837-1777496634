@@ -11,7 +11,7 @@ import { formatCurrency } from "@/lib/bookingCalculations";
 import { format } from "date-fns";
 import { DollarSign, TrendingUp, TrendingDown, Receipt, Calendar, Users, FileText, Plus, StickyNote, Pencil } from "lucide-react";
 import { InvoiceDialog } from "./InvoiceDialog";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { paymentService } from "@/services/paymentService";
 import { bookingService } from "@/services/bookingService";
 import { invoiceService } from "@/services/invoiceService";
@@ -43,6 +43,12 @@ export function ClientDetailsDialog({
   const [noteDialogOpen, setNoteDialogOpen] = useState(false);
   const [customerEditDialogOpen, setCustomerEditDialogOpen] = useState(false);
   const [localBooking, setLocalBooking] = useState(booking);
+  // Resync local copy when the parent passes a different/updated booking.
+  // Without this, edits inside the dialog (or a parent re-fetch) leave
+  // localBooking pinned to whatever was passed at first mount.
+  useEffect(() => {
+    setLocalBooking(booking);
+  }, [booking.id, booking.updated_at]);
   
   const [paymentAmount, setPaymentAmount] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("cash");

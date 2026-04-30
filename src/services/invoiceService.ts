@@ -255,11 +255,13 @@ export const invoiceService = {
         .eq("invoice_id", invoiceId)
         .order("created_at", { ascending: false });
         
-        if (error) { 
-            return []; 
+        if (error) {
+            console.warn("getPaymentReminders failed (table missing or RLS):", error.message);
+            return [];
         }
         return data || [];
-    } catch {
+    } catch (e) {
+        console.warn("getPaymentReminders threw:", e);
         return [];
     }
   },
