@@ -60,7 +60,11 @@ export function ClientDetailsDialog({
   // Live EventMargin config from app_settings — synced across devices.
   const marginConfig = useAppSetting<EventMarginConfig>("event-margin", DEFAULT_EVENT_MARGIN_CONFIG);
 
-  const clientExpenses = allExpenses.filter(e => e.booking_id === localBooking.id);
+  // Skip "Manager Salary" auto-created entries — they duplicate the EventMargin
+  // commission projection and would inflate "Actual" expenses.
+  const clientExpenses = allExpenses.filter(
+    (e) => e.booking_id === localBooking.id && e.category !== "Manager Salary"
+  );
   const actualExpenses = clientExpenses.reduce((sum, e) => sum + e.amount, 0);
 
   // EXPECTED expenses — projection from EventMargin config:

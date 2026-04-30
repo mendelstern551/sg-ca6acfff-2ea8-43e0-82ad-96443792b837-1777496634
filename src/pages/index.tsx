@@ -794,7 +794,12 @@ export default function HomePage() {
     (marginConfig.annualExpenses || []).reduce((s, e) => s + (Number(e.yearlyAmount) || 0), 0) +
     (marginConfig.buildings || []).reduce((s, b) => s + (Number(b.yearlyCost) || 0), 0);
   // Plus any expenses already logged in the DB (food, ad-hoc, manager payments etc.)
-  const dbExpensesSum = allExpenses.reduce((sum, e) => sum + Number(e.amount), 0);
+  // Exclude DB expenses in the "Manager Salary" category — those are auto-created
+  // by ManagerSalary's commission/maintenance generator and are already represented
+  // in computedBookingExpenses.commission. Counting them again double-bills.
+  const dbExpensesSum = allExpenses.reduce((sum, e) =>
+    e.category === "Manager Salary" ? sum : sum + Number(e.amount), 0
+  );
 
   const totalExpenses = computedBookingExpenses + fixedAnnualCosts + dbExpensesSum;
   const netProfit = totalRevenue - totalExpenses;

@@ -60,7 +60,13 @@ export function BudgetDashboard({ bookings, expenses }: BudgetDashboardProps) {
     return sum + commission + perEventLineSum;
   }, 0);
   // DB-tracked expenses (food, ad-hoc, manager payments etc.)
-  const dbExpenses = filteredExpenses.reduce((sum, expense) => sum + expense.amount, 0);
+  // Skip "Manager Salary" expenses — those are auto-created by ManagerSalary's
+  // commission generator and are already counted in computedBookingExpenses above.
+  // Including them here would double-bill manager fees.
+  const dbExpenses = filteredExpenses.reduce(
+    (sum, expense) => (expense.category === "Manager Salary" ? sum : sum + expense.amount),
+    0
+  );
 
   const totalExpenses = computedBookingExpenses + dbExpenses;
   const netProfit = totalRevenue - totalExpenses;
