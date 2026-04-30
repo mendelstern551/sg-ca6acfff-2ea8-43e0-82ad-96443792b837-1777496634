@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { Plus, DollarSign, TrendingUp } from "lucide-react";
+import { Plus, DollarSign, TrendingUp, Pencil, Trash2 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -45,6 +45,7 @@ export function ManagerSalary({ bookings, onAddExpense, allExpenses, onExpensesU
   });
 
   const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
+  const [editingPaymentId, setEditingPaymentId] = useState<string | null>(null);
   const [paymentForm, setPaymentForm] = useState({
     date: new Date(),
     amount: 0,
@@ -329,9 +330,7 @@ export function ManagerSalary({ bookings, onAddExpense, allExpenses, onExpensesU
     }
 
     try {
-      // Insert into Supabase (manager_payment_log) so it syncs across devices.
-      // Falls back to local-only if the table doesn't exist yet.
-      const insertRow = {
+      const row = {
         date: paymentForm.date.toISOString(),
         amount: paymentForm.amount,
         payment_method: paymentForm.paymentMethod,
@@ -340,27 +339,49 @@ export function ManagerSalary({ bookings, onAddExpense, allExpenses, onExpensesU
         related_booking_id: paymentForm.relatedBookingId || null,
         notes: paymentForm.notes || null,
       };
-      // See note above re: any cast.
-      const { data: inserted, error: insertErr } = await (supabase as any)
-        .from("manager_payment_log")
-        .insert(insertRow)
-        .select()
-        .single();
 
-      const newPayment: ManagerPayment = inserted
+      let saved: Record<string, unknown> | null = null;
+      let dbErr: { message: string } | null = null;
+
+      if (editingPaymentId) {
+        // UPDATE existing row
+        const { data, error } = await (supabase as any)
+          .from("manager_payment_log")
+          .update(row)
+          .eq("id", editingPaymentId)
+          .select()
+          .single();
+        saved = data;
+        dbErr = error;
+      } else {
+        // INSERT new row
+        const { data, error } = await (supabase as any)
+          .from("manager_payment_log")
+          .insert(row)
+          .select()
+          .single();
+        saved = data;
+        dbErr = error;
+      }
+
+      if (dbErr) {
+        console.warn("manager_payment_log save failed — local fallback:", dbErr.message);
+      }
+
+      const savedPayment: ManagerPayment = saved
         ? {
-            id: String(inserted.id),
-            date: String(inserted.date),
-            amount: Number(inserted.amount) || 0,
-            paymentMethod: inserted.payment_method as PaymentMethod,
-            referenceNumber: (inserted.reference_number as string) || "",
-            type: inserted.type as "maintenance" | "commission" | "other",
-            relatedBookingId: (inserted.related_booking_id as string) || undefined,
-            notes: (inserted.notes as string) || "",
-            createdAt: (inserted.created_at as string) || new Date().toISOString(),
+            id: String(saved.id),
+            date: String(saved.date),
+            amount: Number(saved.amount) || 0,
+            paymentMethod: saved.payment_method as PaymentMethod,
+            referenceNumber: (saved.reference_number as string) || "",
+            type: saved.type as "maintenance" | "commission" | "other",
+            relatedBookingId: (saved.related_booking_id as string) || undefined,
+            notes: (saved.notes as string) || "",
+            createdAt: (saved.created_at as string) || new Date().toISOString(),
           }
         : {
-            id: Date.now().toString(),
+            id: editingPaymentId || Date.now().toString(),
             date: paymentForm.date.toISOString(),
             amount: paymentForm.amount,
             paymentMethod: paymentForm.paymentMethod,
@@ -371,18 +392,13 @@ export function ManagerSalary({ bookings, onAddExpense, allExpenses, onExpensesU
             createdAt: new Date().toISOString(),
           };
 
-      if (insertErr) {
-        console.warn("manager_payment_log insert failed — staying local:", insertErr.message);
-      }
+      // Replace existing or append
+      const existingIndex = (salaryData.payments || []).findIndex((p) => p.id === savedPayment.id);
+      const nextPayments = existingIndex >= 0
+        ? salaryData.payments.map((p) => (p.id === savedPayment.id ? savedPayment : p))
+        : [...(salaryData.payments || []), savedPayment];
 
-      const updatedData = {
-        ...salaryData,
-        payments: [...(salaryData.payments || []), newPayment]
-      };
-      setSalaryData(updatedData);
-      // Payments are persisted via manager_payment_log above; settings are
-      // mirrored to localStorage by saveAppSetting elsewhere — no direct
-      // localStorage write needed here.
+      setSalaryData({ ...salaryData, payments: nextPayments });
 
       const expense: ExpenseInsert = {
         booking_id: paymentForm.relatedBookingId || null,
@@ -396,46 +412,98 @@ export function ManagerSalary({ bookings, onAddExpense, allExpenses, onExpensesU
         receipt_urls: [],
         proof_urls: []
       };
-      
-      await onAddExpense(expense);
-      onExpensesUpdate();
+
+      // Only create the matching expense on a fresh INSERT — editing an existing
+      // payment shouldn't duplicate the expense entry.
+      if (!editingPaymentId) {
+        await onAddExpense(expense);
+        onExpensesUpdate();
+      }
 
       toast({
-        title: "Payment Recorded",
-        description: `Manager payment of $${paymentForm.amount.toLocaleString()} recorded successfully`
+        title: editingPaymentId ? "Payment Updated" : "Payment Recorded",
+        description: `Manager payment of $${paymentForm.amount.toLocaleString()} ${editingPaymentId ? "updated" : "recorded"} successfully`
       });
 
-      setPaymentForm({ 
-        date: new Date(), 
-        amount: 0, 
-        paymentMethod: "check", 
-        referenceNumber: "", 
-        type: "maintenance", 
-        relatedBookingId: "", 
-        notes: "" 
+      setEditingPaymentId(null);
+      setPaymentForm({
+        date: new Date(),
+        amount: 0,
+        paymentMethod: "check",
+        referenceNumber: "",
+        type: "maintenance",
+        relatedBookingId: "",
+        notes: ""
       });
       setPaymentDialogOpen(false);
     } catch (error) {
-      console.error("Error adding payment:", error);
+      console.error("Error saving payment:", error);
       toast({
         title: "Error",
-        description: "Failed to record payment. Please try again.",
+        description: "Failed to save payment. Please try again.",
         variant: "destructive"
       });
     }
   };
 
-  const handleOpenDialog = (open: boolean) => {
-    if (open) {
-      setPaymentForm({ 
-        date: new Date(), 
-        amount: 0, 
-        paymentMethod: "check", 
-        referenceNumber: "", 
-        type: "maintenance", 
-        relatedBookingId: "", 
-        notes: "" 
+  const handleEditPayment = (payment: ManagerPayment) => {
+    setEditingPaymentId(payment.id);
+    setPaymentForm({
+      date: new Date(payment.date),
+      amount: Number(payment.amount) || 0,
+      paymentMethod: payment.paymentMethod,
+      referenceNumber: payment.referenceNumber || "",
+      type: payment.type,
+      relatedBookingId: payment.relatedBookingId || "",
+      notes: payment.notes || "",
+    });
+    setPaymentDialogOpen(true);
+  };
+
+  const handleDeletePayment = async (payment: ManagerPayment) => {
+    const proceed = window.confirm(
+      `Delete the $${Number(payment.amount).toLocaleString()} ${payment.type} payment from ${format(new Date(payment.date), "MMM d, yyyy")}?\n\nThis cannot be undone. The matching expense entry will not be auto-removed — delete it manually if needed.`
+    );
+    if (!proceed) return;
+
+    try {
+      const { error } = await (supabase as any)
+        .from("manager_payment_log")
+        .delete()
+        .eq("id", payment.id);
+      if (error) {
+        console.warn("manager_payment_log delete failed — local-only:", error.message);
+      }
+      setSalaryData({
+        ...salaryData,
+        payments: (salaryData.payments || []).filter((p) => p.id !== payment.id),
       });
+      toast({
+        title: "Payment Deleted",
+        description: `Removed the $${Number(payment.amount).toLocaleString()} ${payment.type} payment.`
+      });
+    } catch (err) {
+      console.error("Delete payment failed:", err);
+      toast({ title: "Delete failed", description: "Try again.", variant: "destructive" });
+    }
+  };
+
+  const handleOpenDialog = (open: boolean) => {
+    if (open && !editingPaymentId) {
+      // Fresh "Add Payment" — start blank. (Edit flows pre-fill via handleEditPayment.)
+      setPaymentForm({
+        date: new Date(),
+        amount: 0,
+        paymentMethod: "check",
+        referenceNumber: "",
+        type: "maintenance",
+        relatedBookingId: "",
+        notes: ""
+      });
+    }
+    if (!open) {
+      // Closing without saving → drop the edit context.
+      setEditingPaymentId(null);
     }
     setPaymentDialogOpen(open);
   };
@@ -544,8 +612,12 @@ export function ManagerSalary({ bookings, onAddExpense, allExpenses, onExpensesU
                 </DialogTrigger>
                 <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
                   <DialogHeader>
-                    <DialogTitle>Record Manager Payment</DialogTitle>
-                    <DialogDescription>This will automatically create an expense entry</DialogDescription>
+                    <DialogTitle>{editingPaymentId ? "Edit Manager Payment" : "Record Manager Payment"}</DialogTitle>
+                    <DialogDescription>
+                      {editingPaymentId
+                        ? "Update the payment details below."
+                        : "This will automatically create an expense entry"}
+                    </DialogDescription>
                   </DialogHeader>
                   <div className="space-y-4 py-4">
                     {/* Type first — picking "Commission" + a booking auto-fills the amount. */}
@@ -694,7 +766,7 @@ export function ManagerSalary({ bookings, onAddExpense, allExpenses, onExpensesU
                     </div>
 
                     <Button onClick={handleAddPayment} className="w-full bg-blue-600 hover:bg-blue-700">
-                      Record Payment
+                      {editingPaymentId ? "Save Changes" : "Record Payment"}
                     </Button>
                   </div>
                 </DialogContent>
@@ -709,16 +781,42 @@ export function ManagerSalary({ bookings, onAddExpense, allExpenses, onExpensesU
                 {[...payments]
                   .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
                   .map((payment) => (
-                    <div key={payment.id} className="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-800 rounded-lg">
-                      <div>
-                        <div className="flex items-center gap-2">
+                    <div
+                      key={payment.id}
+                      className="group flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-800 rounded-lg"
+                    >
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2 flex-wrap">
                           <p className="font-medium text-sm">${payment.amount.toLocaleString()}</p>
                           <Badge variant={payment.type === "maintenance" ? "default" : "secondary"}>{payment.type}</Badge>
                         </div>
                         <p className="text-xs text-slate-600 dark:text-slate-400">
                           {format(new Date(payment.date), "MMM d, yyyy")} • {payment.paymentMethod}
+                          {payment.referenceNumber && ` • ref ${payment.referenceNumber}`}
                         </p>
-                        {payment.notes && <p className="text-xs text-slate-500 mt-1">{payment.notes}</p>}
+                        {payment.notes && <p className="text-xs text-slate-500 mt-1 truncate">{payment.notes}</p>}
+                      </div>
+                      <div className="flex items-center gap-1 opacity-60 group-hover:opacity-100 transition-opacity ml-2">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8"
+                          onClick={() => handleEditPayment(payment)}
+                          aria-label="Edit payment"
+                          title="Edit payment"
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-destructive hover:text-destructive"
+                          onClick={() => handleDeletePayment(payment)}
+                          aria-label="Delete payment"
+                          title="Delete payment"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
                       </div>
                     </div>
                   ))}
