@@ -499,7 +499,10 @@ export function InvoiceDialog({ open, onOpenChange, booking }: InvoiceDialogProp
             <h4 className="font-semibold text-sm">Payment History</h4>
             <span className="text-xs text-muted-foreground">
               {validPayments.length} payment{validPayments.length === 1 ? "" : "s"} ·{" "}
-              ${actualAmountPaid.toLocaleString()} paid · ${actualBalanceDue.toLocaleString()} {actualBalanceDue > 0 ? "outstanding" : "settled"}
+              ${actualAmountPaid.toLocaleString()} paid ·{" "}
+              {actualBalanceDue > 0
+                ? `$${actualBalanceDue.toLocaleString()} due`
+                : "fully paid"}
             </span>
           </div>
           {validPayments.length === 0 ? (

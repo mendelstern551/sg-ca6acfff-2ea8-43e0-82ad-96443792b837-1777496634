@@ -301,6 +301,17 @@ export default function HomePage() {
       setInvoices(invoicesData);
       setManagerCompensations(managerData);
 
+      // Background self-heal: re-sync any invoice rows whose balance_due / status
+      // got stuck on stale numbers (older payments were tied to booking_id, but
+      // the invoice was indexed by invoice_id and never picked them up). After
+      // the sync runs we re-fetch invoices so the UI reflects the corrected
+      // values without forcing the user to reload manually.
+      void invoiceService
+        .syncAllInvoicesWithPayments()
+        .then(() => invoiceService.getAllInvoices())
+        .then((fresh) => setInvoices(fresh))
+        .catch((err) => console.warn("Background invoice resync failed:", err));
+
       if (results[0].status === "rejected" || results[1].status === "rejected") {
         toast({
           title: "Partial Load Failure",

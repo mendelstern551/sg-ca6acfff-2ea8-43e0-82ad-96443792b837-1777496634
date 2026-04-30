@@ -193,18 +193,38 @@ export const invoiceService = {
       const invoice = await this.getInvoiceById(invoiceId);
       if (!invoice) return;
 
-      const { data: payments } = await supabase
+      // Aggregate payments tied to either invoice OR booking. The dashboard's
+      // PaymentDialog only writes `booking_id` on payment rows, so a strict
+      // `eq("invoice_id", ...)` would miss every dashboard-recorded payment
+      // and leave balance_due / status stuck at the original values.
+      const invByInvoice = await supabase
         .from("payments")
         .select("amount")
         .eq("invoice_id", invoiceId);
-
-      const totalPaid = payments?.reduce((sum, p) => sum + (p.amount || 0), 0) || 0;
-      const balanceDue = (invoice.total_amount || 0) - totalPaid;
+      const invoicePayments = (invByInvoice.data || []) as Array<{ amount: number | null }>;
+      let bookingPayments: Array<{ amount: number | null }> = [];
+      if (invoice.booking_id) {
+        const invByBooking = await supabase
+          .from("payments")
+          .select("amount")
+          .eq("booking_id", invoice.booking_id);
+        bookingPayments = (invByBooking.data || []) as Array<{ amount: number | null }>;
+      }
+      // Dedupe — a payment with both invoice_id AND booking_id set would
+      // otherwise be counted twice. Pull from invoice_id first; fall back to
+      // booking_id only when invoice_id returned nothing (the normal dashboard
+      // case where PaymentDialog skips invoice_id).
+      const ledger = invoicePayments.length > 0 ? invoicePayments : bookingPayments;
+      const totalPaidRaw = ledger.reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
+      const totalPaid = Math.round(totalPaidRaw * 100) / 100;
+      const totalAmount = Math.round((Number(invoice.total_amount) || 0) * 100) / 100;
+      const balanceRaw = totalAmount - totalPaid;
+      const balanceDue = Math.abs(balanceRaw) < 0.01 ? 0 : Math.round(balanceRaw * 100) / 100;
       const newStatus = balanceDue <= 0 ? "paid" : "pending";
 
       await this.updateInvoiceAmounts(invoiceId, {
         deposit_amount: totalPaid,
-        balance_due: balanceDue
+        balance_due: balanceDue < 0 ? 0 : balanceDue,
       });
 
       await this.updateInvoiceStatus(invoiceId, newStatus);

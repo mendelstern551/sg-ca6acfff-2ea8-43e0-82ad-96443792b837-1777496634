@@ -9,18 +9,28 @@ export type Payment = PaymentRow;
 
 /**
  * Recompute amount_paid / balance_due / payment_status on the parent booking
- * from its current payment rows. Called after every create/update/delete so the
- * stored totals never drift from the underlying ledger.
+ * AND its matching invoice from the current payment rows. Called after every
+ * create/update/delete so the stored totals never drift from the ledger.
  *
  * Uses cents-precision rounding so floating-point math doesn't leave
  * a $0.0000001 ghost balance that flips a paid booking to "partial".
+ *
+ * Note: the invoice is found by `booking_id` (not `invoice_id`) because the
+ * dashboard's PaymentDialog only sets `booking_id` on payment rows. Earlier
+ * code synced the invoice by `invoice_id` and consequently saw zero payments,
+ * so the Invoices list stayed at "Outstanding" / full balance forever.
  */
 async function syncBookingTotals(bookingId: string): Promise<void> {
   if (!bookingId) return;
   try {
-    const [bRes, pRes] = await Promise.all([
+    const [bRes, pRes, iRes] = await Promise.all([
       supabase.from("bookings").select("total_cost").eq("id", bookingId).maybeSingle(),
       supabase.from("payments").select("amount").eq("booking_id", bookingId),
+      supabase
+        .from("invoices")
+        .select("id, total_amount")
+        .eq("booking_id", bookingId)
+        .maybeSingle(),
     ]);
     if (bRes.error || pRes.error) {
       console.warn("syncBookingTotals: lookup failed", bRes.error || pRes.error);
@@ -48,6 +58,24 @@ async function syncBookingTotals(bookingId: string): Promise<void> {
       })
       .eq("id", bookingId);
     if (upErr) console.warn("syncBookingTotals: update failed", upErr);
+
+    // Mirror the same numbers onto the invoice row, if one exists. The invoice
+    // table's status enum only has `paid` / `pending` (no `partial`), so we
+    // collapse to `paid` once the balance hits zero.
+    if (!iRes.error && iRes.data?.id) {
+      const invTotal = Math.round((Number(iRes.data.total_amount) || 0) * 100) / 100;
+      const invBalance = Math.round((invTotal - totalPaid) * 100) / 100;
+      const invStatus = invBalance <= 0.01 ? "paid" : "pending";
+      const { error: invErr } = await supabase
+        .from("invoices")
+        .update({
+          deposit_amount: totalPaid,
+          balance_due: invBalance < 0 ? 0 : invBalance,
+          status: invStatus,
+        })
+        .eq("id", iRes.data.id);
+      if (invErr) console.warn("syncBookingTotals: invoice update failed", invErr);
+    }
   } catch (err) {
     console.warn("syncBookingTotals threw:", err);
   }

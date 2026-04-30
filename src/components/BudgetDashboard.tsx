@@ -62,16 +62,20 @@ export function BudgetDashboard({ bookings, expenses }: BudgetDashboardProps) {
     (s, e) => s + (Number(e.amount) || 0),
     0
   );
-  const computedBookingExpenses = filteredBookings.reduce((sum, b) => {
-    const commission = Math.max(
-      (Number(b.total_cost) || 0) * (marginConfig.manager.commissionPercent / 100),
-      marginConfig.manager.minimumCommissionPerEvent
+  const computedManagerCommission = filteredBookings.reduce((sum, b) => {
+    return (
+      sum +
+      Math.max(
+        (Number(b.total_cost) || 0) * (marginConfig.manager.commissionPercent / 100),
+        marginConfig.manager.minimumCommissionPerEvent
+      )
     );
-    return sum + commission + perEventLineSum;
   }, 0);
+  const computedPerEventLines = perEventLineSum * filteredBookings.length;
+  const computedBookingExpenses = computedManagerCommission + computedPerEventLines;
   // DB-tracked expenses (food, ad-hoc, manager payments etc.)
   // Skip "Manager Salary" expenses — those are auto-created by ManagerSalary's
-  // commission generator and are already counted in computedBookingExpenses above.
+  // commission generator and are already counted in computedManagerCommission.
   // Including them here would double-bill manager fees.
   const dbExpenses = filteredExpenses.reduce(
     (sum, expense) =>
@@ -85,11 +89,19 @@ export function BudgetDashboard({ bookings, expenses }: BudgetDashboardProps) {
   const totalPaid = filteredBookings.reduce((sum, booking) => sum + (booking.amount_paid || 0), 0);
   const totalBalance = filteredBookings.reduce((sum, booking) => sum + booking.balance_due, 0);
 
+  // Build the category breakdown from the SAME math as totalExpenses so the
+  // chart agrees with the headline number. We:
+  //   1. drop DB "Manager Salary" rows (already represented as commission), and
+  //   2. inject the live-computed manager commission as its own bar.
   const categoryExpenses = filteredExpenses.reduce((acc, expense) => {
     const cat = normalizeCat(expense.category);
+    if (cat === "Manager Salary") return acc; // replaced by computed commission below
     acc[cat] = (acc[cat] || 0) + expense.amount;
     return acc;
   }, {} as Record<string, number>);
+  if (computedManagerCommission > 0) {
+    categoryExpenses["Manager Commission"] = computedManagerCommission;
+  }
 
   const topCategories = Object.entries(categoryExpenses)
     .sort(([, a], [, b]) => b - a)
@@ -122,6 +134,7 @@ export function BudgetDashboard({ bookings, expenses }: BudgetDashboardProps) {
       staff: "Staff & Labor",
       equipment: "Equipment",
       "Manager Salary": "Manager Salary",
+      "Manager Commission": "Manager Commission (computed)",
       other: "Other",
     };
     return labels[category] || category;
