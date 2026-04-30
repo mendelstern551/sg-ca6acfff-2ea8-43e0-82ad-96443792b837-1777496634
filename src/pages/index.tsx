@@ -937,8 +937,9 @@ export default function HomePage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 dark:from-slate-950 dark:via-slate-900 dark:to-indigo-950">
-      {/* MOBILE / TABLET TOP BAR — visible below lg (≤1023px) */}
-      <header className="lg:hidden sticky top-0 z-40 bg-white/95 dark:bg-slate-900/95 backdrop-blur border-b border-slate-200 dark:border-slate-800">
+      {/* MOBILE / TABLET TOP BAR — scrolls with the page (no sticky) so it doesn't
+          eat vertical space on tablet. Hamburger remains accessible from the top. */}
+      <header className="lg:hidden bg-white/95 dark:bg-slate-900/95 border-b border-slate-200 dark:border-slate-800">
         <div className="flex items-center justify-between p-3">
           <div className="flex items-center gap-2 min-w-0">
             <Sheet open={mobileNavOpen} onOpenChange={setMobileNavOpen}>
