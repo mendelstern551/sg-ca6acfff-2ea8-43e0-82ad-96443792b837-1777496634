@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Plus, DollarSign, TrendingUp } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -17,6 +17,12 @@ import { expenseService } from "@/services/expenseService";
 import { useToast } from "@/hooks/use-toast";
 import type { Database } from "@/integrations/supabase/types";
 import { supabase } from "@/integrations/supabase/client";
+import { loadAppSetting, saveAppSetting } from "@/lib/settingsStore";
+
+// Settings (commission %, season, monthly fee) — synced via app_settings.
+// Payments — synced via manager_payment_log.
+// Key matches legacy localStorage name `trout-lake-manager-salary`.
+const SETTINGS_KEY = "manager-salary";
 
 type ExpenseInsert = Database["public"]["Tables"]["expenses"]["Insert"];
 
@@ -50,35 +56,24 @@ export function ManagerSalary({ bookings, onAddExpense, allExpenses, onExpensesU
   });
   const [isProcessing, setIsProcessing] = useState(false);
 
-  // Load admin settings (commission %, season dates, etc.) from localStorage,
-  // and the payment log from Supabase (so it syncs across devices).
+  // Load admin settings from app_settings (Supabase + local mirror) and the
+  // payment log from manager_payment_log (Supabase). Both fall back gracefully
+  // to localStorage / empty list if their tables don't exist yet.
   useEffect(() => {
-    const saved = localStorage.getItem("trout-lake-manager-salary");
-    let baseData: ManagerSalaryData = {
+    const baseDefaults: Omit<ManagerSalaryData, "payments"> = {
       maintenanceFeePerMonth: 1000,
       commissionPercentage: 15,
       minimumCommissionPerEvent: 1000,
       seasonStart: "2025-10-01",
       seasonEnd: "2026-07-01",
-      payments: [],
     };
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        baseData = {
-          maintenanceFeePerMonth: parsed.maintenanceFeePerMonth ?? baseData.maintenanceFeePerMonth,
-          commissionPercentage: parsed.commissionPercentage ?? baseData.commissionPercentage,
-          minimumCommissionPerEvent: parsed.minimumCommissionPerEvent ?? baseData.minimumCommissionPerEvent,
-          seasonStart: parsed.seasonStart ?? baseData.seasonStart,
-          seasonEnd: parsed.seasonEnd ?? baseData.seasonEnd,
-          // Local payments — used as fallback if Supabase table doesn't exist yet.
-          payments: Array.isArray(parsed.payments) ? parsed.payments : [],
-        };
-      } catch (error) {
-        console.error("Error loading manager salary data:", error);
-      }
-    }
-    setSalaryData(baseData);
+    let cancelled = false;
+
+    // Settings sync via app_settings.
+    loadAppSetting<Omit<ManagerSalaryData, "payments">>(SETTINGS_KEY, baseDefaults).then((s) => {
+      if (cancelled) return;
+      setSalaryData((c) => ({ ...c, ...s }));
+    });
 
     // Pull payments from Supabase. If the table doesn't exist yet, keep the
     // localStorage fallback so the UI still works.
@@ -90,10 +85,21 @@ export function ManagerSalary({ bookings, onAddExpense, allExpenses, onExpensesU
         .from("manager_payment_log")
         .select("*")
         .order("date", { ascending: false });
+      if (cancelled) return;
       if (error) {
         // Silently fall back to localStorage payments — happens before the user
         // has run the manager_payment_log migration.
         console.warn("manager_payment_log not available — using local fallback:", error.message);
+        // Try a localStorage mirror once for legacy payments.
+        try {
+          const saved = window.localStorage.getItem("trout-lake-manager-salary");
+          if (saved) {
+            const parsed = JSON.parse(saved);
+            if (Array.isArray(parsed.payments)) {
+              setSalaryData((c) => ({ ...c, payments: parsed.payments }));
+            }
+          }
+        } catch { /* ignore */ }
         return;
       }
       const remote: ManagerPayment[] = (data || []).map((r: Record<string, unknown>) => ({
@@ -109,7 +115,32 @@ export function ManagerSalary({ bookings, onAddExpense, allExpenses, onExpensesU
       }));
       setSalaryData((c) => ({ ...c, payments: remote }));
     })();
+
+    return () => { cancelled = true; };
   }, []);
+
+  // Persist settings (everything except payments) to app_settings whenever they
+  // change. Debounced so rapid edits don't fire many writes.
+  const settingsLoadedRef = useRef(false);
+  useEffect(() => {
+    if (!settingsLoadedRef.current) {
+      // Skip the very first effect after mount — that's just the load echoing.
+      settingsLoadedRef.current = true;
+      return;
+    }
+    const handle = setTimeout(() => {
+      const { payments: _ignored, ...settings } = salaryData;
+      saveAppSetting(SETTINGS_KEY, settings);
+    }, 500);
+    return () => clearTimeout(handle);
+  }, [
+    salaryData.maintenanceFeePerMonth,
+    salaryData.commissionPercentage,
+    salaryData.minimumCommissionPerEvent,
+    salaryData.seasonStart,
+    salaryData.seasonEnd,
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  ]);
 
   useEffect(() => {
     if (!isProcessing && salaryData) {
@@ -349,8 +380,9 @@ export function ManagerSalary({ bookings, onAddExpense, allExpenses, onExpensesU
         payments: [...(salaryData.payments || []), newPayment]
       };
       setSalaryData(updatedData);
-      // Always keep a local mirror so the UI works offline / pre-migration.
-      localStorage.setItem("trout-lake-manager-salary", JSON.stringify(updatedData));
+      // Payments are persisted via manager_payment_log above; settings are
+      // mirrored to localStorage by saveAppSetting elsewhere — no direct
+      // localStorage write needed here.
 
       const expense: ExpenseInsert = {
         booking_id: paymentForm.relatedBookingId || null,

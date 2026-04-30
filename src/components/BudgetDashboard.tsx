@@ -7,10 +7,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { EnhancedCalendar } from "@/components/ui/enhanced-calendar";
 import { format } from "date-fns";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { PieChart } from "lucide-react";
 import { DEFAULT_EVENT_MARGIN_CONFIG, type EventMarginConfig } from "@/types/eventMargin";
+import { useAppSetting } from "@/lib/settingsStore";
 
 interface BudgetDashboardProps {
   bookings: Booking[];
@@ -23,24 +24,8 @@ export function BudgetDashboard({ bookings, expenses }: BudgetDashboardProps) {
   const [startDate, setStartDate] = useState<Date | undefined>();
   const [endDate, setEndDate] = useState<Date | undefined>();
 
-  // Live read of EventMargin config so the Budget tab matches the Event Margin tab.
-  // Re-reads on the `pricing-config:changed` & storage events; defaults if missing.
-  const [marginConfig, setMarginConfig] = useState<EventMarginConfig>(DEFAULT_EVENT_MARGIN_CONFIG);
-  useEffect(() => {
-    const load = () => {
-      if (typeof window === "undefined") return;
-      try {
-        const raw = window.localStorage.getItem("trout-lake-event-margin");
-        setMarginConfig(raw ? { ...DEFAULT_EVENT_MARGIN_CONFIG, ...JSON.parse(raw) } : DEFAULT_EVENT_MARGIN_CONFIG);
-      } catch {
-        setMarginConfig(DEFAULT_EVENT_MARGIN_CONFIG);
-      }
-    };
-    load();
-    const onStorage = (e: StorageEvent) => { if (e.key === "trout-lake-event-margin") load(); };
-    window.addEventListener("storage", onStorage);
-    return () => window.removeEventListener("storage", onStorage);
-  }, []);
+  // Live EventMargin config from app_settings — synced across devices.
+  const marginConfig = useAppSetting<EventMarginConfig>("event-margin", DEFAULT_EVENT_MARGIN_CONFIG);
 
   const filteredBookings = bookings.filter(booking => {
     const bookingMatch = selectedBooking === "all" || booking.id === selectedBooking;

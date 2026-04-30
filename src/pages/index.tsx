@@ -44,6 +44,7 @@ import { ClientDetailsDialog } from "@/components/ClientDetailsDialog";
 import { PricingSettings } from "@/components/PricingSettings";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { DEFAULT_EVENT_MARGIN_CONFIG, type EventMarginConfig } from "@/types/eventMargin";
+import { useAppSetting } from "@/lib/settingsStore";
 import { getDateRange, isDateInRange, sortByDate, searchInFields } from "@/lib/filterUtils";
 import { startOfDay } from "date-fns";
 
@@ -772,18 +773,8 @@ export default function HomePage() {
   const totalGuests = bookings.reduce((sum, b) => sum + b.number_of_guests, 0);
   const totalRevenue = bookings.reduce((sum, b) => sum + b.total_cost, 0);
 
-  // Pull the live EventMargin config from localStorage for accurate cost modeling.
-  const marginConfig: EventMarginConfig = (() => {
-    if (typeof window === "undefined") return DEFAULT_EVENT_MARGIN_CONFIG;
-    try {
-      const raw = window.localStorage.getItem("trout-lake-event-margin");
-      if (!raw) return DEFAULT_EVENT_MARGIN_CONFIG;
-      const parsed = JSON.parse(raw);
-      return { ...DEFAULT_EVENT_MARGIN_CONFIG, ...parsed };
-    } catch {
-      return DEFAULT_EVENT_MARGIN_CONFIG;
-    }
-  })();
+  // Live EventMargin config — synced via Supabase app_settings (with localStorage mirror).
+  const marginConfig = useAppSetting<EventMarginConfig>("event-margin", DEFAULT_EVENT_MARGIN_CONFIG);
 
   // Per-event variable cost for each booking, using the user's margin model:
   //   manager commission (15% min $1k) + per-event line items + booking-tracked expenses

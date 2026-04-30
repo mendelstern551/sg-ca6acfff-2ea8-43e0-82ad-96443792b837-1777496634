@@ -16,10 +16,12 @@ import {
   calculateEventMargin,
   EventMarginInputs,
 } from "@/types/eventMargin";
+import { loadAppSetting, saveAppSetting } from "@/lib/settingsStore";
 import { Booking } from "@/types/booking";
 import { Plus, Trash2, Calculator, TrendingUp, TrendingDown, Save, RotateCcw, DollarSign, X, ChevronDown, ChevronRight } from "lucide-react";
 
-const STORAGE_KEY = "trout-lake-event-margin";
+// Matches legacy localStorage key `trout-lake-event-margin`.
+const SETTINGS_KEY = "event-margin";
 
 interface EventMarginProps {
   bookings: Booking[];
@@ -31,30 +33,23 @@ const fmt = (n: number) =>
 const fmtPrecise = (n: number) =>
   n.toLocaleString("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 2 });
 
-function loadConfig(): EventMarginConfig {
-  if (typeof window === "undefined") return DEFAULT_EVENT_MARGIN_CONFIG;
-  const raw = window.localStorage.getItem(STORAGE_KEY);
-  if (!raw) return DEFAULT_EVENT_MARGIN_CONFIG;
-  try {
-    const parsed = JSON.parse(raw);
-    return {
-      ...DEFAULT_EVENT_MARGIN_CONFIG,
-      ...parsed,
-      annualExpenses: Array.isArray(parsed.annualExpenses)
-        ? parsed.annualExpenses
-        : DEFAULT_EVENT_MARGIN_CONFIG.annualExpenses,
-      buildings: Array.isArray(parsed.buildings)
-        ? parsed.buildings
-        : DEFAULT_EVENT_MARGIN_CONFIG.buildings,
-      perEventExpenses: Array.isArray(parsed.perEventExpenses)
-        ? parsed.perEventExpenses
-        : DEFAULT_EVENT_MARGIN_CONFIG.perEventExpenses,
-      perEventDefaults: { ...DEFAULT_EVENT_MARGIN_CONFIG.perEventDefaults, ...(parsed.perEventDefaults || {}) },
-      manager: { ...DEFAULT_EVENT_MARGIN_CONFIG.manager, ...(parsed.manager || {}) },
-    };
-  } catch {
-    return DEFAULT_EVENT_MARGIN_CONFIG;
-  }
+function normalizeConfig(parsed: Partial<EventMarginConfig> | null | undefined): EventMarginConfig {
+  if (!parsed) return DEFAULT_EVENT_MARGIN_CONFIG;
+  return {
+    ...DEFAULT_EVENT_MARGIN_CONFIG,
+    ...parsed,
+    annualExpenses: Array.isArray(parsed.annualExpenses)
+      ? parsed.annualExpenses
+      : DEFAULT_EVENT_MARGIN_CONFIG.annualExpenses,
+    buildings: Array.isArray(parsed.buildings)
+      ? parsed.buildings
+      : DEFAULT_EVENT_MARGIN_CONFIG.buildings,
+    perEventExpenses: Array.isArray(parsed.perEventExpenses)
+      ? parsed.perEventExpenses
+      : DEFAULT_EVENT_MARGIN_CONFIG.perEventExpenses,
+    perEventDefaults: { ...DEFAULT_EVENT_MARGIN_CONFIG.perEventDefaults, ...(parsed.perEventDefaults || {}) },
+    manager: { ...DEFAULT_EVENT_MARGIN_CONFIG.manager, ...(parsed.manager || {}) },
+  };
 }
 
 export function EventMargin({ bookings }: EventMarginProps) {
@@ -73,9 +68,14 @@ export function EventMargin({ bookings }: EventMarginProps) {
   const [showCleaningDetail, setShowCleaningDetail] = useState(false);
 
   useEffect(() => {
-    const loaded = loadConfig();
-    setConfig(loaded);
-    setSavedSnapshot(JSON.stringify(loaded));
+    let alive = true;
+    loadAppSetting<EventMarginConfig>(SETTINGS_KEY, DEFAULT_EVENT_MARGIN_CONFIG).then((raw) => {
+      if (!alive) return;
+      const loaded = normalizeConfig(raw);
+      setConfig(loaded);
+      setSavedSnapshot(JSON.stringify(loaded));
+    });
+    return () => { alive = false; };
   }, []);
 
   const isDirty = useMemo(
@@ -106,18 +106,15 @@ export function EventMargin({ bookings }: EventMarginProps) {
     return { expenses, buildings, managerYearly, total: expenses + buildings + managerYearly };
   }, [config]);
 
-  const handleSave = () => {
-    try {
-      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(config));
-      setSavedSnapshot(JSON.stringify(config));
-      toast({ title: "Settings saved", description: "Cost configuration stored locally." });
-    } catch (err) {
-      toast({
-        title: "Save failed",
-        description: err instanceof Error ? err.message : "localStorage unavailable",
-        variant: "destructive",
-      });
-    }
+  const handleSave = async () => {
+    const result = await saveAppSetting(SETTINGS_KEY, config);
+    setSavedSnapshot(JSON.stringify(config));
+    toast({
+      title: "Settings saved",
+      description: result.remote
+        ? "Cost configuration synced to all devices."
+        : "Saved locally — Supabase app_settings table not available yet.",
+    });
   };
 
   const handleReset = () => {

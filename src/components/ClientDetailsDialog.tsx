@@ -16,12 +16,12 @@ import { paymentService } from "@/services/paymentService";
 import { bookingService } from "@/services/bookingService";
 import { invoiceService } from "@/services/invoiceService";
 import { useToast } from "@/hooks/use-toast";
-import { useEffect } from "react";
 import {
   DEFAULT_EVENT_MARGIN_CONFIG,
   type EventMarginConfig,
   allocateBuildingsForGuests,
 } from "@/types/eventMargin";
+import { useAppSetting } from "@/lib/settingsStore";
 
 interface ClientDetailsDialogProps {
   open: boolean;
@@ -57,21 +57,8 @@ export function ClientDetailsDialog({
   
   const { toast } = useToast();
 
-  // Live read of EventMargin config so per-booking finance reflects user's cost model.
-  const [marginConfig, setMarginConfig] = useState<EventMarginConfig>(DEFAULT_EVENT_MARGIN_CONFIG);
-  useEffect(() => {
-    const load = () => {
-      if (typeof window === "undefined") return;
-      try {
-        const raw = window.localStorage.getItem("trout-lake-event-margin");
-        setMarginConfig(raw ? { ...DEFAULT_EVENT_MARGIN_CONFIG, ...JSON.parse(raw) } : DEFAULT_EVENT_MARGIN_CONFIG);
-      } catch { /* keep defaults */ }
-    };
-    load();
-    const onStorage = (e: StorageEvent) => { if (e.key === "trout-lake-event-margin") load(); };
-    window.addEventListener("storage", onStorage);
-    return () => window.removeEventListener("storage", onStorage);
-  }, []);
+  // Live EventMargin config from app_settings — synced across devices.
+  const marginConfig = useAppSetting<EventMarginConfig>("event-margin", DEFAULT_EVENT_MARGIN_CONFIG);
 
   const clientExpenses = allExpenses.filter(e => e.booking_id === localBooking.id);
   const actualExpenses = clientExpenses.reduce((sum, e) => sum + e.amount, 0);
