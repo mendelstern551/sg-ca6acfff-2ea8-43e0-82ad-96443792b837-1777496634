@@ -309,9 +309,17 @@ export function BookingList({ bookings, onEdit, onDelete, onUpdateBooking, expen
         </Table>
       </div>
       {selectedBookingForDetails && (
-        <ClientDetailsDialog 
+        <ClientDetailsDialog
+          // key tied to booking.id forces a fresh mount when switching bookings —
+          // otherwise ClientDetailsDialog's internal `useState(booking)` stays
+          // pinned to the booking it first saw.
+          key={selectedBookingForDetails.id}
           open={clientDetailsOpen}
-          onOpenChange={setClientDetailsOpen}
+          onOpenChange={(o) => {
+            setClientDetailsOpen(o);
+            // Drop the booking on close so the dialog unmounts cleanly.
+            if (!o) setSelectedBookingForDetails(null);
+          }}
           booking={selectedBookingForDetails}
           allExpenses={expenses}
           onNavigateToExpenses={onNavigateToExpenses}

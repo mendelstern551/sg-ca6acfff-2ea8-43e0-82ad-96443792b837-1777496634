@@ -1706,6 +1706,8 @@ export default function HomePage() {
 
       {viewBooking && (
         <ClientDetailsDialog
+          // Key tied to booking.id forces a fresh mount when switching bookings.
+          key={viewBooking.id}
           open={viewBookingOpen}
           onOpenChange={(o) => { setViewBookingOpen(o); if (!o) setViewBooking(null); }}
           booking={viewBooking}
