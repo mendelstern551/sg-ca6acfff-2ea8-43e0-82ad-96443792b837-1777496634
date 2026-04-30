@@ -13,6 +13,9 @@ import { format, differenceInDays } from "date-fns";
 import { Booking, BookingType, Payment, DEFAULT_PRICING, PricingConfig } from "@/types/booking";
 import { formatCurrency, calculateBookingCost } from "@/lib/bookingCalculations";
 import { usePricingConfig } from "@/lib/pricingStore";
+import { DEFAULT_EVENT_MARGIN_CONFIG, type EventMarginConfig, allocateBuildingsForGuests } from "@/types/eventMargin";
+import { useAppSetting } from "@/lib/settingsStore";
+import { TrendingUp, TrendingDown } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { DateRange } from "react-day-picker";
 import { emailService } from "@/services/emailService";
@@ -57,6 +60,8 @@ export function BookingDialog({ open, onOpenChange, onSave, booking: editingBook
 
   // Live pricing from Settings → Pricing tab. Updates without a refresh when admin saves.
   const pricingConfig = usePricingConfig();
+  // Live cost model from Event Margin tab. Drives the "Expected Expenses" preview below.
+  const marginConfig = useAppSetting<EventMarginConfig>("event-margin", DEFAULT_EVENT_MARGIN_CONFIG);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -435,6 +440,118 @@ export function BookingDialog({ open, onOpenChange, onSave, booking: editingBook
               </div>
             </CardContent>
           </Card>
+
+          {/* Expected Expenses & Profit — auto-calculated from Event Margin config.
+              Updates live as the user types guests / picks a custom price, BEFORE saving. */}
+          {(() => {
+            const guestsNum = typeof numberOfGuests === "number" ? numberOfGuests : 0;
+            if (guestsNum <= 0 && totalCost <= 0) return null;
+            const allocated = allocateBuildingsForGuests(guestsNum, marginConfig.buildings);
+            const buildingCleaning = allocated.reduce((s, b) => s + (Number(b.cleaningFee) || 0), 0);
+            const perEventLines = (marginConfig.perEventExpenses || []).reduce(
+              (s, e) => s + (Number(e.amount) || 0),
+              0
+            );
+            const commission = Math.max(
+              totalCost * (marginConfig.manager.commissionPercent / 100),
+              marginConfig.manager.minimumCommissionPerEvent
+            );
+            const expectedExpenses = commission + buildingCleaning + perEventLines;
+            const projectedProfit = totalCost - expectedExpenses;
+            const margin = totalCost > 0 ? (projectedProfit / totalCost) * 100 : 0;
+            const profitPerGuest = guestsNum > 0 ? projectedProfit / guestsNum : 0;
+            const totalBeds = marginConfig.buildings.reduce((s, b) => s + (Number(b.beds) || 0), 0);
+            const overCapacity = guestsNum > totalBeds;
+            return (
+              <Card className={
+                projectedProfit >= 0
+                  ? "border-2 border-emerald-200 bg-emerald-50/30 dark:bg-emerald-950/20 dark:border-emerald-900"
+                  : "border-2 border-rose-200 bg-rose-50/30 dark:bg-rose-950/20 dark:border-rose-900"
+              }>
+                <CardContent className="pt-6">
+                  <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
+                    <div className="flex items-center gap-2">
+                      {projectedProfit >= 0 ? (
+                        <TrendingUp className="h-5 w-5 text-emerald-600" />
+                      ) : (
+                        <TrendingDown className="h-5 w-5 text-rose-600" />
+                      )}
+                      <h3 className="font-semibold">Expected Expenses & Profit</h3>
+                    </div>
+                    <span className="text-xs text-muted-foreground">
+                      Live preview · based on Event Margin config
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/* Expense breakdown */}
+                    <div className="space-y-1.5 text-sm">
+                      <div className="flex justify-between">
+                        <span className="text-slate-600 dark:text-slate-400">
+                          Manager commission ({marginConfig.manager.commissionPercent}% / min {formatCurrency(marginConfig.manager.minimumCommissionPerEvent)})
+                        </span>
+                        <span className="font-medium">{formatCurrency(commission)}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-slate-600 dark:text-slate-400">
+                          Building cleaning · {allocated.length}× ({allocated.map(b => b.name).join(", ") || "—"})
+                        </span>
+                        <span className="font-medium">{formatCurrency(buildingCleaning)}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-slate-600 dark:text-slate-400">
+                          Per-event line items ({marginConfig.perEventExpenses.length})
+                        </span>
+                        <span className="font-medium">{formatCurrency(perEventLines)}</span>
+                      </div>
+                      <div className="flex justify-between border-t pt-2 mt-2">
+                        <span className="font-semibold">Total expected expenses</span>
+                        <span className="font-bold text-rose-600">{formatCurrency(expectedExpenses)}</span>
+                      </div>
+                    </div>
+
+                    {/* Profit summary */}
+                    <div className="rounded-lg bg-white dark:bg-slate-900 border p-4 space-y-2">
+                      <div className="flex justify-between items-baseline">
+                        <span className="text-sm text-slate-600 dark:text-slate-400">Revenue</span>
+                        <span className="text-lg font-semibold">{formatCurrency(totalCost)}</span>
+                      </div>
+                      <div className="flex justify-between items-baseline">
+                        <span className="text-sm text-slate-600 dark:text-slate-400">Net profit</span>
+                        <span className={
+                          "text-2xl font-bold " +
+                          (projectedProfit >= 0 ? "text-emerald-700 dark:text-emerald-300" : "text-rose-700 dark:text-rose-300")
+                        }>
+                          {formatCurrency(projectedProfit)}
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-baseline">
+                        <span className="text-sm text-slate-600 dark:text-slate-400">Margin</span>
+                        <span className={
+                          "text-sm font-medium " +
+                          (projectedProfit >= 0 ? "text-emerald-700 dark:text-emerald-300" : "text-rose-700 dark:text-rose-300")
+                        }>
+                          {margin.toFixed(1)}%
+                        </span>
+                      </div>
+                      {guestsNum > 0 && (
+                        <div className="flex justify-between items-baseline border-t pt-2">
+                          <span className="text-xs text-slate-500">Profit per guest</span>
+                          <span className="text-sm font-medium">{formatCurrency(profitPerGuest)}</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {overCapacity && (
+                    <div className="text-xs text-amber-700 dark:text-amber-400 mt-3">
+                      ⚠ {guestsNum} guests exceed total bed capacity ({totalBeds}).
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            );
+          })()}
 
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
