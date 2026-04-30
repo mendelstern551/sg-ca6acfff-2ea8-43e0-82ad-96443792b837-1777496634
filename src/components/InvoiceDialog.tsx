@@ -396,13 +396,15 @@ export function InvoiceDialog({ open, onOpenChange, booking }: InvoiceDialogProp
     );
   };
 
-  const handleEditPayment = (payment: Payment) => {
+  // Loose typing — booking.payments is generated from the bookings table types
+  // and slightly drifts from `Payment` on optional fields.
+  const handleEditPayment = (payment: { id: string }) => {
     window.dispatchEvent(
       new CustomEvent("dialog:edit-payment", { detail: { bookingId: booking.id, payment } })
     );
   };
 
-  const handleDeletePayment = async (payment: Payment) => {
+  const handleDeletePayment = async (payment: { id: string; amount: number }) => {
     const proceed = window.confirm(
       `Delete this $${Number(payment.amount).toLocaleString()} payment?\n\nThis cannot be undone.`
     );
