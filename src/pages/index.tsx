@@ -1024,7 +1024,23 @@ export default function HomePage() {
               onClick={async () => {
                 try {
                   await fetch("/api/auth/logout", { method: "POST" });
+                } catch {
+                  /* network failure shouldn't block local cleanup */
                 } finally {
+                  // Wipe any cached app data on this device so the next person
+                  // to use this browser can't see the previous admin's
+                  // pricing-config / event-margin / manager-salary etc.
+                  // Keys we touch are all `trout-lake-*` (settingsStore mirror)
+                  // plus `theme` (next-themes — keep so dark mode survives).
+                  try {
+                    const keysToDrop: string[] = [];
+                    for (let i = 0; i < localStorage.length; i++) {
+                      const k = localStorage.key(i);
+                      if (k && k.startsWith("trout-lake-")) keysToDrop.push(k);
+                    }
+                    keysToDrop.forEach((k) => localStorage.removeItem(k));
+                    sessionStorage.clear();
+                  } catch { /* private mode / quota — ignore */ }
                   // Hard navigation so middleware re-evaluates and we land on /login.
                   window.location.assign("/login");
                 }

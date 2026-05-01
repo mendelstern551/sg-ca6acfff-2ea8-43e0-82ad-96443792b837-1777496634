@@ -61,14 +61,34 @@ const STRIP_REQUEST_HEADERS = new Set([
   "cdn-loop",
 ]);
 
-// Strip response headers that would confuse the browser if echoed back.
+// Strip response headers that either confuse the browser (transfer
+// encoding etc.) or fingerprint the upstream backend. We rewrite the
+// `Server` header below so DevTools doesn't say "postgrest/x.x.x" and
+// reveal that Supabase is the data store.
 const STRIP_RESPONSE_HEADERS = new Set([
   "transfer-encoding",
   "content-encoding", // node-fetch already decoded
   "connection",
   "keep-alive",
   "content-length", // recomputed by Next when we write
+  "server",
+  "x-supabase-api-version",
+  "x-supabase-forwarded",
+  "sb-gateway-version",
+  "sb-project-ref",
+  "x-pgrst-version",
+  "x-frame-options", // we set our own (DENY)
+  "x-content-type-options", // we set our own (nosniff)
+  "strict-transport-security", // we set our own
+  "referrer-policy", // we set our own
+  "x-envoy-upstream-service-time",
+  "cf-ray",
+  "cf-cache-status",
 ]);
+
+// Generic prefixes whose response headers should never leak through. Any
+// key starting with one of these is dropped.
+const STRIP_RESPONSE_PREFIXES = ["sb-", "cf-", "x-supabase-", "x-pgrst-"];
 
 // Whitelist of upstream API surfaces. Anything else is rejected so a
 // future bug in url-construction can't accidentally proxy weird paths
@@ -159,13 +179,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(502).json({ error: "Upstream fetch failed" });
   }
 
-  // Mirror upstream status, headers, body.
+  // Mirror upstream status, headers, body — but strip anything that
+  // would fingerprint Supabase or override our security headers.
   res.status(upstream.status);
   upstream.headers.forEach((value, key) => {
-    if (STRIP_RESPONSE_HEADERS.has(key.toLowerCase())) return;
+    const lk = key.toLowerCase();
+    if (STRIP_RESPONSE_HEADERS.has(lk)) return;
+    if (STRIP_RESPONSE_PREFIXES.some((p) => lk.startsWith(p))) return;
     // Don't echo back a Set-Cookie from upstream — the session cookie is
     // ours, and Supabase doesn't legitimately set cookies for REST.
-    if (key.toLowerCase() === "set-cookie") return;
+    if (lk === "set-cookie") return;
     res.setHeader(key, value);
   });
   // Always make proxy responses non-cacheable; data is per-user.

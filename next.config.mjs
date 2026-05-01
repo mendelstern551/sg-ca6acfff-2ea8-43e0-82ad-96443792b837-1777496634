@@ -96,6 +96,12 @@ const securityHeaders = [
     value:
       "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()",
   },
+  // Belt-and-suspenders with /robots.txt: keeps the admin app out of
+  // every search engine, AI scraper, and link-preview crawler.
+  {
+    key: "X-Robots-Tag",
+    value: "noindex, nofollow, noarchive, nosnippet, noimageindex",
+  },
   // Cross-origin isolation: block other origins from embedding us as a
   // resource and from poking at our window.
   { key: "Cross-Origin-Opener-Policy", value: "same-origin" },
