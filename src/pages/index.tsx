@@ -4,7 +4,6 @@ import { Calendar, Users, DollarSign, FileText, Plus, Home, Receipt, Briefcase, 
 import { Sheet, SheetContent, SheetTrigger, SheetTitle, SheetHeader } from "@/components/ui/sheet";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ThemeSwitch } from "@/components/ThemeSwitch";
 import { BookingDialog } from "@/components/BookingDialog";
 import { BookingList } from "@/components/BookingList";
 import { ExpenseDialog } from "@/components/ExpenseDialog";
@@ -1012,11 +1011,9 @@ export default function HomePage() {
             <ThemeToggle />
           </div>
           {navBody}
-          <div className="p-4 border-t border-slate-200 dark:border-slate-800 mt-auto space-y-3">
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-slate-600 dark:text-slate-400">Theme</span>
-              <ThemeSwitch />
-            </div>
+          {/* Theme toggle lives in the header at the top of the sidebar — no
+              need to repeat it here. Just the sign-out lives in the footer. */}
+          <div className="p-4 border-t border-slate-200 dark:border-slate-800 mt-auto">
             <Button
               variant="ghost"
               size="sm"
