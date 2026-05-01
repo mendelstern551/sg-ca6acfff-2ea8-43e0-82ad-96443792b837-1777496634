@@ -53,19 +53,30 @@ const supabaseHost = (() => {
   }
 })();
 
+// Third-party hosts the page legitimately loads from.
+//   - cdn.softgen.ai: monitoring script injected by _document.tsx (required
+//     by the Softgen platform — removing it breaks tooling).
+//   - cdn.softgen.dev: visual editor, dev-only.
+const SOFTGEN_HOSTS = "https://cdn.softgen.ai https://cdn.softgen.dev";
+
 const csp = [
   "default-src 'self'",
   // Next.js needs inline scripts for hydration; in dev it also needs eval.
-  // We allow inline only; never eval in production.
+  // We allow inline only; never eval in production. Softgen monitoring is
+  // loaded async from cdn.softgen.ai.
   process.env.NODE_ENV === "production"
-    ? "script-src 'self' 'unsafe-inline'"
-    : "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
+    ? `script-src 'self' 'unsafe-inline' ${SOFTGEN_HOSTS}`
+    : `script-src 'self' 'unsafe-inline' 'unsafe-eval' ${SOFTGEN_HOSTS}`,
   // Tailwind + shadcn inject inline styles dynamically.
   "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
   "font-src 'self' data: https://fonts.gstatic.com",
   "img-src 'self' data: blob: https:",
-  // API calls: same-origin + Supabase REST/Realtime/Storage.
-  `connect-src 'self'${supabaseHost ? " " + supabaseHost + " wss://" + supabaseHost.replace(/^https?:\/\//, "") : ""}`,
+  // API calls: same-origin + Supabase REST/Realtime/Storage + Softgen telemetry.
+  `connect-src 'self' ${SOFTGEN_HOSTS}${supabaseHost ? " " + supabaseHost + " wss://" + supabaseHost.replace(/^https?:\/\//, "") : ""}`,
+  // PWA manifest must be same-origin; explicit for clarity.
+  "manifest-src 'self'",
+  // Service worker scope.
+  "worker-src 'self'",
   // Block being framed by anyone (clickjacking defense).
   "frame-ancestors 'none'",
   "base-uri 'self'",

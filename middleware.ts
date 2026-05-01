@@ -19,6 +19,12 @@ const PUBLIC_PATHS = [
   // Cron endpoint — middleware lets it through, but the handler itself
   // requires a CRON_SECRET bearer token OR a valid admin session.
   "/api/run-scheduled-emails",
+  // PWA install assets — Chrome / Android need these reachable from the
+  // login screen (or cold, on first install) to discover the manifest
+  // and verify Digital Asset Links for the TWA wrapper.
+  "/manifest.webmanifest",
+  "/icons/",
+  "/.well-known/",
 ];
 
 // File extensions that should never be gated (lets browsers fetch the
