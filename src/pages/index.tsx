@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/router";
-import { Calendar, Users, DollarSign, FileText, Plus, Home, Receipt, Briefcase, Mail, MessageSquare, TrendingUp, BarChart3, Wrench, LayoutDashboard, Clock, AlertCircle, CheckCircle2, Search, Settings, Menu } from "lucide-react";
+import { Calendar, Users, DollarSign, FileText, Plus, Home, Receipt, Briefcase, Mail, MessageSquare, TrendingUp, BarChart3, Wrench, LayoutDashboard, Clock, AlertCircle, CheckCircle2, Search, Settings, Menu, LogOut } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger, SheetTitle, SheetHeader } from "@/components/ui/sheet";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -1012,11 +1012,26 @@ export default function HomePage() {
             <ThemeToggle />
           </div>
           {navBody}
-          <div className="p-4 border-t border-slate-200 dark:border-slate-800 mt-auto">
+          <div className="p-4 border-t border-slate-200 dark:border-slate-800 mt-auto space-y-3">
             <div className="flex items-center justify-between">
               <span className="text-sm text-slate-600 dark:text-slate-400">Theme</span>
               <ThemeSwitch />
             </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="w-full justify-start text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100"
+              onClick={async () => {
+                try {
+                  await fetch("/api/auth/logout", { method: "POST" });
+                } finally {
+                  // Hard navigation so middleware re-evaluates and we land on /login.
+                  window.location.assign("/login");
+                }
+              }}
+            >
+              <LogOut className="h-4 w-4 mr-2" /> Sign out
+            </Button>
           </div>
         </aside>
 
