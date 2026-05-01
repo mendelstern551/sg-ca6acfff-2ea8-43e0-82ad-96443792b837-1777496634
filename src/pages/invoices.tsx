@@ -9,6 +9,9 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 
+// Force SSR so middleware actually runs (see lib/force-dynamic.ts).
+export { getServerSideProps } from "@/lib/force-dynamic";
+
 export default function InvoicesPage() {
   const [invoices, setInvoices] = useState<InvoiceWithDetails[]>([]);
   const [filteredInvoices, setFilteredInvoices] = useState<InvoiceWithDetails[]>([]);

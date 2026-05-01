@@ -1,6 +1,9 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/router";
 import { Calendar, Users, DollarSign, FileText, Plus, Home, Receipt, Briefcase, Mail, MessageSquare, TrendingUp, BarChart3, Wrench, LayoutDashboard, Clock, AlertCircle, CheckCircle2, Search, Settings, Menu, LogOut } from "lucide-react";
+// Force SSR so Vercel doesn't serve a static prerendered HTML shell that
+// bypasses middleware. See lib/force-dynamic.ts for the rationale.
+export { getServerSideProps } from "@/lib/force-dynamic";
 import { Sheet, SheetContent, SheetTrigger, SheetTitle, SheetHeader } from "@/components/ui/sheet";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";

@@ -25,6 +25,9 @@ import {
 } from "lucide-react";
 import { format } from "date-fns";
 
+// Force SSR so middleware actually runs (see lib/force-dynamic.ts).
+export { getServerSideProps } from "@/lib/force-dynamic";
+
 interface BookingRow {
   id: string;
   name: string;
