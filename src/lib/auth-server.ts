@@ -29,19 +29,43 @@ export const SESSION_COOKIE = "tlr_session";
 const ADMIN_CRED_KEY = "admin-credential";
 const ADMIN_RESET_KEY = "admin-reset-token";
 
-// ---- Supabase service-role client (server-side only). The anon key works
-// fine for app_settings since RLS allows it, but we keep this as a thin
-// helper so future calls can swap to service role without a refactor. ----
+// ---- Supabase server client. Always prefers SUPABASE_SERVICE_ROLE_KEY so
+// we can read/write rows that have RLS policies denying the anon role
+// (specifically the `admin-credential` and `admin-reset-token` rows in
+// app_settings). In production we REFUSE to fall back to the anon key —
+// that fallback would silently bypass our security model and let the
+// browser-readable anon key access the admin credential.
 function getServerSupabase(): SupabaseClient | null {
   const url =
     process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL || "";
-  const key =
-    process.env.SUPABASE_SERVICE_ROLE_KEY ||
+  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
+  if (!url) return null;
+
+  if (serviceKey) {
+    return createClient(url, serviceKey, { auth: { persistSession: false } });
+  }
+
+  // Fail-closed in production: don't pretend the anon fallback is fine.
+  if (process.env.NODE_ENV === "production") {
+    console.error(
+      "auth: SUPABASE_SERVICE_ROLE_KEY missing in production. Auth-server " +
+        "operations require the service role to bypass RLS on admin-* keys."
+    );
+    return null;
+  }
+
+  // Dev convenience: allow anon fallback so a freshly-cloned repo without
+  // the service-role key still boots. Logging warns so the developer knows
+  // they're running with reduced security.
+  const anonKey =
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
     process.env.SUPABASE_ANON_KEY ||
     "";
-  if (!url || !key) return null;
-  return createClient(url, key, { auth: { persistSession: false } });
+  if (!anonKey) return null;
+  console.warn(
+    "auth: using anon key fallback (dev only). Set SUPABASE_SERVICE_ROLE_KEY before deploying."
+  );
+  return createClient(url, anonKey, { auth: { persistSession: false } });
 }
 
 // ---- Helpers ----
