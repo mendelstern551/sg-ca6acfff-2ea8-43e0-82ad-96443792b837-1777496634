@@ -21,8 +21,19 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
-    const ok = await verifyCredentials(email, password);
-    if (!ok) {
+    const result = await verifyCredentials(email, password);
+    if (result.ok === false) {
+      if (result.reason === "misconfigured") {
+        // Don't pretend it's a bad password — the operator needs to know to
+        // set the env vars on Vercel. Surfaced verbatim in the UI.
+        console.error("login: server misconfigured, missing:", result.missing);
+        const plural = result.missing.length > 1 ? "s" : "";
+        return res.status(500).json({
+          error: `Server is missing required environment variable${plural}: ${result.missing.join(", ")}. Set them in Vercel → Settings → Environment Variables, then redeploy.`,
+          misconfigured: true,
+          missing: result.missing,
+        });
+      }
       // Slow down brute-force a tiny bit. Real protection would be a rate
       // limiter — fine for a single-admin app.
       await new Promise((r) => setTimeout(r, 350));
@@ -31,7 +42,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const token = signSession(email);
     if (!token) {
       console.error("login: SESSION_SECRET missing or too short");
-      return res.status(500).json({ error: "Server misconfigured" });
+      return res.status(500).json({
+        error: "Server misconfigured: SESSION_SECRET missing or too short.",
+        misconfigured: true,
+      });
     }
     res.setHeader("Set-Cookie", buildSessionCookieHeader(token));
     return res.status(200).json({ ok: true });

@@ -218,44 +218,68 @@ export function getAdminEmail(): string | null {
   return email ? normalizeEmail(email) : null;
 }
 
-/** Confirm submitted credentials. Bootstraps the bcrypt hash on first use. */
+export type CredentialResult =
+  | { ok: true }
+  | { ok: false; reason: "misconfigured"; missing: string[] }
+  | { ok: false; reason: "invalid" };
+
+/**
+ * Confirm submitted credentials. Returns a discriminated result so the API
+ * can distinguish "wrong password" (401) from "server hasn't been told what
+ * the password is yet" (500) — the latter is a deploy-config problem, not a
+ * user typo, and the UI should surface it so the operator knows to fix it.
+ *
+ * Bootstraps the bcrypt hash on first successful use.
+ */
 export async function verifyCredentials(
   submittedEmail: string,
   submittedPassword: string
-): Promise<boolean> {
+): Promise<CredentialResult> {
   const adminEmail = getAdminEmail();
-  if (!adminEmail) return false;
-  if (normalizeEmail(submittedEmail) !== adminEmail) return false;
+  const sessionSecret = getSessionSecret();
+  const stored = adminEmail ? await getStoredHash() : null;
+  const envPassword = process.env.ADMIN_PASSWORD || "";
 
-  // Try the stored bcrypt hash first.
-  const stored = await getStoredHash();
+  // Detect a misconfigured deploy: no admin email, or no way to validate a
+  // password (neither stored hash nor env fallback), or no session secret.
+  const missing: string[] = [];
+  if (!adminEmail) missing.push("ADMIN_EMAIL");
+  if (!stored && !envPassword) missing.push("ADMIN_PASSWORD");
+  if (!sessionSecret) missing.push("SESSION_SECRET");
+  if (missing.length > 0) return { ok: false, reason: "misconfigured", missing };
+
+  // Past this point we know adminEmail is non-null.
+  if (normalizeEmail(submittedEmail) !== adminEmail) {
+    return { ok: false, reason: "invalid" };
+  }
+
+  // Stored bcrypt hash takes precedence over the env bootstrap.
   if (stored) {
     try {
-      return await bcrypt.compare(submittedPassword, stored);
+      const match = await bcrypt.compare(submittedPassword, stored);
+      return match ? { ok: true } : { ok: false, reason: "invalid" };
     } catch (err) {
       console.warn("bcrypt.compare threw:", err);
-      return false;
+      return { ok: false, reason: "invalid" };
     }
   }
 
-  // Bootstrap path: first login, no hash stored yet. Compare against the
-  // ADMIN_PASSWORD env (timing-safe) and persist the hash so subsequent
-  // logins / forgot-password flows are DB-driven.
-  const envPassword = process.env.ADMIN_PASSWORD || "";
-  if (!envPassword) return false;
+  // Bootstrap path: no stored hash, compare against env (timing-safe).
   const a = Buffer.from(submittedPassword);
   const b = Buffer.from(envPassword);
-  if (a.length !== b.length || !timingSafeEqual(a, b)) return false;
+  if (a.length !== b.length || !timingSafeEqual(a, b)) {
+    return { ok: false, reason: "invalid" };
+  }
 
   try {
     const hash = await bcrypt.hash(submittedPassword, 10);
     await setStoredHash(hash);
   } catch (err) {
-    // Hash-store failure shouldn't block a valid login — we'll re-bootstrap
-    // next time. Just log it.
+    // Hash-store failure shouldn't block an otherwise-valid login — we'll
+    // re-bootstrap on the next attempt.
     console.warn("Bootstrap hash store failed:", err);
   }
-  return true;
+  return { ok: true };
 }
 
 /** Replace the stored hash with a new password. Used by reset-password. */
