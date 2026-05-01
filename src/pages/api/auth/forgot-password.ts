@@ -7,6 +7,7 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import nodemailer from "nodemailer";
 import { generateResetToken, getAdminEmail } from "@/lib/auth-server";
+import { rateLimit, clientIp } from "@/lib/rate-limit";
 
 function buildBaseUrl(req: NextApiRequest): string {
   const explicit = process.env.NEXT_PUBLIC_APP_URL || process.env.APP_URL;
@@ -25,6 +26,20 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     res.setHeader("Allow", "POST");
     return res.status(405).json({ error: "Method not allowed" });
   }
+
+  // Rate limit forgot-password aggressively — it sends real email and an
+  // attacker would otherwise be able to spam the admin inbox or generate
+  // unbounded reset tokens. 5 per IP per 30 min.
+  const ip = clientIp(req);
+  const rl = rateLimit(`forgot:${ip}`, { max: 5, windowMs: 30 * 60 * 1000 });
+  if (!rl.ok) {
+    res.setHeader("Retry-After", String(rl.retryAfterSeconds));
+    // Still return 200 to avoid signaling to an attacker that they're being
+    // rate-limited (which would tell them they're hitting the right endpoint
+    // for the right account).
+    return res.status(200).json({ ok: true });
+  }
+
   const { email } = (req.body || {}) as { email?: string };
   if (!email || typeof email !== "string") {
     return res.status(400).json({ error: "Email is required" });

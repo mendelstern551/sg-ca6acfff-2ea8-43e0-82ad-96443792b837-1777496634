@@ -9,12 +9,25 @@ import {
   signSession,
   buildSessionCookieHeader,
 } from "@/lib/auth-server";
+import { rateLimit, clientIp } from "@/lib/rate-limit";
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== "POST") {
     res.setHeader("Allow", "POST");
     return res.status(405).json({ error: "Method not allowed" });
   }
+
+  // Brute-force defense: 10 attempts per IP per 10-minute window. Counters
+  // live in-memory per serverless instance — see lib/rate-limit.ts.
+  const ip = clientIp(req);
+  const rl = rateLimit(`login:${ip}`, { max: 10, windowMs: 10 * 60 * 1000 });
+  if (!rl.ok) {
+    res.setHeader("Retry-After", String(rl.retryAfterSeconds));
+    return res.status(429).json({
+      error: `Too many login attempts. Try again in ${Math.ceil(rl.retryAfterSeconds / 60)} minute(s).`,
+    });
+  }
+
   const { email, password } = (req.body || {}) as { email?: string; password?: string };
   if (!email || !password) {
     return res.status(400).json({ error: "Email and password are required" });

@@ -1,18 +1,19 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { createClient } from "@supabase/supabase-js";
 import nodemailer from "nodemailer";
+import { readSessionFromReq } from "@/lib/auth-server";
 
 /**
  * Scheduler runner — sends `client_emails` rows where:
  *   status = "scheduled" AND scheduled_date <= NOW()
  *
- * Trigger this endpoint:
- *   - Manually: POST /api/run-scheduled-emails  (button in Email History dialog)
- *   - Vercel Cron: add `{ "crons": [{ "path": "/api/run-scheduled-emails", "schedule": "*​/5 * * * *" }] }`
- *     to vercel.json (runs every 5 minutes).
- *   - GitHub Actions / external cron: hit the URL on whatever schedule you want.
+ * Auth requirements (one of):
+ *   - Authorization: Bearer <CRON_SECRET>   — for Vercel Cron / GitHub Actions
+ *   - Valid admin session cookie            — for the manual "Send now" button
  *
- * Optional: set CRON_SECRET in env and the runner will require Bearer auth.
+ * If CRON_SECRET isn't configured, only session-authenticated callers get
+ * through — fail-closed. (Previously a missing CRON_SECRET silently let the
+ * world hit this endpoint and burn through SMTP quota.)
  */
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -20,13 +21,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(405).json({ error: "Method not allowed" });
   }
 
-  // Optional shared-secret guard for cron endpoints
-  const cronSecret = process.env.CRON_SECRET;
-  if (cronSecret) {
-    const auth = req.headers.authorization;
-    if (auth !== `Bearer ${cronSecret}`) {
-      return res.status(401).json({ error: "Unauthorized" });
-    }
+  // Auth: cron-secret bearer OR admin session. Always require ONE of them.
+  const cronSecret = process.env.CRON_SECRET || "";
+  const auth = req.headers.authorization || "";
+  const cronOk = !!cronSecret && auth === `Bearer ${cronSecret}`;
+  const sessionOk = !!readSessionFromReq(req.cookies);
+  if (!cronOk && !sessionOk) {
+    return res.status(401).json({ error: "Unauthorized" });
   }
 
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;

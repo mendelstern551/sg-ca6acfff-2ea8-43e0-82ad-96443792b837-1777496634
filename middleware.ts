@@ -10,13 +10,15 @@ import { NextRequest, NextResponse } from "next/server";
 import { verifySessionEdge, SESSION_COOKIE } from "@/lib/auth-edge";
 
 // Anything starting with these prefixes is allowed without a session.
+// Everything else (pages AND API) requires a valid session cookie.
 const PUBLIC_PATHS = [
   "/login",
   "/forgot-password",
   "/reset-password",
   "/api/auth/", // login / forgot / reset / logout / me
-  // Public-by-design feedback endpoints already exposed to clients:
-  "/api/send-feedback-request",
+  // Cron endpoint — middleware lets it through, but the handler itself
+  // requires a CRON_SECRET bearer token OR a valid admin session.
+  "/api/run-scheduled-emails",
 ];
 
 // File extensions that should never be gated (lets browsers fetch the
