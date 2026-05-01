@@ -35,23 +35,16 @@ function getTurboRules() {
 // CSP allows only:
 //   - same-origin scripts/styles/images (plus inline styles for shadcn/Tailwind)
 //   - fonts from Google CDN (used by some shadcn defaults)
-//   - connections to Supabase (DB + storage) and self
+//   - connections to self (the /api/db proxy handles Supabase) and Softgen
 // `frame-ancestors 'none'` blocks the site from being iframed (clickjacking).
 // `'unsafe-inline'` for styles is unfortunately required by Tailwind+Radix;
 // scripts use 'self' only (no `unsafe-inline`/`unsafe-eval` in prod).
 //
-// The Supabase host is read from env at build time so we don't have to
-// hand-edit the CSP per project. If unset, CSP omits the connect-src entry
-// and Supabase calls will fail loudly — which is the correct fail-closed
-// behavior for a misconfigured deploy.
-const supabaseHost = (() => {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
-  try {
-    return url ? new URL(url).origin : "";
-  } catch {
-    return "";
-  }
-})();
+// Note: we deliberately do NOT include the real Supabase host in CSP.
+// All Supabase traffic goes through the same-origin /api/db proxy now,
+// so there's no legitimate reason for the browser to call Supabase
+// directly. If a future regression accidentally ships the old anon-key
+// client-side, the CSP will block it as a fail-safe.
 
 // Third-party hosts the page legitimately loads from.
 //   - cdn.softgen.ai: monitoring script injected by _document.tsx (required
@@ -71,8 +64,9 @@ const csp = [
   "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
   "font-src 'self' data: https://fonts.gstatic.com",
   "img-src 'self' data: blob: https:",
-  // API calls: same-origin + Supabase REST/Realtime/Storage + Softgen telemetry.
-  `connect-src 'self' ${SOFTGEN_HOSTS}${supabaseHost ? " " + supabaseHost + " wss://" + supabaseHost.replace(/^https?:\/\//, "") : ""}`,
+  // API calls: same-origin (Supabase goes through /api/db proxy) +
+  // Softgen telemetry. No direct Supabase host — see comment above.
+  `connect-src 'self' ${SOFTGEN_HOSTS}`,
   // PWA manifest must be same-origin; explicit for clarity.
   "manifest-src 'self'",
   // Service worker scope.
