@@ -39,6 +39,16 @@ function isPublic(pathname: string): boolean {
   return false;
 }
 
+// Stamp every response from a protected route with no-store so the CDN
+// can't serve a cached HTML shell of the dashboard to a different user
+// (or to an anonymous one). Public routes (login screens, fonts) keep
+// their normal cache behavior.
+function stampNoStore(res: NextResponse): NextResponse {
+  res.headers.set("Cache-Control", "private, no-store, max-age=0, must-revalidate");
+  res.headers.set("Pragma", "no-cache");
+  return res;
+}
+
 export async function middleware(req: NextRequest) {
   const { pathname, search } = req.nextUrl;
 
@@ -51,15 +61,19 @@ export async function middleware(req: NextRequest) {
   const payload = await verifySessionEdge(token, secret);
 
   if (payload) {
-    return NextResponse.next();
+    // Authenticated — let the request through but make sure the response
+    // can't be cached as a generic edge artifact.
+    return stampNoStore(NextResponse.next());
   }
 
   // For API routes, return JSON 401 instead of redirecting (avoids a redirect
   // chain that would confuse fetch callers).
   if (pathname.startsWith("/api/")) {
-    return new NextResponse(
-      JSON.stringify({ error: "Not authenticated" }),
-      { status: 401, headers: { "Content-Type": "application/json" } }
+    return stampNoStore(
+      new NextResponse(JSON.stringify({ error: "Not authenticated" }), {
+        status: 401,
+        headers: { "Content-Type": "application/json" },
+      })
     );
   }
 
@@ -67,7 +81,7 @@ export async function middleware(req: NextRequest) {
   loginUrl.pathname = "/login";
   // Round-trip the original path so we can return there after login.
   loginUrl.search = `?next=${encodeURIComponent(pathname + search)}`;
-  return NextResponse.redirect(loginUrl);
+  return stampNoStore(NextResponse.redirect(loginUrl));
 }
 
 export const config = {
