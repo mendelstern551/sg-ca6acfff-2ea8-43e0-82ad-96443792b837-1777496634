@@ -197,7 +197,10 @@ export default function HomePage() {
       if (inFlight) return;
       if (typeof document !== "undefined" && document.visibilityState !== "visible") return;
       inFlight = true;
-      loadAllData().finally(() => {
+      // Pass silent=true so the loading spinner doesn't flash and no toast
+      // pops on transient failures — that was making the dashboard "blink"
+      // every 30 seconds on its own.
+      loadAllData(true).finally(() => {
         inFlight = false;
       });
     };
@@ -260,10 +263,13 @@ export default function HomePage() {
     return () => clearInterval(interval);
   }, [reminderRefreshKey, currentReminder]);
 
-  const loadAllData = async () => {
+  // `silent` mode: background polls / focus refetches must NOT toggle the
+  // loading spinner (that's what was making the dashboard blink every 30s)
+  // and must NOT pop a toast on partial failures (it would spam every poll).
+  const loadAllData = async (silent = false) => {
     try {
-      setLoading(true);
-      
+      if (!silent) setLoading(true);
+
       const results = await Promise.allSettled([
         bookingService.getAllBookings(),
         expenseService.getAllExpenses(),
@@ -288,23 +294,42 @@ export default function HomePage() {
         payments: b.payments || [],
       }));
 
-      setBookings(bookingsWithPayments);
-      setExpenses(expensesData);
-      setInvoices(invoicesData);
-      setManagerCompensations(managerData);
+      // Skip the setState if the new data is byte-identical to the current
+      // value. Otherwise every 30s poll would re-render the entire dashboard
+      // tree with the same data, blowing focus/scroll/animation state.
+      // (JSON.stringify is fine here — datasets are <100KB.)
+      setBookings((prev) =>
+        JSON.stringify(prev) === JSON.stringify(bookingsWithPayments) ? prev : bookingsWithPayments
+      );
+      setExpenses((prev) =>
+        JSON.stringify(prev) === JSON.stringify(expensesData) ? prev : expensesData
+      );
+      setInvoices((prev) =>
+        JSON.stringify(prev) === JSON.stringify(invoicesData) ? prev : invoicesData
+      );
+      setManagerCompensations((prev) =>
+        JSON.stringify(prev) === JSON.stringify(managerData) ? prev : managerData
+      );
 
-      // Background self-heal: re-sync any invoice rows whose balance_due / status
-      // got stuck on stale numbers (older payments were tied to booking_id, but
-      // the invoice was indexed by invoice_id and never picked them up). After
-      // the sync runs we re-fetch invoices so the UI reflects the corrected
-      // values without forcing the user to reload manually.
-      void invoiceService
-        .syncAllInvoicesWithPayments()
-        .then(() => invoiceService.getAllInvoices())
-        .then((fresh) => setInvoices(fresh))
-        .catch((err) => console.warn("Background invoice resync failed:", err));
+      // Background self-heal — only on the FIRST load (not on every 30s
+      // poll). Resyncs invoice balance_due / status for rows that got stuck
+      // when older payments were tied to booking_id but indexed by
+      // invoice_id. Running this on every poll would burn function
+      // invocations and cause an extra setInvoices that bypasses the
+      // identity check above.
+      if (!silent) {
+        void invoiceService
+          .syncAllInvoicesWithPayments()
+          .then(() => invoiceService.getAllInvoices())
+          .then((fresh) => {
+            setInvoices((prev) =>
+              JSON.stringify(prev) === JSON.stringify(fresh) ? prev : fresh
+            );
+          })
+          .catch((err) => console.warn("Background invoice resync failed:", err));
+      }
 
-      if (results[0].status === "rejected" || results[1].status === "rejected") {
+      if (!silent && (results[0].status === "rejected" || results[1].status === "rejected")) {
         toast({
           title: "Partial Load Failure",
           description: "Some data couldn't be loaded. Retrying automatically...",
@@ -313,13 +338,15 @@ export default function HomePage() {
       }
     } catch (error) {
       console.error("Error loading data:", error);
-      toast({
-        title: "Error Loading Data",
-        description: "Failed to load data. The app will retry automatically every 30 seconds.",
-        variant: "destructive",
-      });
+      if (!silent) {
+        toast({
+          title: "Error Loading Data",
+          description: "Failed to load data. The app will retry automatically every 30 seconds.",
+          variant: "destructive",
+        });
+      }
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   };
 
