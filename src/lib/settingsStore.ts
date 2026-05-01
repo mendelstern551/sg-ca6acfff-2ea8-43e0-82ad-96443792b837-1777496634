@@ -167,17 +167,48 @@ export async function saveAppSetting<T>(
   }
 }
 
-/** Reactive hook — re-renders on save. */
+/**
+ * Reactive hook — re-renders on save AND on cross-device changes.
+ *
+ * Cross-device sync sources, in priority order:
+ *   1. Same-tab CustomEvent (instant — when this tab calls saveAppSetting)
+ *   2. Same-browser cross-tab StorageEvent (instant — localStorage mirror change)
+ *   3. Tab-visibility change (when the user switches back from another browser
+ *      / device, we refetch to catch what changed while we were idle)
+ *   4. Periodic poll while the tab is visible (every 60s) — catches changes
+ *      that happen on another device while this tab is active too
+ *
+ * Polling stops when the tab is hidden so we don't burn function invocations
+ * for a tab the user isn't looking at.
+ */
+const POLL_INTERVAL_MS = 60_000;
+
 export function useAppSetting<T>(key: string, defaultValue: T): T {
   const [val, setVal] = useState<T>(defaultValue);
   const defaultRef = useRef(defaultValue);
   defaultRef.current = defaultValue;
+  const valRef = useRef<T>(defaultValue);
+  valRef.current = val;
 
   useEffect(() => {
     let alive = true;
-    loadAppSetting<T>(key, defaultRef.current).then((v) => {
-      if (alive) setVal(v);
-    });
+    let pollTimer: ReturnType<typeof setInterval> | null = null;
+
+    const refetch = () => {
+      loadAppSetting<T>(key, defaultRef.current).then((v) => {
+        if (!alive) return;
+        // Only update if the value actually changed — avoids re-renders that
+        // would otherwise reset focus / scroll on every poll tick.
+        try {
+          if (JSON.stringify(v) !== JSON.stringify(valRef.current)) setVal(v);
+        } catch {
+          setVal(v);
+        }
+      });
+    };
+
+    refetch();
+
     const onChange = (e: Event) => {
       const detail = (e as CustomEvent<T>).detail;
       if (detail !== undefined) setVal(detail);
@@ -189,12 +220,45 @@ export function useAppSetting<T>(key: string, defaultValue: T): T {
         } catch { /* ignore */ }
       }
     };
+    const onVisibilityOrFocus = () => {
+      if (document.visibilityState === "visible") refetch();
+    };
+
+    // Set up the periodic poll only while the tab is visible.
+    const startPoll = () => {
+      if (pollTimer) return;
+      pollTimer = setInterval(() => {
+        if (document.visibilityState === "visible") refetch();
+      }, POLL_INTERVAL_MS);
+    };
+    const stopPoll = () => {
+      if (pollTimer) {
+        clearInterval(pollTimer);
+        pollTimer = null;
+      }
+    };
+    if (typeof document !== "undefined" && document.visibilityState === "visible") {
+      startPoll();
+    }
+
+    const onVisibilityChange = () => {
+      onVisibilityOrFocus();
+      if (document.visibilityState === "visible") startPoll();
+      else stopPoll();
+    };
+
     window.addEventListener(eventName(key), onChange);
     window.addEventListener("storage", onStorage);
+    window.addEventListener("focus", onVisibilityOrFocus);
+    document.addEventListener("visibilitychange", onVisibilityChange);
+
     return () => {
       alive = false;
+      stopPoll();
       window.removeEventListener(eventName(key), onChange);
       window.removeEventListener("storage", onStorage);
+      window.removeEventListener("focus", onVisibilityOrFocus);
+      document.removeEventListener("visibilitychange", onVisibilityChange);
     };
   }, [key]);
 

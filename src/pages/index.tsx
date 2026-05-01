@@ -180,70 +180,60 @@ export default function HomePage() {
 
   useEffect(() => {
     loadAllData();
-    
-    // ✅ FIX #1: Disable realtime subscriptions temporarily to prevent freezing
-    // The issue is that rapid database changes trigger multiple reloads
-    // We'll rely on manual refreshes after save operations instead
-    
-    /* DISABLED REALTIME SUBSCRIPTIONS - CAUSING FREEZING
-    let reloadTimeout: NodeJS.Timeout | null = null;
-    let isReloading = false;
-    
-    const debouncedReload = () => {
-      if (isReloading) return;
-      if (reloadTimeout) clearTimeout(reloadTimeout);
-      reloadTimeout = setTimeout(() => {
-        isReloading = true;
-        loadAllData().finally(() => {
-          isReloading = false;
-        });
-      }, 2000);
+
+    // Cross-device freshness: when the user switches back to this tab from
+    // another browser / device, refetch immediately so they see whatever
+    // changed while they were away. Plus a 30s background poll while the
+    // tab is visible so two browsers open side-by-side stay in sync without
+    // either user touching anything. (The old realtime implementation was
+    // disabled because it fired on every single row change with no
+    // batching and caused the UI to freeze; this debounced poll keeps the
+    // simplicity without the thrash.)
+    const POLL_MS = 30_000;
+    let inFlight = false;
+    let pollTimer: ReturnType<typeof setInterval> | null = null;
+
+    const refetchIfIdle = () => {
+      if (inFlight) return;
+      if (typeof document !== "undefined" && document.visibilityState !== "visible") return;
+      inFlight = true;
+      loadAllData().finally(() => {
+        inFlight = false;
+      });
     };
-    
-    const bookingsChannel = supabase
-      .channel('bookings-changes')
-      .on('postgres_changes', { 
-        event: '*', 
-        schema: 'public', 
-        table: 'bookings' 
-      }, debouncedReload)
-      .subscribe();
-    
-    const paymentsChannel = supabase
-      .channel('payments-changes')
-      .on('postgres_changes', { 
-        event: '*', 
-        schema: 'public', 
-        table: 'payments' 
-      }, debouncedReload)
-      .subscribe();
-    
-    const expensesChannel = supabase
-      .channel('expenses-changes')
-      .on('postgres_changes', { 
-        event: '*', 
-        schema: 'public', 
-        table: 'expenses' 
-      }, debouncedReload)
-      .subscribe();
-    
-    const invoicesChannel = supabase
-      .channel('invoices-changes')
-      .on('postgres_changes', { 
-        event: '*', 
-        schema: 'public', 
-        table: 'invoices' 
-      }, debouncedReload)
-      .subscribe();
-    
+
+    const startPoll = () => {
+      if (pollTimer) return;
+      pollTimer = setInterval(refetchIfIdle, POLL_MS);
+    };
+    const stopPoll = () => {
+      if (pollTimer) {
+        clearInterval(pollTimer);
+        pollTimer = null;
+      }
+    };
+
+    const onVisibility = () => {
+      if (document.visibilityState === "visible") {
+        refetchIfIdle();
+        startPoll();
+      } else {
+        stopPoll();
+      }
+    };
+    const onFocus = () => refetchIfIdle();
+
+    if (typeof document !== "undefined" && document.visibilityState === "visible") {
+      startPoll();
+    }
+    document.addEventListener("visibilitychange", onVisibility);
+    window.addEventListener("focus", onFocus);
+
     return () => {
-      if (reloadTimeout) clearTimeout(reloadTimeout);
-      bookingsChannel.unsubscribe();
-      paymentsChannel.unsubscribe();
-      expensesChannel.unsubscribe();
-      invoicesChannel.unsubscribe();
+      stopPoll();
+      document.removeEventListener("visibilitychange", onVisibility);
+      window.removeEventListener("focus", onFocus);
     };
-    */
   }, []);
 
   useEffect(() => {
