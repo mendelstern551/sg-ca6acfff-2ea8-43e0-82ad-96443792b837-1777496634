@@ -415,7 +415,8 @@ export type Database = {
           notes: string | null
           payment_method: string | null
           proof_urls: string[] | null
-          receipt_url: string | null
+          // receipt_url (singular) removed — column no longer exists in the
+          // actual schema; use receipt_urls (plural array) instead.
           receipt_urls: string[] | null
           updated_at: string | null
           vendor: string | null
@@ -431,7 +432,6 @@ export type Database = {
           notes?: string | null
           payment_method?: string | null
           proof_urls?: string[] | null
-          receipt_url?: string | null
           receipt_urls?: string[] | null
           updated_at?: string | null
           vendor?: string | null
@@ -447,7 +447,6 @@ export type Database = {
           notes?: string | null
           payment_method?: string | null
           proof_urls?: string[] | null
-          receipt_url?: string | null
           receipt_urls?: string[] | null
           updated_at?: string | null
           vendor?: string | null

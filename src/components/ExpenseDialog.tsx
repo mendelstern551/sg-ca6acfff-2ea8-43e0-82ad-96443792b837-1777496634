@@ -85,7 +85,10 @@ export function ExpenseDialog({ open, onOpenChange, onSave, expense, bookings }:
       payment_method: paymentMethod,
       expense_date: date.toISOString(),
       receipt_urls: receiptUrls,
-      receipt_url: receiptUrls[0] || null,
+      // Legacy `receipt_url` (singular) used to be sent alongside the
+      // array — but the actual DB schema only has `receipt_urls` (plural).
+      // Sending the singular field triggered PGRST204 "column does not
+      // exist" and caused every save to fail with "Failed to save expense".
       proof_urls: proofUrls,
       notes,
     });
