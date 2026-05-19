@@ -18,7 +18,7 @@ import {
 } from "@/types/eventMargin";
 import { loadAppSetting, saveAppSetting } from "@/lib/settingsStore";
 import { Booking } from "@/types/booking";
-import { Plus, Trash2, Calculator, TrendingUp, TrendingDown, Save, RotateCcw, DollarSign, X, ChevronDown, ChevronRight } from "lucide-react";
+import { Plus, Trash2, Calculator, TrendingUp, TrendingDown, Save, RotateCcw, DollarSign, X, ChevronDown, ChevronRight, CalendarDays } from "lucide-react";
 
 // Matches legacy localStorage key `trout-lake-event-margin`.
 const SETTINGS_KEY = "event-margin";
@@ -461,6 +461,244 @@ export function EventMargin({ bookings, view }: EventMarginProps) {
         </CardContent>
       </Card>
       )}
+
+      {/* WEEKLY BREAKDOWN — running cost view. Helps the operator see what
+          the resort costs to keep open per week, independent of bookings.
+          All numbers are live-derived from the same config above so editing
+          a hydro bill updates the weekly figure instantly. Lives on the
+          config tab so the user sees the impact of every line they edit. */}
+      {showConfig && (() => {
+        const annualSum = (config.annualExpenses || []).reduce(
+          (s, e) => s + (Number(e.yearlyAmount) || 0),
+          0
+        );
+        const buildingsYearlySum = (config.buildings || []).reduce(
+          (s, b) => s + (Number(b.yearlyCost) || 0),
+          0
+        );
+        const buildingsPerEventSum = (config.buildings || []).reduce(
+          (s, b) => s + (Number(b.perEventCost) || 0),
+          0
+        );
+        const perEventSum = (config.perEventExpenses || []).reduce(
+          (s, e) => s + (Number(e.amount) || 0),
+          0
+        );
+        const yearlyRunning = annualSum + buildingsYearlySum;
+        const weeklyRunning = yearlyRunning / 52;
+        const monthlyRunning = yearlyRunning / 12;
+        const eventsPerYear = Math.max(1, Number(config.expectedEventsPerYear) || 30);
+        // Annual share each event has to cover to break even on running costs:
+        const annualShareEachEvent = yearlyRunning / eventsPerYear;
+        const totalPerEvent = annualShareEachEvent + perEventSum + buildingsPerEventSum;
+        // If events are spread evenly, weekly average per-event impact:
+        const eventsPerWeek = eventsPerYear / 52;
+        const weeklyEventCosts = (perEventSum + buildingsPerEventSum) * eventsPerWeek;
+        const weeklyAllIn = weeklyRunning + weeklyEventCosts;
+
+        return (
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between flex-wrap gap-2">
+                <div>
+                  <CardTitle className="flex items-center gap-2">
+                    <CalendarDays className="h-5 w-5" />
+                    Weekly Cost Breakdown
+                  </CardTitle>
+                  <CardDescription>
+                    What the resort costs to keep running, divided per week / month / year. Auto-computed from the rows above.
+                  </CardDescription>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Label htmlFor="events-per-year" className="text-xs whitespace-nowrap">Events / year</Label>
+                  <Input
+                    id="events-per-year"
+                    type="number"
+                    min={1}
+                    className="h-9 w-20"
+                    value={config.expectedEventsPerYear}
+                    onChange={(e) =>
+                      setConfig((c) => ({
+                        ...c,
+                        expectedEventsPerYear: Math.max(1, parseInt(e.target.value) || 1),
+                      }))
+                    }
+                  />
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {/* Top summary — three big numbers */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div className="rounded-lg border-2 border-teal-200 dark:border-teal-800 bg-teal-50 dark:bg-teal-950/30 p-4">
+                  <div className="text-xs uppercase tracking-wide text-teal-700 dark:text-teal-300 font-semibold">Per week</div>
+                  <div className="text-2xl font-bold text-teal-900 dark:text-teal-100 mt-1">{fmt(weeklyRunning)}</div>
+                  <div className="text-[11px] text-teal-700/80 dark:text-teal-300/80 mt-1">
+                    fixed running costs only
+                  </div>
+                </div>
+                <div className="rounded-lg border-2 border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-950/30 p-4">
+                  <div className="text-xs uppercase tracking-wide text-blue-700 dark:text-blue-300 font-semibold">Per month</div>
+                  <div className="text-2xl font-bold text-blue-900 dark:text-blue-100 mt-1">{fmt(monthlyRunning)}</div>
+                  <div className="text-[11px] text-blue-700/80 dark:text-blue-300/80 mt-1">
+                    yearly ÷ 12
+                  </div>
+                </div>
+                <div className="rounded-lg border-2 border-indigo-200 dark:border-indigo-800 bg-indigo-50 dark:bg-indigo-950/30 p-4">
+                  <div className="text-xs uppercase tracking-wide text-indigo-700 dark:text-indigo-300 font-semibold">Per year</div>
+                  <div className="text-2xl font-bold text-indigo-900 dark:text-indigo-100 mt-1">{fmt(yearlyRunning)}</div>
+                  <div className="text-[11px] text-indigo-700/80 dark:text-indigo-300/80 mt-1">
+                    annual + building overhead
+                  </div>
+                </div>
+              </div>
+
+              {/* If events are happening, what's the all-in weekly cost? */}
+              <div className="rounded-lg border bg-slate-50 dark:bg-slate-900/40 p-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <div className="text-xs uppercase tracking-wide text-slate-600 dark:text-slate-400 font-semibold">All-in per week</div>
+                    <div className="text-2xl font-bold mt-1">{fmt(weeklyAllIn)}</div>
+                    <div className="text-[11px] text-muted-foreground mt-1">
+                      fixed weekly cost + ({eventsPerWeek.toFixed(2)} events/week × {fmt(perEventSum + buildingsPerEventSum)} per-event variable)
+                    </div>
+                  </div>
+                  <div>
+                    <div className="text-xs uppercase tracking-wide text-slate-600 dark:text-slate-400 font-semibold">Cost per event (break-even)</div>
+                    <div className="text-2xl font-bold mt-1">{fmt(totalPerEvent)}</div>
+                    <div className="text-[11px] text-muted-foreground mt-1">
+                      {fmt(annualShareEachEvent)} annual share + {fmt(perEventSum + buildingsPerEventSum)} variable
+                    </div>
+                  </div>
+                </div>
+                <p className="text-xs text-muted-foreground mt-3">
+                  Manager commission isn't included here — it scales with revenue, not running costs.
+                </p>
+              </div>
+
+              {/* Per-line breakdown table */}
+              <div className="space-y-4">
+                {/* Annual fixed expenses */}
+                {(config.annualExpenses || []).length > 0 && (
+                  <div>
+                    <div className="text-sm font-semibold mb-2">Annual fixed expenses</div>
+                    <div className="rounded-md border overflow-hidden">
+                      <table className="w-full text-sm">
+                        <thead className="bg-slate-100 dark:bg-slate-800/60 text-xs uppercase tracking-wide text-slate-600 dark:text-slate-400">
+                          <tr>
+                            <th className="text-left px-3 py-2 font-semibold">Item</th>
+                            <th className="text-right px-3 py-2 font-semibold w-28">Yearly</th>
+                            <th className="text-right px-3 py-2 font-semibold w-24">Monthly</th>
+                            <th className="text-right px-3 py-2 font-semibold w-24">Weekly</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y">
+                          {config.annualExpenses.map((e) => (
+                            <tr key={e.id}>
+                              <td className="px-3 py-1.5">{e.label}</td>
+                              <td className="px-3 py-1.5 text-right tabular-nums">{fmtPrecise(e.yearlyAmount)}</td>
+                              <td className="px-3 py-1.5 text-right tabular-nums text-slate-600 dark:text-slate-400">{fmtPrecise(e.yearlyAmount / 12)}</td>
+                              <td className="px-3 py-1.5 text-right tabular-nums text-slate-600 dark:text-slate-400">{fmtPrecise(e.yearlyAmount / 52)}</td>
+                            </tr>
+                          ))}
+                          <tr className="bg-slate-50 dark:bg-slate-900/40 font-semibold">
+                            <td className="px-3 py-1.5">Subtotal</td>
+                            <td className="px-3 py-1.5 text-right tabular-nums">{fmtPrecise(annualSum)}</td>
+                            <td className="px-3 py-1.5 text-right tabular-nums">{fmtPrecise(annualSum / 12)}</td>
+                            <td className="px-3 py-1.5 text-right tabular-nums">{fmtPrecise(annualSum / 52)}</td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
+
+                {/* Buildings yearly portion */}
+                {(config.buildings || []).some((b) => Number(b.yearlyCost) > 0) && (
+                  <div>
+                    <div className="text-sm font-semibold mb-2">Buildings (yearly overhead)</div>
+                    <div className="rounded-md border overflow-hidden">
+                      <table className="w-full text-sm">
+                        <thead className="bg-slate-100 dark:bg-slate-800/60 text-xs uppercase tracking-wide text-slate-600 dark:text-slate-400">
+                          <tr>
+                            <th className="text-left px-3 py-2 font-semibold">Building</th>
+                            <th className="text-right px-3 py-2 font-semibold w-28">Yearly</th>
+                            <th className="text-right px-3 py-2 font-semibold w-24">Monthly</th>
+                            <th className="text-right px-3 py-2 font-semibold w-24">Weekly</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y">
+                          {config.buildings.filter((b) => Number(b.yearlyCost) > 0).map((b) => (
+                            <tr key={b.id}>
+                              <td className="px-3 py-1.5">{b.name}</td>
+                              <td className="px-3 py-1.5 text-right tabular-nums">{fmtPrecise(b.yearlyCost)}</td>
+                              <td className="px-3 py-1.5 text-right tabular-nums text-slate-600 dark:text-slate-400">{fmtPrecise(b.yearlyCost / 12)}</td>
+                              <td className="px-3 py-1.5 text-right tabular-nums text-slate-600 dark:text-slate-400">{fmtPrecise(b.yearlyCost / 52)}</td>
+                            </tr>
+                          ))}
+                          <tr className="bg-slate-50 dark:bg-slate-900/40 font-semibold">
+                            <td className="px-3 py-1.5">Subtotal</td>
+                            <td className="px-3 py-1.5 text-right tabular-nums">{fmtPrecise(buildingsYearlySum)}</td>
+                            <td className="px-3 py-1.5 text-right tabular-nums">{fmtPrecise(buildingsYearlySum / 12)}</td>
+                            <td className="px-3 py-1.5 text-right tabular-nums">{fmtPrecise(buildingsYearlySum / 52)}</td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
+
+                {/* Per-event line items */}
+                {(config.perEventExpenses || []).length > 0 && (
+                  <div>
+                    <div className="text-sm font-semibold mb-2">Per-event variable costs</div>
+                    <div className="rounded-md border overflow-hidden">
+                      <table className="w-full text-sm">
+                        <thead className="bg-slate-100 dark:bg-slate-800/60 text-xs uppercase tracking-wide text-slate-600 dark:text-slate-400">
+                          <tr>
+                            <th className="text-left px-3 py-2 font-semibold">Item</th>
+                            <th className="text-right px-3 py-2 font-semibold w-28">Per event</th>
+                            <th className="text-right px-3 py-2 font-semibold w-32">
+                              Avg / week
+                              <div className="text-[10px] normal-case font-normal text-slate-500">
+                                ({eventsPerWeek.toFixed(2)} events/wk)
+                              </div>
+                            </th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y">
+                          {config.perEventExpenses.map((e) => (
+                            <tr key={e.id}>
+                              <td className="px-3 py-1.5">{e.label}</td>
+                              <td className="px-3 py-1.5 text-right tabular-nums">{fmtPrecise(e.amount)}</td>
+                              <td className="px-3 py-1.5 text-right tabular-nums text-slate-600 dark:text-slate-400">{fmtPrecise(e.amount * eventsPerWeek)}</td>
+                            </tr>
+                          ))}
+                          {(config.buildings || []).filter((b) => Number(b.perEventCost) > 0).map((b) => (
+                            <tr key={b.id + "-pe"} className="text-slate-700 dark:text-slate-300">
+                              <td className="px-3 py-1.5">
+                                <span className="text-xs uppercase tracking-wide text-slate-500 mr-2">Bldg</span>
+                                {b.name}
+                              </td>
+                              <td className="px-3 py-1.5 text-right tabular-nums">{fmtPrecise(b.perEventCost)}</td>
+                              <td className="px-3 py-1.5 text-right tabular-nums text-slate-600 dark:text-slate-400">{fmtPrecise(b.perEventCost * eventsPerWeek)}</td>
+                            </tr>
+                          ))}
+                          <tr className="bg-slate-50 dark:bg-slate-900/40 font-semibold">
+                            <td className="px-3 py-1.5">Subtotal</td>
+                            <td className="px-3 py-1.5 text-right tabular-nums">{fmtPrecise(perEventSum + buildingsPerEventSum)}</td>
+                            <td className="px-3 py-1.5 text-right tabular-nums">{fmtPrecise((perEventSum + buildingsPerEventSum) * eventsPerWeek)}</td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        );
+      })()}
 
       {/* CALCULATOR */}
       {showCalculator && (
