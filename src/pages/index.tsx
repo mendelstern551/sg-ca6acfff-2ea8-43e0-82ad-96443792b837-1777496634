@@ -246,10 +246,17 @@ export default function HomePage() {
           reminderService.getDueReminders(),
           reminderService.getMinimizedReminders()
         ]);
-        
-        setDueReminders(due);
-        setMinimizedReminders(minimized);
-        
+
+        // Skip-if-unchanged so the 60s poll doesn't re-render the dashboard
+        // (and trigger child component refreshes) when nothing actually
+        // changed in the reminder set.
+        setDueReminders((prev) =>
+          JSON.stringify(prev) === JSON.stringify(due) ? prev : due
+        );
+        setMinimizedReminders((prev) =>
+          JSON.stringify(prev) === JSON.stringify(minimized) ? prev : minimized
+        );
+
         if (due.length > 0 && !currentReminder) {
           setCurrentReminder(due[0]);
         }
