@@ -181,70 +181,88 @@ export function BookingCalendar({ bookings, onDateClick, onBookingClick, onAddBo
 
   return (
     <>
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle className="flex items-center gap-2">
-                <CalendarIcon className="h-5 w-5" />
-                Booking Calendar
-              </CardTitle>
-              <CardDescription>
-                English & Hebrew dates with Jewish holidays • Click dates to add or view bookings
-              </CardDescription>
-            </div>
-          </div>
-          <div className="text-center mt-4">
-            <div className="text-sm font-medium">{format(currentMonth, "MMMM yyyy")}</div>
-            <div className="text-xs text-slate-600 dark:text-slate-400 font-hebrew">{getHebrewMonthYear(currentMonth)}</div>
-          </div>
-          <div className="mt-3 flex flex-wrap items-end justify-center gap-2">
-            <div className="flex flex-col gap-1">
-              <Label htmlFor="cal-jump" className="text-xs text-slate-600 dark:text-slate-400">
-                Jump to date — check availability
-              </Label>
-              <Input
-                id="cal-jump"
-                type="date"
-                className="h-9 w-44"
-                value={format(currentMonth, "yyyy-MM-dd")}
-                onChange={(e) => handleJumpToDate(e.target.value)}
-              />
-            </div>
-            <Button variant="outline" size="sm" className="h-9" onClick={handleJumpToToday}>
-              Today
-            </Button>
-          </div>
-          <div className="flex items-center gap-4 mt-4 text-xs flex-wrap">
-            <div className="flex items-center gap-2"><Star className="h-3 w-3 text-yellow-500 fill-yellow-500" /><span className="text-slate-600 dark:text-slate-400">Holiday</span></div>
-            <div className="flex items-center gap-2"><div className="w-3 h-3 rounded bg-blue-500 border border-blue-600" /><span className="text-slate-600 dark:text-slate-400">Yom Tov (Confirmed)</span></div>
-            <div className="flex items-center gap-2"><div className="w-3 h-3 rounded bg-green-500 border border-green-600" /><span className="text-slate-600 dark:text-slate-400">Shabaton (Confirmed)</span></div>
-            <div className="flex items-center gap-2"><div className="w-3 h-3 rounded bg-purple-500 border border-purple-600" /><span className="text-slate-600 dark:text-slate-400">Night Event (Confirmed)</span></div>
-            <div className="flex items-center gap-2"><div className="w-3 h-3 rounded bg-orange-400 border border-orange-500" /><span className="text-slate-600 dark:text-slate-400">Pending</span></div>
-          </div>
-        </CardHeader>
-        <CardContent className="relative">
-          <div className="flex items-center gap-4">
-            <Button 
-              variant="outline" 
-              size="default" 
+      <Card className="overflow-visible">
+        {/* Sticky control bar — pinned to top of viewport while the grid
+            scrolls below. This is THE fix for "arrows moved with each
+            month" — they used to be absolutely-positioned inside
+            CardContent at top-1/2, so as the grid's height changed
+            month-to-month the arrows tracked with it and the user had to
+            scroll vertically just to advance the month. Now the arrows
+            sit at a fixed viewport position regardless of how tall the
+            month's grid happens to be. */}
+        <div className="sticky top-0 z-20 bg-white/95 dark:bg-slate-900/95 backdrop-blur supports-[backdrop-filter]:bg-white/75 dark:supports-[backdrop-filter]:bg-slate-900/75 border-b border-slate-200 dark:border-slate-800 rounded-t-xl">
+          <div className="flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-2 sm:py-3">
+            <Button
+              variant="outline"
+              size="icon"
               onClick={handlePreviousMonth}
-              className="absolute left-0 top-1/2 -translate-y-1/2 z-10 h-12 w-12 rounded-full shadow-lg hover:shadow-xl bg-white dark:bg-slate-800 hover:bg-blue-50 dark:hover:bg-blue-950 border-2"
+              aria-label="Previous month"
+              className="h-9 w-9 sm:h-10 sm:w-10 rounded-full shrink-0"
             >
-              <ChevronLeft className="h-7 w-7" />
+              <ChevronLeft className="h-5 w-5" />
             </Button>
 
-            <div className="flex-1 px-3 sm:px-8 md:px-12 lg:px-16">
-              <div className="grid grid-cols-7 gap-1 sm:gap-2 mb-2">
+            <div className="flex-1 min-w-0 text-center">
+              <div className="text-base sm:text-lg font-semibold leading-tight truncate">
+                {format(currentMonth, "MMMM yyyy")}
+              </div>
+              <div className="text-xs text-slate-600 dark:text-slate-400 font-hebrew leading-tight truncate">
+                {getHebrewMonthYear(currentMonth)}
+              </div>
+            </div>
+
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-9 px-2 sm:px-3 text-xs sm:text-sm shrink-0"
+              onClick={handleJumpToToday}
+            >
+              Today
+            </Button>
+            <Input
+              id="cal-jump"
+              type="date"
+              className="h-9 w-[140px] sm:w-[160px] text-xs sm:text-sm shrink-0 hidden sm:block"
+              value={format(currentMonth, "yyyy-MM-dd")}
+              onChange={(e) => handleJumpToDate(e.target.value)}
+              aria-label="Jump to date"
+            />
+
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={handleNextMonth}
+              aria-label="Next month"
+              className="h-9 w-9 sm:h-10 sm:w-10 rounded-full shrink-0"
+            >
+              <ChevronRight className="h-5 w-5" />
+            </Button>
+          </div>
+
+          {/* Compact single-row legend — keeps the sticky bar slim so it
+              doesn't eat half the viewport on smaller screens. */}
+          <div className="flex items-center justify-center gap-3 sm:gap-4 px-3 sm:px-4 pb-2 text-[10px] sm:text-xs overflow-x-auto whitespace-nowrap">
+            <div className="flex items-center gap-1.5 shrink-0"><Star className="h-3 w-3 text-yellow-500 fill-yellow-500" /><span className="text-slate-600 dark:text-slate-400">Holiday</span></div>
+            <div className="flex items-center gap-1.5 shrink-0"><div className="w-2.5 h-2.5 rounded bg-blue-500 border border-blue-600" /><span className="text-slate-600 dark:text-slate-400">Yom Tov</span></div>
+            <div className="flex items-center gap-1.5 shrink-0"><div className="w-2.5 h-2.5 rounded bg-green-500 border border-green-600" /><span className="text-slate-600 dark:text-slate-400">Shabaton</span></div>
+            <div className="flex items-center gap-1.5 shrink-0"><div className="w-2.5 h-2.5 rounded bg-purple-500 border border-purple-600" /><span className="text-slate-600 dark:text-slate-400">Night</span></div>
+            <div className="flex items-center gap-1.5 shrink-0"><div className="w-2.5 h-2.5 rounded bg-orange-400 border border-orange-500" /><span className="text-slate-600 dark:text-slate-400">Pending</span></div>
+          </div>
+        </div>
+
+        <CardContent className="pt-3 sm:pt-4">
+          <div>
+            <div>
+              <div className="grid grid-cols-7 gap-1 sm:gap-1.5 mb-1.5">
                 {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((day, i) => (
-                  <div key={day} className="text-center py-2">
-                    <div className="text-[11px] sm:text-sm font-medium text-slate-600 dark:text-slate-400 uppercase tracking-wide">{day}</div>
-                    <div className="text-[10px] sm:text-xs text-slate-500 dark:text-slate-500 font-hebrew">{["ראשון","שני","שלישי","רביעי","חמישי","שישי","שבת"][i]}</div>
+                  <div key={day} className="text-center py-1">
+                    <div className="text-[10px] sm:text-xs font-medium text-slate-600 dark:text-slate-400 uppercase tracking-wide">{day}</div>
+                    <div className="text-[9px] sm:text-[10px] text-slate-500 dark:text-slate-500 font-hebrew leading-tight">{["ראשון","שני","שלישי","רביעי","חמישי","שישי","שבת"][i]}</div>
                   </div>
                 ))}
               </div>
 
-              <div className="grid grid-cols-7 gap-1 sm:gap-2">
+              <div className="grid grid-cols-7 gap-1 sm:gap-1.5">
                 {days.map((day) => {
                   const dayKey = format(day, "yyyy-MM-dd");
                   const dayBookings = bookingsByDate[dayKey] || [];
@@ -286,7 +304,7 @@ export function BookingCalendar({ bookings, onDateClick, onBookingClick, onAddBo
                       key={day.toString()}
                       onClick={() => handleDateClick(day)}
                       style={isCurrentMonth && hasBookings ? inlineStyle : undefined}
-                      className={`relative min-h-[72px] sm:min-h-[100px] md:min-h-[120px] p-1.5 sm:p-2 rounded-lg border-2 transition-all flex flex-col text-left hover:shadow-md hover:-translate-y-0.5
+                      className={`relative min-h-[64px] sm:min-h-[88px] md:min-h-[100px] p-1 sm:p-1.5 rounded-md border-2 transition-all flex flex-col text-left hover:shadow-md hover:-translate-y-0.5
                         ${!isCurrentMonth ? "bg-slate-50 dark:bg-slate-800/50 opacity-40" : ""}
                         ${isCurrentMonth && !hasBookings && !hasHoliday && !isToday ? "bg-white dark:bg-slate-900" : ""}
                         ${isCurrentMonth && !hasBookings && hasHoliday ? "bg-yellow-50 dark:bg-yellow-950/20" : ""}
@@ -350,15 +368,6 @@ export function BookingCalendar({ bookings, onDateClick, onBookingClick, onAddBo
                 })}
               </div>
             </div>
-
-            <Button 
-              variant="outline" 
-              size="default" 
-              onClick={handleNextMonth}
-              className="absolute right-0 top-1/2 -translate-y-1/2 z-10 h-12 w-12 rounded-full shadow-lg hover:shadow-xl bg-white dark:bg-slate-800 hover:bg-blue-50 dark:hover:bg-blue-950 border-2"
-            >
-              <ChevronRight className="h-7 w-7" />
-            </Button>
           </div>
         </CardContent>
       </Card>

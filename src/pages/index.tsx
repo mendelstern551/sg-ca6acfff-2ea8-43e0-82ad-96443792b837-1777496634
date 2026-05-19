@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/router";
-import { Calendar, Users, DollarSign, FileText, Plus, Home, Receipt, Briefcase, Mail, MessageSquare, TrendingUp, BarChart3, Wrench, LayoutDashboard, Clock, AlertCircle, CheckCircle2, Search, Settings, Menu, LogOut } from "lucide-react";
+import { Calendar, Users, DollarSign, FileText, Plus, Home, Receipt, Briefcase, Mail, MessageSquare, TrendingUp, BarChart3, Wrench, LayoutDashboard, Clock, AlertCircle, CheckCircle2, Search, Settings, Menu, LogOut, Calculator } from "lucide-react";
 // Force SSR so Vercel doesn't serve a static prerendered HTML shell that
 // bypasses middleware. See lib/force-dynamic.ts for the rationale.
 export { getServerSideProps } from "@/lib/force-dynamic";
@@ -943,6 +943,7 @@ export default function HomePage() {
     { id: "receipts", label: "Receipts", icon: Receipt },
     { id: "manager", label: "Manager", icon: Briefcase },
     { id: "margin", label: "Event Margin", icon: TrendingUp },
+    { id: "profit-calculator", label: "Event Profit Calculator", icon: Calculator },
     { id: "communications", label: "Communications", icon: Mail },
     { id: "emails", label: "Email History", icon: MessageSquare },
     { id: "feedback", label: "Feedback", icon: MessageSquare },
@@ -1604,7 +1605,8 @@ export default function HomePage() {
             </Card>
           )}
 
-          {activeTab === "margin" && <EventMargin bookings={bookings} />}
+          {activeTab === "margin" && <EventMargin bookings={bookings} view="config" />}
+          {activeTab === "profit-calculator" && <EventMargin bookings={bookings} view="calculator" />}
 
           {activeTab === "settings" && <PricingSettings />}
 

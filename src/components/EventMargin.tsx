@@ -25,6 +25,15 @@ const SETTINGS_KEY = "event-margin";
 
 interface EventMarginProps {
   bookings: Booking[];
+  /**
+   * Which slice of the page to render:
+   *   - "config": just the Cost Configuration card (the "Event Margin" tab)
+   *   - "calculator": just the Event Profit Calculator card (its own tab)
+   *   - undefined: render both (legacy single-page layout, kept for backward compat)
+   * The two views share the same Supabase-synced config, so editing in one
+   * tab reflects instantly in the other.
+   */
+  view?: "config" | "calculator";
 }
 
 const fmt = (n: number) =>
@@ -52,7 +61,13 @@ function normalizeConfig(parsed: Partial<EventMarginConfig> | null | undefined):
   };
 }
 
-export function EventMargin({ bookings }: EventMarginProps) {
+export function EventMargin({ bookings, view }: EventMarginProps) {
+  // When the page is split into two tabs, hide whichever section the
+  // current tab doesn't care about. Both views still mount the same hook
+  // tree (config load, breakdown memo, calculator state) so jumping
+  // between tabs feels instant and the calculator gets the latest config.
+  const showConfig = view === undefined || view === "config";
+  const showCalculator = view === undefined || view === "calculator";
   const { toast } = useToast();
   const [config, setConfig] = useState<EventMarginConfig>(DEFAULT_EVENT_MARGIN_CONFIG);
   const [savedSnapshot, setSavedSnapshot] = useState<string>("");
@@ -202,6 +217,7 @@ export function EventMargin({ bookings }: EventMarginProps) {
   return (
     <div className="space-y-6">
       {/* COST CONFIG */}
+      {showConfig && (
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between flex-wrap gap-2">
@@ -444,8 +460,10 @@ export function EventMargin({ bookings }: EventMarginProps) {
           </section>
         </CardContent>
       </Card>
+      )}
 
       {/* CALCULATOR */}
+      {showCalculator && (
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -689,6 +707,7 @@ export function EventMargin({ bookings }: EventMarginProps) {
           </div>
         </CardContent>
       </Card>
+      )}
     </div>
   );
 }
