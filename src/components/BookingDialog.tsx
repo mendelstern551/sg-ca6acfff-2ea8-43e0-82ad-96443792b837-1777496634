@@ -8,7 +8,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { EnhancedCalendar } from "@/components/ui/enhanced-calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { CalendarIcon, Calculator, Mail, AlertTriangle } from "lucide-react";
+import { CalendarIcon, Calculator, Mail, AlertTriangle, ChevronLeft, ChevronRight, Check } from "lucide-react";
 import { format, differenceInDays } from "date-fns";
 import { Booking, BookingType, Payment, DEFAULT_PRICING, PricingConfig } from "@/types/booking";
 import { formatCurrency, calculateBookingCost } from "@/lib/bookingCalculations";
@@ -58,6 +58,16 @@ export function BookingDialog({ open, onOpenChange, onSave, booking: editingBook
   const [dateConflict, setDateConflict] = useState<{ hasConflict: boolean; message?: string }>({ hasConflict: false });
   const [capacityWarning, setCapacityWarning] = useState<{ hasWarning: boolean; message?: string }>({ hasWarning: false });
 
+  // Wizard step state. The form is split into four screens; user moves
+  // through them with Back/Next so each screen has just one logical
+  // chunk (basics → contact → dates+guests → pricing+notes). Validation
+  // runs per-step so the user can't move forward leaving required
+  // fields blank. When editing an existing booking we still start at
+  // step 1 but every step's fields are pre-filled — users can click
+  // the step pills above to jump anywhere directly.
+  const TOTAL_STEPS = 4;
+  const [step, setStep] = useState<number>(1);
+
   // Live pricing from Settings → Pricing tab. Updates without a refresh when admin saves.
   const pricingConfig = usePricingConfig();
   // Live cost model from Event Margin tab. Drives the "Expected Expenses" preview below.
@@ -92,10 +102,31 @@ export function BookingDialog({ open, onOpenChange, onSave, booking: editingBook
   useEffect(() => {
     if (!open) {
       setTimeout(() => resetForm(), 300);
-    } else if (!editingBooking) {
-      recalculateRates();
+    } else {
+      // Always restart the wizard at step 1 when reopening.
+      setStep(1);
+      if (!editingBooking) recalculateRates();
     }
   }, [open, editingBooking]);
+
+  // Per-step validity. The user can't tap "Next" without filling the
+  // required fields on the current step. Step 4 has no required-field
+  // gating — Save runs the same checks `handleSave` already does.
+  const stepValid = (s: number): boolean => {
+    if (s === 1) return !!bookingType && name.trim().length > 0;
+    if (s === 2) return contactName.trim().length > 0;
+    if (s === 3) return !!dateRange?.from && !!dateRange?.to && typeof numberOfGuests === "number" && numberOfGuests > 0;
+    return true;
+  };
+  const canAdvance = stepValid(step);
+  const goNext = () => {
+    if (!canAdvance) return;
+    if (step < TOTAL_STEPS) setStep(step + 1);
+  };
+  const goBack = () => {
+    if (step > 1) setStep(step - 1);
+  };
+  const stepLabels = ["Basics", "Contact", "Dates & Guests", "Pricing"];
 
   const resetForm = () => {
     setBookingType("shabaton");
@@ -170,6 +201,12 @@ export function BookingDialog({ open, onOpenChange, onSave, booking: editingBook
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
+    // Wizard guard: pressing Enter on an earlier step should advance, not
+    // submit. Save only fires from the final step's "Create / Update" button.
+    if (step < TOTAL_STEPS) {
+      goNext();
+      return;
+    }
     if (!contactName || !dateRange?.from || !dateRange?.to || numberOfGuests === "") return;
 
     // ✅ NEW: Warn about conflicts before saving
@@ -273,15 +310,52 @@ export function BookingDialog({ open, onOpenChange, onSave, booking: editingBook
         <DialogHeader>
           <DialogTitle>{editingBooking ? "Edit Booking" : "Create New Booking"}</DialogTitle>
           <DialogDescription>
-            Fill in the booking details below. Pricing will be calculated automatically.
+            Step {step} of {TOTAL_STEPS}: {stepLabels[step - 1]}
           </DialogDescription>
         </DialogHeader>
 
+        {/* Step indicator — clickable pills so users can jump back to any
+            previous step. We don't let them skip FORWARD past an invalid
+            step (the next-pill is disabled until the current step is OK)
+            so required fields don't get left blank. */}
+        <div className="flex items-center justify-between gap-1 sm:gap-2 mb-4 pb-3 border-b">
+          {stepLabels.map((label, i) => {
+            const num = i + 1;
+            const isCurrent = num === step;
+            const isComplete = num < step && stepValid(num);
+            const isReachable = num <= step || stepValid(step);
+            return (
+              <button
+                key={label}
+                type="button"
+                disabled={!isReachable && num > step}
+                onClick={() => { if (num < step || (num > step && stepValid(step))) setStep(num); }}
+                className={`flex-1 flex items-center gap-1.5 sm:gap-2 px-2 sm:px-3 py-1.5 sm:py-2 rounded-md transition-colors text-left
+                  ${isCurrent ? "bg-blue-600 text-white" : ""}
+                  ${!isCurrent && isComplete ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-950/50 cursor-pointer" : ""}
+                  ${!isCurrent && !isComplete ? "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400" : ""}
+                  ${!isReachable && num > step ? "opacity-50 cursor-not-allowed" : ""}
+                `}
+              >
+                <span className={`flex items-center justify-center h-5 w-5 sm:h-6 sm:w-6 rounded-full text-xs font-semibold shrink-0
+                  ${isCurrent ? "bg-white text-blue-600" : ""}
+                  ${!isCurrent && isComplete ? "bg-emerald-600 text-white" : ""}
+                  ${!isCurrent && !isComplete ? "bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300" : ""}
+                `}>
+                  {isComplete ? <Check className="h-3 w-3 sm:h-3.5 sm:w-3.5" /> : num}
+                </span>
+                <span className="text-xs sm:text-sm font-medium truncate hidden sm:inline">{label}</span>
+              </button>
+            );
+          })}
+        </div>
+
         <form onSubmit={handleSave} className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* === STEP 1 — Booking basics === */}
+          {step === 1 && (
             <div className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="type">Booking Type</Label>
+                <Label htmlFor="type">Booking Type *</Label>
                 <Select value={bookingType} onValueChange={handleBookingTypeChange}>
                   <SelectTrigger><SelectValue placeholder="Select booking type" /></SelectTrigger>
                   <SelectContent>
@@ -292,6 +366,11 @@ export function BookingDialog({ open, onOpenChange, onSave, booking: editingBook
                 </Select>
               </div>
 
+              <div className="space-y-2">
+                <Label htmlFor="name">Event Name *</Label>
+                <Input id="name" value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g., Pesach 2025" required />
+              </div>
+
               <div className="flex items-center space-x-3 p-4 bg-blue-50 dark:bg-blue-950/30 rounded-lg border-2 border-blue-200 dark:border-blue-800">
                 <Checkbox id="confirmed" checked={confirmed} onCheckedChange={handleConfirmedChange} />
                 <Label htmlFor="confirmed" className="text-sm font-semibold cursor-pointer flex items-center gap-2">
@@ -299,32 +378,14 @@ export function BookingDialog({ open, onOpenChange, onSave, booking: editingBook
                   <span className="text-xs font-normal text-slate-600 dark:text-slate-400">(Check to mark as confirmed)</span>
                 </Label>
               </div>
+            </div>
+          )}
 
-              {confirmed && (
-                <div className="flex items-center space-x-3 p-4 bg-green-50 dark:bg-green-950/30 rounded-lg border-2 border-green-200 dark:border-green-800">
-                  <Checkbox 
-                    id="sendConfirmation" 
-                    checked={sendConfirmationEmail} 
-                    onCheckedChange={(checked) => setSendConfirmationEmail(Boolean(checked))}
-                    disabled={!contactEmail}
-                  />
-                  <Label htmlFor="sendConfirmation" className="text-sm font-semibold cursor-pointer flex items-center gap-2">
-                    <Mail className="h-4 w-4 text-green-600" />
-                    <span className="text-green-700 dark:text-green-300">Send Confirmation Email</span>
-                    {!contactEmail && (
-                      <span className="text-xs font-normal text-orange-600 dark:text-orange-400">(Email required)</span>
-                    )}
-                  </Label>
-                </div>
-              )}
-
+          {/* === STEP 2 — Client contact info === */}
+          {step === 2 && (
+            <div className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="name">Event Name</Label>
-                <Input id="name" value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g., Pesach 2025" required />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="contactName">Contact Name</Label>
+                <Label htmlFor="contactName">Contact Name *</Label>
                 <Input id="contactName" value={contactName} onChange={(e) => setContactName(e.target.value)} placeholder="Primary contact person" required />
               </div>
 
@@ -337,18 +398,39 @@ export function BookingDialog({ open, onOpenChange, onSave, booking: editingBook
                 <Label htmlFor="contactPhone">Contact Phone</Label>
                 <Input id="contactPhone" type="tel" value={contactPhone} onChange={(e) => setContactPhone(e.target.value)} placeholder="(555) 123-4567" />
               </div>
-            </div>
 
+              {confirmed && (
+                <div className="flex items-center space-x-3 p-4 bg-green-50 dark:bg-green-950/30 rounded-lg border-2 border-green-200 dark:border-green-800">
+                  <Checkbox
+                    id="sendConfirmation"
+                    checked={sendConfirmationEmail}
+                    onCheckedChange={(checked) => setSendConfirmationEmail(Boolean(checked))}
+                    disabled={!contactEmail}
+                  />
+                  <Label htmlFor="sendConfirmation" className="text-sm font-semibold cursor-pointer flex items-center gap-2">
+                    <Mail className="h-4 w-4 text-green-600" />
+                    <span className="text-green-700 dark:text-green-300">Send Confirmation Email</span>
+                    {!contactEmail && (
+                      <span className="text-xs font-normal text-orange-600 dark:text-orange-400">(Email required)</span>
+                    )}
+                  </Label>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* === STEP 3 — Dates + guests + conflict/capacity warnings === */}
+          {step === 3 && (
             <div className="space-y-4">
               <div className="space-y-2">
                 <Label>Select Dates *</Label>
                 <div className="border rounded-lg p-2 bg-white dark:bg-slate-900">
-                  <EnhancedCalendar 
-                    mode="range" 
-                    selected={dateRange} 
-                    onSelect={setDateRange} 
+                  <EnhancedCalendar
+                    mode="range"
+                    selected={dateRange}
+                    onSelect={setDateRange}
                     numberOfMonths={1}
-                    className="rounded-md scale-90"
+                    className="rounded-md"
                   />
                 </div>
                 {dateRange?.from && dateRange?.to && (
@@ -364,13 +446,36 @@ export function BookingDialog({ open, onOpenChange, onSave, booking: editingBook
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="numberOfGuests">Number of Guests</Label>
+                <Label htmlFor="numberOfGuests">Number of Guests *</Label>
                 <Input id="numberOfGuests" type="number" min="1" value={numberOfGuests} onChange={(e) => setNumberOfGuests(e.target.value === '' ? '' : parseInt(e.target.value))} placeholder="Enter number of guests" required />
               </div>
 
-              <div className="space-y-2 pt-2 border-t">
+              {dateConflict.hasConflict && (
+                <Alert variant="destructive" className="border-2 border-red-500">
+                  <AlertTriangle className="h-4 w-4" />
+                  <AlertDescription className="font-semibold">
+                    {dateConflict.message}
+                  </AlertDescription>
+                </Alert>
+              )}
+
+              {capacityWarning.hasWarning && (
+                <Alert className="border-2 border-amber-500 bg-amber-50 dark:bg-amber-950/20">
+                  <AlertTriangle className="h-4 w-4 text-amber-600" />
+                  <AlertDescription className="font-semibold text-amber-800 dark:text-amber-200">
+                    {capacityWarning.message}
+                  </AlertDescription>
+                </Alert>
+              )}
+            </div>
+          )}
+
+          {/* === STEP 4 — Pricing breakdown + adjustments + notes + expected profit === */}
+          {step === 4 && (
+            <div className="space-y-4">
+              <div className="space-y-2 pt-2">
                 <Label className="text-blue-600 font-semibold">Pricing Adjustments</Label>
-                <div className="grid grid-cols-2 gap-2">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   <div className="space-y-2">
                     <Label htmlFor="discountPercent" className="text-sm">Discount (%)</Label>
                     <Input id="discountPercent" type="number" min="0" max="100" value={discountPercent ?? ""} onChange={(e) => setDiscountPercent(e.target.value === '' ? null : parseFloat(e.target.value))} placeholder="e.g., 10 for 10%" />
@@ -381,32 +486,15 @@ export function BookingDialog({ open, onOpenChange, onSave, booking: editingBook
                   </div>
                 </div>
               </div>
+
               <div className="space-y-2">
                 <Label htmlFor="notes">Notes</Label>
                 <Textarea id="notes" value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Additional notes or special requirements" rows={4} />
               </div>
             </div>
-          </div>
-
-          {/* ✅ NEW: Conflict and capacity warnings */}
-          {dateConflict.hasConflict && (
-            <Alert variant="destructive" className="border-2 border-red-500">
-              <AlertTriangle className="h-4 w-4" />
-              <AlertDescription className="font-semibold">
-                {dateConflict.message}
-              </AlertDescription>
-            </Alert>
           )}
 
-          {capacityWarning.hasWarning && (
-            <Alert className="border-2 border-amber-500 bg-amber-50 dark:bg-amber-950/20">
-              <AlertTriangle className="h-4 w-4 text-amber-600" />
-              <AlertDescription className="font-semibold text-amber-800 dark:text-amber-200">
-                {capacityWarning.message}
-              </AlertDescription>
-            </Alert>
-          )}
-
+          {step === 4 && (
           <Card className="bg-slate-50 dark:bg-slate-900/50">
             <CardContent className="pt-6">
               <div className="flex items-center gap-2 mb-4">
@@ -453,10 +541,12 @@ export function BookingDialog({ open, onOpenChange, onSave, booking: editingBook
               </div>
             </CardContent>
           </Card>
+          )}
 
           {/* Expected Expenses & Profit — auto-calculated from Event Margin config.
-              Updates live as the user types guests / picks a custom price, BEFORE saving. */}
-          {(() => {
+              Updates live as the user types guests / picks a custom price, BEFORE saving.
+              Only shown on the final review step. */}
+          {step === 4 && (() => {
             const guestsNum = typeof numberOfGuests === "number" ? numberOfGuests : 0;
             if (guestsNum <= 0 && totalCost <= 0) return null;
             const allocated = allocateBuildingsForGuests(guestsNum, marginConfig.buildings);
@@ -566,9 +656,38 @@ export function BookingDialog({ open, onOpenChange, onSave, booking: editingBook
             );
           })()}
 
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-            <Button type="submit">{editingBooking ? "Update Booking" : "Create Booking"}</Button>
+          <DialogFooter className="flex flex-row items-center justify-between sm:justify-between gap-2 pt-4 border-t">
+            <div>
+              <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
+                Cancel
+              </Button>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={goBack}
+                disabled={step === 1}
+              >
+                <ChevronLeft className="h-4 w-4 mr-1" />
+                Back
+              </Button>
+              {step < TOTAL_STEPS ? (
+                <Button
+                  type="button"
+                  onClick={goNext}
+                  disabled={!canAdvance}
+                  title={!canAdvance ? "Fill in the required fields above first" : undefined}
+                >
+                  Next
+                  <ChevronRight className="h-4 w-4 ml-1" />
+                </Button>
+              ) : (
+                <Button type="submit">
+                  {editingBooking ? "Update Booking" : "Create Booking"}
+                </Button>
+              )}
+            </div>
           </DialogFooter>
         </form>
       </DialogContent>
