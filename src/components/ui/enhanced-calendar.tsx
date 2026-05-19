@@ -7,7 +7,13 @@ import { HDate, HebrewCalendar, flags, Sedra, months } from "@hebcal/core";
 
 export type EnhancedCalendarProps = DayPickerProps;
 
-const HEBREW_WEEKDAYS = ["יום ראשון", "יום שני", "יום שלישי", "יום רביעי", "יום חמישי", "יום שישי", "שבת"];
+// Short bilingual weekday labels. The previous full Hebrew strings
+// ("יום ראשון" etc.) were too wide for the head cells and wrapped onto
+// two cramped lines. These compact bilingual labels (English short-form
+// + Hebrew single-letter abbreviation, e.g., "Sun · א׳") read clearly at
+// any sensible cell width.
+const ENGLISH_WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+const HEBREW_WEEKDAY_ABBR = ["א׳", "ב׳", "ג׳", "ד׳", "ה׳", "ו׳", "ש׳"];
 
 function EnhancedCalendar({
   className,
@@ -77,7 +83,9 @@ function EnhancedCalendar({
 
   const formatWeekday = (date: Date, options?: any): string => {
     const dayIndex = date.getDay();
-    return HEBREW_WEEKDAYS[dayIndex];
+    // English short form + Hebrew letter abbreviation. Renders on a single
+    // line at ~64px head_cell width and stays legible.
+    return `${ENGLISH_WEEKDAYS[dayIndex]} · ${HEBREW_WEEKDAY_ABBR[dayIndex]}`;
   };
 
   return (
@@ -88,7 +96,9 @@ function EnhancedCalendar({
         formatWeekdayName: formatWeekday,
       }}
       classNames={{
-        months: "flex flex-col sm:flex-row gap-4",
+        // Two-month layout: side-by-side on tablet/desktop, stacked on
+        // phones. Bigger gap so the months don't visually merge.
+        months: "flex flex-col md:flex-row gap-6 justify-center",
         month: "space-y-3",
         caption: "flex justify-center pt-1 pb-2 relative items-center border-b",
         caption_label: "text-base font-semibold tracking-tight",
@@ -101,8 +111,10 @@ function EnhancedCalendar({
         nav_button_next: "absolute right-1",
         table: "w-full border-collapse",
         head_row: "flex",
+        // Wider head cells so "Sun · א׳" fits on one line; matches day cell
+        // width below so the columns line up visually.
         head_cell:
-          "text-muted-foreground w-12 font-medium text-[10px] uppercase tracking-wider py-2",
+          "text-muted-foreground w-14 font-medium text-[11px] tracking-tight py-2 whitespace-nowrap",
         row: "flex w-full mt-1",
         cell: cn(
           "relative p-0 text-center text-sm focus-within:relative focus-within:z-20",
@@ -112,7 +124,9 @@ function EnhancedCalendar({
             : "[&:has([aria-selected])]:rounded-lg"
         ),
         day: cn(
-          "h-16 w-12 sm:h-20 sm:w-12 p-0 font-normal rounded-md transition-colors",
+          // Square-ish cells, wider to match head_cell, slightly shorter on
+          // mobile so two months fit without dialog overflow.
+          "h-14 w-14 sm:h-16 sm:w-14 p-0 font-normal rounded-md transition-colors",
           "hover:bg-accent hover:text-accent-foreground",
           "aria-selected:opacity-100 flex flex-col items-center justify-center"
         ),

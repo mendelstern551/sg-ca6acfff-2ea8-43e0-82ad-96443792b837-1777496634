@@ -306,7 +306,10 @@ export function BookingDialog({ open, onOpenChange, onSave, booking: editingBook
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+      {/* max-w-5xl gives the 2-month calendar on step 3 enough horizontal
+          room to render side-by-side without clipping. Other steps still
+          read fine at this width — fields are full-width or 2-col. */}
+      <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{editingBooking ? "Edit Booking" : "Create New Booking"}</DialogTitle>
           <DialogDescription>
@@ -424,12 +427,16 @@ export function BookingDialog({ open, onOpenChange, onSave, booking: editingBook
             <div className="space-y-4">
               <div className="space-y-2">
                 <Label>Select Dates *</Label>
-                <div className="border rounded-lg p-2 bg-white dark:bg-slate-900">
+                <div className="border rounded-lg p-2 bg-white dark:bg-slate-900 overflow-x-auto">
+                  {/* Two months side-by-side on tablet/desktop so users
+                      can pick date ranges that cross a month boundary
+                      without paging back and forth. Falls back to a
+                      stacked single column on phones. */}
                   <EnhancedCalendar
                     mode="range"
                     selected={dateRange}
                     onSelect={setDateRange}
-                    numberOfMonths={1}
+                    numberOfMonths={2}
                     className="rounded-md"
                   />
                 </div>
